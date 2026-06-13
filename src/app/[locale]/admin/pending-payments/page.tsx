@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { isLocale, type Locale } from "@/lib/i18n"
 
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
 const copy = {
   zh: {
     badge: "Pending Payments",
