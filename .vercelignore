@@ -1,5 +1,5 @@
-backend/
-dist/
-data/
+/backend/
+/dist/
+/data/
 *.log
 .supabase-rpc-test.json
