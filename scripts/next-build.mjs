@@ -1,12 +1,19 @@
 import { spawnSync } from "node:child_process"
 
 const env = { ...process.env }
-delete env.VERCEL
 
-const debugEnvNames = Object.keys(process.env)
-  .filter((key) => /^(CI|NODE_ENV|NEXT|NOW|VERCEL)/.test(key))
-  .sort()
-console.error(`[lbid-build] env flags: ${debugEnvNames.join(", ")}`)
+for (const key of Object.keys(env)) {
+  const isVercelInternal =
+    key === "VERCEL" ||
+    key.startsWith("VERCEL_") ||
+    key.startsWith("NOW_") ||
+    key.startsWith("NEXT_PRIVATE_") ||
+    key.startsWith("NEXT_EDGE_") ||
+    key.startsWith("NEXT_ENABLE_") ||
+    key.startsWith("NEXT_PUBLIC_VERCEL_")
+
+  if (isVercelInternal) delete env[key]
+}
 
 const result = spawnSync(process.execPath, ["--trace-uncaught", "--trace-warnings", "node_modules/next/dist/bin/next", "build"], {
   env,
