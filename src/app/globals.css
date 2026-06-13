@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 33% 98%;
+    --foreground: 224 42% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 42% 15%;
+    --primary: 226 55% 24%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 42% 94%;
+    --secondary-foreground: 224 42% 18%;
+    --muted: 217 35% 95%;
+    --muted-foreground: 220 14% 43%;
+    --accent: 43 52% 54%;
+    --accent-foreground: 224 42% 15%;
+    --border: 220 24% 88%;
+    --input: 220 24% 88%;
+    --ring: 43 52% 54%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background:
+      linear-gradient(135deg, rgba(27, 43, 94, 0.04) 0 25%, transparent 25% 50%, rgba(201, 168, 76, 0.05) 50% 75%, transparent 75%) 0 0 / 56px 56px,
+      radial-gradient(circle at 8% -10%, rgba(201, 168, 76, 0.18), transparent 28%),
+      radial-gradient(circle at 92% 0%, rgba(27, 43, 94, 0.12), transparent 30%),
+      linear-gradient(180deg, #ffffff 0%, #f7f9fd 46%, #eef3fb 100%);
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: rgba(201, 168, 76, 0.28);
+    color: #1b2b5e;
+  }
+}
+
+.grid-glow {
+  background-image:
+    linear-gradient(rgba(27, 43, 94, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 43, 94, 0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+
+.bg-white\/\[0\.025\],
+.bg-white\/\[0\.035\],
+.bg-white\/\[0\.04\],
+.bg-white\/\[0\.045\],
+.bg-white\/\[0\.055\] {
+  background-color: rgba(255, 255, 255, 0.82);
+}
+
+.border-white\/10,
+.border-white\/20 {
+  border-color: rgba(27, 43, 94, 0.1);
+}

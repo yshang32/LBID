@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-06-09T06:56:32.759Z",
+  "totalEmailLeads": 275,
+  "countries": {
+    "India": 60,
+    "Malaysia": 38,
+    "Indonesia": 60,
+    "Philippines": 7,
+    "Vietnam": 60,
+    "Cambodia": 13,
+    "Bangladesh": 37
+  },
+  "emailOnly": true,
+  "sources": [
+    {
+      "country": "India",
+      "countryCode": "IN",
+      "sourceUrl": "https://fiata.org/directory/in/",
+      "leadsWithEmail": 60,
+      "status": "ok"
+    },
+    {
+      "country": "Malaysia",
+      "countryCode": "MY",
+      "sourceUrl": "https://fiata.org/directory/my/",
+      "leadsWithEmail": 38,
+      "status": "ok"
+    },
+    {
+      "country": "Indonesia",
+      "countryCode": "ID",
+      "sourceUrl": "https://fiata.org/directory/id/",
+      "leadsWithEmail": 60,
+      "status": "ok"
+    },
+    {
+      "country": "Philippines",
+      "countryCode": "PH",
+      "sourceUrl": "https://fiata.org/directory/ph/",
+      "leadsWithEmail": 7,
+      "status": "ok"
+    },
+    {
+      "country": "Vietnam",
+      "countryCode": "VN",
+      "sourceUrl": "https://fiata.org/directory/vn/",
+      "leadsWithEmail": 60,
+      "status": "ok"
+    },
+    {
+      "country": "Cambodia",
+      "countryCode": "KH",
+      "sourceUrl": "https://fiata.org/directory/kh/",
+      "leadsWithEmail": 13,
+      "status": "ok"
+    },
+    {
+      "country": "Bangladesh",
+      "countryCode": "BD",
+      "sourceUrl": "https://fiata.org/directory/bd/",
+      "leadsWithEmail": 38,
+      "status": "ok"
+    }
+  ]
+}

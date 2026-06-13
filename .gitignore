@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# Next.js / Vite build output
+.next/
+dist/
+out/
+
+# local env / secrets
+.env
+.env.*
+!.env.example
+
+# local runtime files
+*.log
+.supabase-rpc-test.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
