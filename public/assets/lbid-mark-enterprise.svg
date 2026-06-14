@@ -1,0 +1,36 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">LBID symbol</title>
+  <desc id="desc">A simple global bridge and trust-bond symbol for LBID.</desc>
+  <defs>
+    <linearGradient id="ring" x1="48" y1="36" x2="210" y2="218" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#49F4FF"/>
+      <stop offset="0.5" stop-color="#385CFF"/>
+      <stop offset="1" stop-color="#D8B35A"/>
+    </linearGradient>
+    <linearGradient id="bridgeA" x1="59" y1="78" x2="197" y2="178" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF5FF"/>
+      <stop offset="1" stop-color="#596B8E"/>
+    </linearGradient>
+    <linearGradient id="bridgeB" x1="197" y1="78" x2="59" y2="178" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D8B35A"/>
+      <stop offset="1" stop-color="#2C4FFF"/>
+    </linearGradient>
+    <filter id="glow" x="-22%" y="-22%" width="144%" height="144%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.55 0 0 0 0 1 0 0 0 0.32 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <path d="M55 71C72.4 45.9 99.1 31 128 31C173.1 31 211.1 62.4 221 104" stroke="url(#ring)" stroke-width="14" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M201 196C183.6 214.4 157.5 225 128 225C82.9 225 44.9 193.6 35 152" stroke="url(#ring)" stroke-width="14" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M35 104C39.3 87.1 47.9 71.8 60 60" stroke="url(#ring)" stroke-width="10" stroke-linecap="round" opacity="0.84"/>
+  <path d="M221 152C216.7 168.9 208.1 184.2 196 196" stroke="url(#ring)" stroke-width="10" stroke-linecap="round" opacity="0.84"/>
+  <path d="M70 91L128 128L70 165" stroke="url(#bridgeA)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M186 91L128 128L186 165" stroke="url(#bridgeB)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M110 128L128 110L146 128L128 146L110 128Z" fill="#08111F" stroke="#F2C75C" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="70" cy="91" r="7" fill="#49F4FF"/>
+  <circle cx="186" cy="165" r="7" fill="#F2C75C"/>
+</svg>

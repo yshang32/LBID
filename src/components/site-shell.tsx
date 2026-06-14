@@ -23,14 +23,14 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link
             href={prefix}
-            className="flex h-11 w-[154px] items-center justify-center overflow-hidden rounded-md border border-[#202833] bg-[#0d1116] px-3 shadow-[0_8px_20px_rgba(13,17,22,0.14)]"
+            className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-[#202833] bg-[#0d1116] shadow-[0_8px_20px_rgba(13,17,22,0.14)]"
           >
             <Image
-              src="/assets/lbid-logo-site-lockup.png"
+              src="/assets/lbid-app-icon.png"
               alt="LBID"
-              width={148}
+              width={44}
               height={44}
-              className="h-[34px] w-auto object-contain"
+              className="h-full w-full object-cover"
               priority
             />
           </Link>

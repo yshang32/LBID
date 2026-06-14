@@ -7,7 +7,10 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
   title: "LBID | Logistics Marketplace",
-  description: "A logistics marketplace connecting Southeast Asian freight agencies with Hong Kong forwarders.",
+  description: "A global logistics matching and digital transaction platform for clients, agents, traders, and forwarders.",
+  icons: {
+    icon: "/assets/favicon.png",
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
