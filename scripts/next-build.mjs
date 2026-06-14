@@ -15,7 +15,7 @@ for (const key of Object.keys(env)) {
   if (isVercelInternal) delete env[key]
 }
 
-const result = spawnSync(process.execPath, ["--trace-uncaught", "--trace-warnings", "node_modules/next/dist/bin/next", "build"], {
+const result = spawnSync(process.execPath, ["--trace-exit", "--trace-uncaught", "--trace-warnings", "node_modules/next/dist/bin/next", "build"], {
   env,
   stdio: "inherit",
 })
