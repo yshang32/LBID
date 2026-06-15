@@ -20,10 +20,11 @@ const copy = {
     coverage: "服務範圍",
     badges: "徽章",
     invite: "邀請報價",
-    create: "建立詢價",
-    message: "聯絡貨代",
+    create: "建立 SR 邀請 Bid",
+    message: "中標後解鎖訊息",
     engine: "積分機制",
     referral: "推薦碼",
+    sealed: "Award 前只顯示能力、服務範圍、評分和回覆速度；完整聯絡資料會在 Match Record 建立後解鎖。",
   },
   en: {
     member: "member",
@@ -34,10 +35,11 @@ const copy = {
     coverage: "Service coverage",
     badges: "Badges",
     invite: "Invite to quote",
-    create: "Create inquiry",
-    message: "Message forwarder",
+    create: "Create SR to invite bid",
+    message: "Unlock messages after award",
     engine: "Points engine",
     referral: "Referral code",
+    sealed: "Before award, only capability, coverage, reviews and response speed are shown. Full contacts unlock after Match Record creation.",
   },
 }
 
@@ -55,7 +57,7 @@ export default function LocalizedForwarderProfilePage({ params }: { params: { lo
   return (
     <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_360px]">
       <section className="space-y-6">
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
@@ -79,20 +81,20 @@ export default function LocalizedForwarderProfilePage({ params }: { params: { lo
           </CardContent>
         </Card>
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="border-white/10 bg-white/[0.045]">
+          <Card>
             <CardHeader>
               <CardTitle>{t.coverage}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {forwarder.coverage.map((place) => (
-                <div key={place} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                <div key={place} className="flex items-center gap-2 rounded-md border border-lblue/10 bg-slate-50 p-3">
                   <MapPin className="h-4 w-4 text-lgold" />
                   {place}
                 </div>
               ))}
             </CardContent>
           </Card>
-          <Card className="border-white/10 bg-white/[0.045]">
+          <Card>
             <CardHeader>
               <CardTitle>{t.badges}</CardTitle>
             </CardHeader>
@@ -108,21 +110,22 @@ export default function LocalizedForwarderProfilePage({ params }: { params: { lo
         </div>
       </section>
       <aside className="space-y-4">
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <CardTitle>{t.invite}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button asChild className="w-full" variant="gold">
-              <Link href={`/${locale}/workflow`}>{t.create}</Link>
+              <Link href={`/${locale}/inquiries/new`}>{t.create}</Link>
             </Button>
             <Button className="w-full" variant="outline">
               <MessageSquare className="h-4 w-4" />
               {t.message}
             </Button>
+            <div className="rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm text-muted-foreground">{t.sealed}</div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-white/[0.045]">
+        <Card>
           <CardHeader>
             <CardTitle>{t.engine}</CardTitle>
           </CardHeader>
@@ -141,10 +144,10 @@ export default function LocalizedForwarderProfilePage({ params }: { params: { lo
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Star; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
+    <div className="rounded-md border border-lblue/10 bg-slate-50 p-4">
       <Icon className="h-5 w-5 text-lgold" />
       <div className="mt-3 text-sm text-muted-foreground">{label}</div>
-      <div className="text-2xl font-black">{value}</div>
+      <div className="text-2xl font-black text-lblue">{value}</div>
     </div>
   )
 }

@@ -41,6 +41,7 @@ const copy = {
       no: "不會",
     },
     points: "Forwarder earned +80 points for 5-star review preview.",
+    average: "平均分",
   },
   en: {
     badge: "Completion review",
@@ -69,6 +70,7 @@ const copy = {
       no: "No",
     },
     points: "Forwarder earned +80 points for 5-star review preview.",
+    average: "Average score",
   },
 }
 
@@ -88,6 +90,8 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
   const [recommend, setRecommend] = useState("yes")
   const [comment, setComment] = useState(locale === "zh" ? "回覆快，文件清楚，派送準時。" : "Fast response, clear documents, on-time delivery.")
   const [submitted, setSubmitted] = useState(false)
+  const average = Number((Object.values(ratings).reduce((sum, value) => sum + value, 0) / ratingKeys.length).toFixed(1))
+  const pointPreview = average >= 4.8 ? 80 : average >= 4.2 ? 50 : 20
 
   function updateRating(key: RatingKey, value: number) {
     setRatings((items) => ({ ...items, [key]: value }))
@@ -101,7 +105,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
           <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
           <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <Star className="h-5 w-5 text-lgold" />
             <CardTitle>{t.labels.overall}</CardTitle>
@@ -136,7 +140,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
         </Card>
       </section>
       <aside className="space-y-5">
-        <Card className="border-white/10 bg-white/[0.045]">
+        <Card>
           <CardContent className="space-y-3 p-4">
             <div>
               <div className="text-sm text-muted-foreground">{t.order}</div>
@@ -148,13 +152,18 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-white/[0.045]">
+        <Card>
           <CardHeader>
             <CardTitle>{t.badge}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-1 text-lgold">
               {Array.from({ length: ratings.overall }).map((_, index) => <Star key={index} className="h-5 w-5 fill-current" />)}
+            </div>
+            <div className="rounded-md border border-lblue/10 bg-slate-50 p-3">
+              <div className="text-sm text-muted-foreground">{t.average}</div>
+              <div className="text-3xl font-black text-lblue">{average}</div>
+              <div className="text-sm text-muted-foreground">+{pointPreview} points preview</div>
             </div>
             <p className="text-sm text-muted-foreground">{comment}</p>
             <Badge variant="teal">{t.recommend[recommend as keyof typeof t.recommend]}</Badge>
@@ -165,7 +174,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
             <CardHeader>
               <CheckCircle2 className="h-5 w-5 text-teal-300" />
               <CardTitle>{t.submitted}</CardTitle>
-              <CardDescription>{ratings.overall === 5 ? t.points : t.note}</CardDescription>
+              <CardDescription>{average >= 4.8 ? t.points : `Forwarder earned +${pointPreview} points preview.`}</CardDescription>
             </CardHeader>
           </Card>
         ) : null}
@@ -179,7 +188,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
 
 function RatingControl({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
+    <div className="rounded-lg border border-lblue/10 bg-slate-50 p-4">
       <div className="text-sm font-semibold">{label}</div>
       <div className="mt-3 flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (

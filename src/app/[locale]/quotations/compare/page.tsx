@@ -42,6 +42,12 @@ const copy = {
     pdf: "查看 PDF",
     accept: "接受報價",
     accepted: "已接受",
+    sort: "排序",
+    byPrice: "最低價",
+    byTransit: "最快時效",
+    byRating: "最高評分",
+    shortlist: "加入 shortlist",
+    shortlisted: "已加入 shortlist",
     confirmTitle: "Order 已建立",
     confirmBody: "Winning Forwarder 會收到通知；其他 Forwarder 會收到未被選中通知。",
     orderRef: "Order reference",
@@ -64,6 +70,12 @@ const copy = {
     pdf: "View PDF",
     accept: "Accept quotation",
     accepted: "Accepted",
+    sort: "Sort",
+    byPrice: "Lowest price",
+    byTransit: "Fastest transit",
+    byRating: "Highest rating",
+    shortlist: "Shortlist",
+    shortlisted: "Shortlisted",
     confirmTitle: "Order created",
     confirmBody: "The winning forwarder is notified; other forwarders receive a not-selected update.",
     orderRef: "Order reference",
@@ -76,7 +88,17 @@ export default function QuotationComparePage({ params }: { params: { locale: str
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
   const [acceptedQuote, setAcceptedQuote] = useState<Quote | null>(null)
-  const sortedQuotes = [...quotes].sort((a, b) => a.total - b.total)
+  const [sort, setSort] = useState<"price" | "transit" | "rating">("price")
+  const [shortlisted, setShortlisted] = useState<string[]>([])
+  const sortedQuotes = [...quotes].sort((a, b) => {
+    if (sort === "rating") return b.rating - a.rating
+    if (sort === "transit") return Number.parseInt(a.transit) - Number.parseInt(b.transit)
+    return a.total - b.total
+  })
+
+  function toggleShortlist(id: string) {
+    setShortlisted((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id])
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
@@ -93,6 +115,12 @@ export default function QuotationComparePage({ params }: { params: { locale: str
             <div className="text-muted-foreground">{t.cargo}</div>
           </CardContent>
         </Card>
+      </section>
+      <section className="mt-5 flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-muted-foreground">{t.sort}</span>
+        <Button variant={sort === "price" ? "gold" : "outline"} size="sm" onClick={() => setSort("price")}>{t.byPrice}</Button>
+        <Button variant={sort === "transit" ? "gold" : "outline"} size="sm" onClick={() => setSort("transit")}>{t.byTransit}</Button>
+        <Button variant={sort === "rating" ? "gold" : "outline"} size="sm" onClick={() => setSort("rating")}>{t.byRating}</Button>
       </section>
       <section className="mt-8 grid gap-4">
         {sortedQuotes.map((quote, index) => {
@@ -117,6 +145,9 @@ export default function QuotationComparePage({ params }: { params: { locale: str
                 <Metric icon={Star} label={t.rating} value={String(quote.rating)} />
                 <div className="flex flex-wrap gap-2 lg:justify-end">
                   <Button variant="outline">{t.pdf}</Button>
+                  <Button variant={shortlisted.includes(quote.id) ? "secondary" : "outline"} onClick={() => toggleShortlist(quote.id)}>
+                    {shortlisted.includes(quote.id) ? t.shortlisted : t.shortlist}
+                  </Button>
                   <Button variant={isAccepted ? "secondary" : "gold"} onClick={() => setAcceptedQuote(quote)}>
                     {isAccepted ? t.accepted : t.accept}
                   </Button>

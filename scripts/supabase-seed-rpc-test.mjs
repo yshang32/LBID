@@ -23,7 +23,7 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
   email_confirm: true,
 })
 
-if (authError && !authError.message.includes("already registered")) {
+if (authError && !isAlreadyRegisteredError(authError)) {
   console.error(authError.message)
   process.exit(1)
 }
@@ -43,7 +43,25 @@ if (!userId) {
   process.exit(1)
 }
 
-const agentId = crypto.randomUUID()
+const agentEmail = `agent-${Date.now()}@lbid.local`
+const agentPassword = "LBID-agent-123456"
+
+const { data: agentAuthData, error: agentAuthError } = await supabase.auth.admin.createUser({
+  email: agentEmail,
+  password: agentPassword,
+  email_confirm: true,
+})
+
+if (agentAuthError && !isAlreadyRegisteredError(agentAuthError)) {
+  console.error(agentAuthError.message)
+  process.exit(1)
+}
+
+const agentId = agentAuthData.user?.id
+if (!agentId) {
+  console.error("Unable to resolve agency test user id")
+  process.exit(1)
+}
 
 await supabase.from("users").upsert([
   {
@@ -59,7 +77,7 @@ await supabase.from("users").upsert([
     role: "agency",
     company_name: "LBID Test Agent",
     country: "Vietnam",
-    email: `agent-${Date.now()}@lbid.local`,
+    email: agentEmail,
     referral_code: `TEST-AGT-${Date.now()}`,
   },
 ])
@@ -81,7 +99,7 @@ await supabase.from("subscriptions").upsert({
   plan: "trial",
   status: "trial",
   trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-})
+}, { onConflict: "user_id" })
 
 const { data: sr, error: srError } = await supabase
   .from("shipment_requests")
@@ -106,6 +124,9 @@ const output = {
   email,
   password,
   userId,
+  agencyEmail: agentEmail,
+  agencyPassword: agentPassword,
+  agencyUserId: agentId,
   shipmentRequestId: sr.id,
   tokenBalanceFree: 5,
 }
@@ -124,4 +145,8 @@ function loadDotEnvLocal() {
     const value = trimmed.slice(index + 1).trim().replace(/^["']|["']$/g, "")
     if (!process.env[key]) process.env[key] = value
   }
+}
+
+function isAlreadyRegisteredError(error) {
+  return error.message.includes("already registered") || error.message.includes("already been registered")
 }

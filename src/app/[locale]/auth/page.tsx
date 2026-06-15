@@ -32,10 +32,10 @@ const copy = {
     demo: "Demo mode",
     configured: "Supabase connected",
     demoText: "未設定 Supabase env 時，表單會以 demo flow 顯示。",
-    loginReady: "已登入，可以進入 Dashboard。",
+    loginReady: "已登入，可以進入工作台。",
     verifyTitle: "試用帳戶已建立",
-    verifyBody: "完成 email verification 後可開始 onboarding，並獲得 10 tokens。",
-    dashboard: "進入 Dashboard",
+    verifyBody: "完成 email verification 後即可進入 onboarding，並獲得 10 tokens。",
+    dashboard: "進入工作台",
     trust: ["Sealed bid", "Token ledger", "Preferred partner"],
     roles: [
       { value: "agency", label: "Agency" },
@@ -61,10 +61,10 @@ const copy = {
     demo: "Demo mode",
     configured: "Supabase connected",
     demoText: "Forms stay in demo flow until Supabase env vars are configured.",
-    loginReady: "Signed in. Ready to enter the Dashboard.",
+    loginReady: "Signed in. Ready to enter the workspace.",
     verifyTitle: "Trial account created",
     verifyBody: "After email verification, onboarding unlocks and 10 tokens are granted.",
-    dashboard: "Go to Dashboard",
+    dashboard: "Go to workspace",
     trust: ["Sealed bid", "Token ledger", "Preferred partner"],
     roles: [
       { value: "agency", label: "Agency" },
@@ -102,9 +102,9 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
     <main className="min-h-[calc(100vh-4rem)] bg-[#050607] text-white">
       <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl place-items-center px-4 py-14 sm:px-6">
         <div className="w-full max-w-[440px]">
-          <div className="mb-16 flex justify-center">
+          <div className="mb-12 flex justify-center">
             <Image
-              src="/assets/lbid-logo-site-lockup.png"
+              src="/assets/lbid-logo-enterprise-dark.png"
               alt="LBID"
               width={260}
               height={78}
@@ -116,6 +116,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
           <div className="rounded-xl border border-white/10 bg-[#111216] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <div className="text-center">
               <h1 className="text-2xl font-black tracking-tight">{mode === "login" ? t.title : t.registerTitle}</h1>
+              <p className="mt-2 text-sm text-[#8f96a3]">{t.subtitle}</p>
               <p className="mt-3 text-sm text-[#8f96a3]">
                 {mode === "login" ? (
                   <>
@@ -230,7 +231,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
             ) : null}
           </div>
 
-          <div className="mt-16 grid grid-cols-3 items-center gap-6 opacity-40">
+          <div className="mt-12 grid grid-cols-3 items-center gap-6 opacity-40">
             {t.trust.map((item) => (
               <div key={item} className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#9aa1ae]">
                 {item}

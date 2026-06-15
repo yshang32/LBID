@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowUpRight, BadgeCheck, Filter, MapPin, Search, Star } from "lucide-react"
+import { ArrowUpRight, BadgeCheck, Filter, MapPin, Search, ShieldCheck, Star, Zap } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,10 @@ const copy = {
     sea: "海運",
     cold: "冷鏈",
     allTiers: "所有會員",
+    monthly: "月費會員",
+    annual: "年費會員",
+    readonly: "只讀觀察",
+    partner: "Partner",
     search: "搜尋",
     completed: "完成訂單",
     response: "回覆時間",
@@ -34,6 +38,8 @@ const copy = {
     reset: "重設",
     rank: "Directory score",
     boosted: "Boosted",
+    createSr: "建立 SR 邀請 Bid",
+    sealed: "先看能力，不公開聯絡。中標後才解鎖完整資料。",
   },
   en: {
     badge: "Public Directory",
@@ -46,6 +52,10 @@ const copy = {
     sea: "Sea freight",
     cold: "Cold chain",
     allTiers: "All tiers",
+    monthly: "Monthly Member",
+    annual: "Annual Member",
+    readonly: "Read-only",
+    partner: "Partner",
     search: "Search",
     completed: "Completed",
     response: "Response",
@@ -55,6 +65,8 @@ const copy = {
     reset: "Reset",
     rank: "Directory score",
     boosted: "Boosted",
+    createSr: "Create SR to invite bid",
+    sealed: "Review capability first. Full contacts unlock after award.",
   },
 }
 
@@ -97,7 +109,7 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
           {t.saved}
         </Button>
       </div>
-      <Card className="mt-8 border-white/10 bg-white/[0.055]">
+      <Card className="mt-8">
         <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_180px_180px_auto_auto]">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -111,9 +123,9 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
           </Select>
           <Select value={tier} onChange={(event) => setTier(event.target.value)}>
             <option value="all">{t.allTiers}</option>
-            <option value="free">Free</option>
-            <option value="standard">Standard</option>
-            <option value="premium">Premium</option>
+            <option value="free">{t.readonly}</option>
+            <option value="standard">{t.monthly}</option>
+            <option value="premium">{t.annual}</option>
             <option value="partner">Partner</option>
           </Select>
           <Button variant="gold">{t.search}</Button>
@@ -124,7 +136,7 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
         {filteredForwarders.length} {t.results}
       </div>
       {filteredForwarders.length === 0 ? (
-        <Card className="mt-4 border-white/10 bg-white/[0.045]">
+        <Card className="mt-4">
           <CardContent className="p-8 text-center text-muted-foreground">{t.noResults}</CardContent>
         </Card>
       ) : (
@@ -139,12 +151,12 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
             }))
 
             return (
-              <Card key={forwarder.slug} className="border-white/10 bg-white/[0.045]">
+              <Card key={forwarder.slug} className="bg-white">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <Badge variant={forwarder.tier === "Premium" || forwarder.tier === "Partner" ? "gold" : "secondary"}>
-                        {forwarder.tier}
+                        {formatTier(forwarder.tier, locale)}
                       </Badge>
                       <CardTitle className="mt-3">{forwarder.name}</CardTitle>
                     </div>
@@ -155,9 +167,21 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border border-lgold/25 bg-lgold/10 p-3 text-sm">
-                    <span className="font-semibold text-lblue">{t.rank}</span>
-                    <span className="font-mono font-black text-lgold">{directoryScore}</span>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-md border border-lgold/25 bg-lgold/10 p-3 text-sm">
+                      <div className="flex items-center gap-1 font-semibold text-[#6f5514]">
+                        <ShieldCheck className="h-4 w-4" />
+                        {t.rank}
+                      </div>
+                      <div className="mt-1 font-mono text-2xl font-black text-lblue">{directoryScore}</div>
+                    </div>
+                    <div className="rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm">
+                      <div className="flex items-center gap-1 font-semibold text-muted-foreground">
+                        <Zap className="h-4 w-4 text-lgold" />
+                        Token bid
+                      </div>
+                      <div className="mt-1 font-black text-lblue">1 Token</div>
+                    </div>
                   </div>
                   <p className="text-sm leading-6 text-muted-foreground">{forwarder.description}</p>
                   <div className="flex flex-wrap gap-2">
@@ -170,11 +194,11 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
                     ))}
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                    <div className="rounded-md border border-lblue/10 bg-slate-50 p-3">
                       <div className="text-muted-foreground">{t.completed}</div>
                       <div className="text-xl font-black">{forwarder.completedOrders}</div>
                     </div>
-                    <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                    <div className="rounded-md border border-lblue/10 bg-slate-50 p-3">
                       <div className="text-muted-foreground">{t.response}</div>
                       <div className="text-xl font-black">{forwarder.responseTime}</div>
                     </div>
@@ -183,11 +207,17 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
                     <MapPin className="h-4 w-4 text-lgold" />
                     {forwarder.coverage.join(", ")}
                   </div>
-                  <Button asChild className="w-full" variant="outline">
+                  <p className="rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm text-muted-foreground">{t.sealed}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button asChild variant="gold">
+                      <Link href={`${prefix}/inquiries/new`}>{t.createSr}</Link>
+                    </Button>
+                    <Button asChild variant="outline">
                     <Link href={`${prefix}/forwarders/${forwarder.slug}`}>
                       {t.view} <ArrowUpRight className="h-4 w-4" />
                     </Link>
-                  </Button>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )
@@ -196,4 +226,18 @@ export default function LocalizedForwardersPage({ params }: { params: { locale: 
       )}
     </main>
   )
+}
+
+function formatTier(tier: string, locale: Locale) {
+  if (locale === "en") {
+    if (tier === "Standard") return "Monthly Member"
+    if (tier === "Premium") return "Annual Member"
+    if (tier === "Free") return "Read-only"
+    return tier
+  }
+  if (tier === "Standard") return "月費會員"
+  if (tier === "Premium") return "年費會員"
+  if (tier === "Free") return "只讀觀察"
+  if (tier === "Partner") return "Partner"
+  return tier
 }

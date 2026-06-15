@@ -4,20 +4,20 @@
 
 @layer base {
   :root {
-    --background: 210 33% 98%;
+    --background: 216 45% 98%;
     --foreground: 224 42% 15%;
     --card: 0 0% 100%;
     --card-foreground: 224 42% 15%;
     --primary: 226 55% 24%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 42% 94%;
+    --secondary: 219 52% 95%;
     --secondary-foreground: 224 42% 18%;
-    --muted: 217 35% 95%;
+    --muted: 218 42% 96%;
     --muted-foreground: 220 14% 43%;
     --accent: 43 52% 54%;
     --accent-foreground: 224 42% 15%;
-    --border: 220 24% 88%;
-    --input: 220 24% 88%;
+    --border: 220 29% 90%;
+    --input: 220 29% 88%;
     --ring: 43 52% 54%;
     --radius: 0.5rem;
   }
@@ -29,11 +29,16 @@
   body {
     @apply bg-background text-foreground;
     background:
-      linear-gradient(135deg, rgba(27, 43, 94, 0.04) 0 25%, transparent 25% 50%, rgba(201, 168, 76, 0.05) 50% 75%, transparent 75%) 0 0 / 56px 56px,
-      radial-gradient(circle at 8% -10%, rgba(201, 168, 76, 0.18), transparent 28%),
-      radial-gradient(circle at 92% 0%, rgba(27, 43, 94, 0.12), transparent 30%),
-      linear-gradient(180deg, #ffffff 0%, #f7f9fd 46%, #eef3fb 100%);
+      radial-gradient(circle at 18% 10%, rgba(201, 168, 76, 0.16), transparent 28rem),
+      radial-gradient(circle at 82% 4%, rgba(61, 132, 180, 0.12), transparent 24rem),
+      linear-gradient(rgba(27, 43, 94, 0.038) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27, 43, 94, 0.028) 1px, transparent 1px),
+      linear-gradient(135deg, rgba(27, 43, 94, 0.026) 0 1px, transparent 1px 18px),
+      linear-gradient(180deg, #ffffff 0%, #fbfcff 46%, #f2f6fc 100%);
+    background-attachment: fixed;
+    background-size: auto, auto, 48px 48px, 48px 48px, 18px 18px, auto;
     min-height: 100vh;
+    text-rendering: geometricPrecision;
   }
 
   ::selection {
@@ -44,9 +49,10 @@
 
 .grid-glow {
   background-image:
-    linear-gradient(rgba(27, 43, 94, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(27, 43, 94, 0.05) 1px, transparent 1px);
-  background-size: 46px 46px;
+    radial-gradient(circle at 18% 8%, rgba(201, 168, 76, 0.14), transparent 24rem),
+    linear-gradient(rgba(27, 43, 94, 0.052) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 43, 94, 0.04) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
 }
 
 .bg-white\/\[0\.025\],
@@ -60,4 +66,13 @@
 .border-white\/10,
 .border-white\/20 {
   border-color: rgba(27, 43, 94, 0.1);
+}
+
+.surface-glass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.88));
+  border-color: rgba(27, 43, 94, 0.1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.88) inset,
+    0 22px 60px rgba(27, 43, 94, 0.08);
 }

@@ -1,230 +1,183 @@
 import Link from "next/link"
-import { BarChart3, Coins, Handshake, PackagePlus, Radar, ReceiptText, ShieldCheck, Star, TrendingUp } from "lucide-react"
+import { ArrowRight, Clock3, Coins, FileText, Flame, PackagePlus, ShieldCheck, Star, TrendingUp, Users } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { calculateIntroductionFee, companyProfile, inquiries, matchRecords, matchStages, reorders, volumeTracking } from "@/lib/data"
 import { isLocale, type Locale } from "@/lib/i18n"
-
-type Role = "agency" | "forwarder" | "admin"
-
-const roleSet = new Set<Role>(["agency", "forwarder", "admin"])
+import { v4Matches, v4ShipmentRequests, v4Status } from "@/lib/v4"
 
 const copy = {
   zh: {
-    badge: "Matching-first dashboard",
-    title: {
-      agency: "Agent 工作台",
-      forwarder: "HK Forwarder 工作台",
-      admin: "LBID 管理台",
-    },
-    intro: {
-      agency: "先用 Shipment Request 找到合適香港 Forwarder，再把勝出報價轉成 Preferred Partner、Rate Card 和 Reorder。",
-      forwarder: "集中處理開放中的 SR、已配對客戶、Introduction Period 收費和長期貨量。",
-      admin: "監察 SR 配對、Forwarder 質素、平台介紹費和長期合作數據。",
-    },
-    primary: {
-      agency: "建立新 SR",
-      forwarder: "提交 sealed bid",
-      admin: "查看管理台",
-    },
-    secondary: "查看 Match Record",
-    openSr: "Open SR",
-    partners: "Preferred Partners",
-    reorders: "Reorders",
-    fee: "Introduction Fee",
-    volume: "Volume Tracking",
-    quality: "Quality Review",
-    latestPartners: "最近配對",
-    preferred: "Preferred Partner",
-    introPeriod: "Introduction Period",
-    reorderCta: "從 Partner Reorder",
-    feePending: "待收平台介紹費",
-    noConnection: "一次配對，長期合作",
-    wallet: "Token / Reputation",
-    freeTokens: "Free",
-    paidTokens: "Paid",
-    reputation: "Reputation",
-    progress: "Match progress",
+    hello: "今日工作台",
+    summary: "你今日有 3 個接單機會 + 2 個交易進行中",
+    hot: "即將截標",
+    open: "可接單 Request",
+    matches: "進行中 Matches",
+    month: "本月概況",
+    bidNow: "立即 Bid -1 Token",
+    priority: "Priority Bid -2 Tokens",
+    remaining: "剩餘名額",
+    score: "信譽要求",
+    budget: "預算範圍",
+    deadline: "截標倒數",
+    slotsUsed: "已用名額",
+    mode: "運輸方式",
+    masked: "階段 1 顯示：路線、貨類、範圍資料；中標後先解鎖完整聯絡。",
+    view: "查看",
+    createSr: "建立新 SR",
+    marketplace: "更多接單機會",
+    stage: ["配對成立", "報價已扣", "資料解鎖", "交易中", "完成"],
+    stats: [
+      ["發出 SR", "4"],
+      ["Bid 次數", "6"],
+      ["成功配對", "2"],
+      ["信譽分 +", "10"],
+    ],
   },
   en: {
-    badge: "Matching-first dashboard",
-    title: {
-      agency: "Agent workspace",
-      forwarder: "HK Forwarder workspace",
-      admin: "LBID admin console",
-    },
-    intro: {
-      agency: "Use a Shipment Request to discover the right Hong Kong forwarder, then turn the winning bid into a Preferred Partner, Rate Card and Reorders.",
-      forwarder: "Manage open SRs, matched agents, introduction-period fees and long-term volume.",
-      admin: "Monitor SR matching, forwarder quality, platform introduction fees and relationship volume.",
-    },
-    primary: {
-      agency: "Create new SR",
-      forwarder: "Submit sealed bid",
-      admin: "Open admin",
-    },
-    secondary: "View Match Record",
-    openSr: "Open SR",
-    partners: "Preferred Partners",
-    reorders: "Reorders",
-    fee: "Introduction Fee",
-    volume: "Volume Tracking",
-    quality: "Quality Review",
-    latestPartners: "Latest matches",
-    preferred: "Preferred Partner",
-    introPeriod: "Introduction Period",
-    reorderCta: "Reorder from Partner",
-    feePending: "Pending platform fee",
-    noConnection: "Match once, trust long-term",
-    wallet: "Token / Reputation",
-    freeTokens: "Free",
-    paidTokens: "Paid",
-    reputation: "Reputation",
-    progress: "Match progress",
+    hello: "Welcome back",
+    summary: "You have 3 bid opportunities and 2 active matches today",
+    hot: "Closing soon",
+    open: "Open Requests",
+    matches: "Active Matches",
+    month: "Monthly Snapshot",
+    bidNow: "Bid Now -1 Token",
+    priority: "Priority Bid -2 Tokens",
+    remaining: "slots left",
+    score: "Required score",
+    budget: "Budget range",
+    deadline: "Deadline",
+    slotsUsed: "bid slots used",
+    mode: "Mode",
+    masked: "Stage 1 shows route, cargo category and ranges only. Full contacts unlock after award.",
+    view: "View",
+    createSr: "Create SR",
+    marketplace: "More opportunities",
+    stage: ["Matched", "Token used", "Contact unlocked", "In trade", "Completed"],
+    stats: [
+      ["SR created", "4"],
+      ["Bids submitted", "6"],
+      ["Matches won", "2"],
+      ["Score gained", "10"],
+    ],
   },
 }
 
-export default function LocalizedDashboardPage({
-  params,
-  searchParams,
-}: {
-  params: { locale: string }
-  searchParams: { role?: string }
-}) {
+export default function LocalizedDashboardPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
-  const role = roleSet.has(searchParams.role as Role) ? (searchParams.role as Role) : "agency"
   const t = copy[locale]
   const prefix = `/${locale}`
-  const cards = getCards(role, t)
-  const firstMatch = matchRecords[0]
+  const hotRequest = v4ShipmentRequests[0]
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
-      <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-lblue sm:text-6xl">{t.title[role]}</h1>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro[role]}</p>
-          <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-lblue">
-            <Handshake className="h-4 w-4 text-lgold" />
-            {t.noConnection}
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
+      <section className="rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Badge variant="gold">LBID v4 Workspace</Badge>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-lblue sm:text-5xl">
+              {locale === "zh" ? `${v4Status.companyName} ${t.hello}` : `${t.hello}, ${v4Status.companyName}`}
+            </h1>
+            <p className="mt-2 text-muted-foreground">{t.summary}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="gold">
+              <Link href={`${prefix}/marketplace`}>
+                {t.marketplace} <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`${prefix}/inquiries/new`}>
+                {t.createSr} <PackagePlus className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="gold">
-            <Link href={role === "agency" ? `${prefix}/inquiries/new` : role === "admin" ? `${prefix}/admin` : `${prefix}/quotations/new`}>
-              {t.primary[role]}
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href={`${prefix}/matches/${firstMatch.id}`}>{t.secondary}</Link>
-          </Button>
-        </div>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
-        {cards.map((card) => (
-          <Card key={card.label} className="border-white/10 bg-white/[0.045]">
-            <CardHeader>
-              <card.icon className="h-5 w-5 text-lgold" />
-              <CardTitle>{card.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black text-lblue">{card.value}</div>
-              <div className="mt-1 text-sm text-muted-foreground">{card.meta}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-
-      <section className="mt-6 grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
-        <Card className="border-white/10 bg-white/[0.055]">
-          <CardHeader>
-            <Coins className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.wallet}</CardTitle>
+      <section className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
+        <Card className="border-red-200 bg-white">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-red-600">
+                <Flame className="h-4 w-4" />
+                {t.hot}
+              </div>
+              <CardTitle className="mt-2 text-2xl">{hotRequest.lane}</CardTitle>
+            </div>
+            <Badge variant="gold">{hotRequest.id}</Badge>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            <Metric label={t.freeTokens} value={`${companyProfile.tokenBalanceFree}`} />
-            <Metric label={t.paidTokens} value={`${companyProfile.tokenBalancePaid}`} />
-            <Metric label={t.reputation} value={`${companyProfile.reputationScore}`} />
+          <CardContent>
+            <ShipmentRequestCard request={hotRequest} locale={locale} primary />
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
-            <Star className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.progress}</CardTitle>
+            <CardTitle>{t.month}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 md:grid-cols-5">
-              {matchStages.map((stage, index) => (
-                <div key={stage} className={`rounded-lg border p-3 text-xs font-semibold ${index <= 2 ? "border-lgold/50 bg-lgold/15 text-lgold" : "border-white/10 bg-white/[0.035] text-muted-foreground"}`}>
-                  <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-md bg-white font-mono">{index + 1}</div>
-                  {stage}
-                </div>
-              ))}
+          <CardContent className="grid grid-cols-2 gap-3">
+            {t.stats.map(([label, value]) => (
+              <div key={label} className="rounded-md border border-lblue/10 bg-slate-50 p-4">
+                <div className="text-sm text-muted-foreground">{label}</div>
+                <div className="mt-1 text-3xl font-black text-lblue">{value}</div>
+              </div>
+            ))}
+            <div className="col-span-2 rounded-md border border-lgold/25 bg-lgold/10 p-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#6f5514]">
+                <Coins className="h-4 w-4" />
+                Token 餘額
+              </div>
+              <div className="mt-1 text-3xl font-black text-lblue">{v4Status.tokens}</div>
             </div>
           </CardContent>
         </Card>
       </section>
 
-      <section className="mt-6 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
-        <Card className="border-white/10 bg-white/[0.055]">
+      <section className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-black text-lblue">{t.open}</h2>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`${prefix}/marketplace`}>{t.marketplace}</Link>
+          </Button>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {v4ShipmentRequests.slice(1).map((request) => (
+            <ShipmentRequestCard key={request.id} request={request} locale={locale} />
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_.85fr]">
+        <Card>
           <CardHeader>
-            <CardTitle>{t.latestPartners}</CardTitle>
+            <CardTitle>{t.matches}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {matchRecords.map((match) => (
-              <Link
-                key={match.id}
-                href={`${prefix}/matches/${match.id}`}
-                className="block rounded-lg border border-white/10 bg-white/[0.035] p-4 transition hover:border-lgold/40 hover:bg-lgold/10"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="space-y-4">
+            {v4Matches.map((match) => (
+              <Link key={match.id} href={`${prefix}/matches/${match.id}`} className="block rounded-lg border border-lblue/10 bg-white p-4 transition hover:border-lgold/40 hover:bg-lgold/10">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="font-black text-lblue">{match.agency} x {match.forwarder}</div>
-                    <div className="mt-1 text-sm text-muted-foreground">{match.route} · {match.cargoLane}</div>
+                    <div className="font-black text-lblue">{match.title}</div>
+                    <div className="text-sm text-muted-foreground">{match.route}</div>
                   </div>
-                  <Badge variant="teal">{t.preferred}</Badge>
+                  <Badge variant="teal">{match.status}</Badge>
                 </div>
-                <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
-                  <Metric label={t.introPeriod} value={`${match.introductionPeriodStart} - ${match.introductionPeriodEnd}`} />
-                  <Metric label={t.reorders} value={`${reorders.filter((order) => order.matchRecordId === match.id).length}`} />
-                  <Metric label={t.volume} value={volumeTracking.find((item) => item.matchRecordId === match.id)?.totalVolume ?? "-"} />
-                </div>
+                <ProgressSteps labels={t.stage} active={match.stage} />
               </Link>
             ))}
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
-            <CardTitle>{role === "agency" ? t.reorderCta : t.feePending}</CardTitle>
+            <CardTitle>Why LBID keeps value inside</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {reorders.map((order) => {
-              const match = matchRecords.find((item) => item.id === order.matchRecordId)
-              const fee = calculateIntroductionFee(match?.introductionPeriodStart ?? order.orderDate, order.orderDate, order.agreedPrice)
-
-              return (
-                <div key={order.id} className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-bold text-lblue">{order.id}</div>
-                      <div className="text-sm text-muted-foreground">{match?.route}</div>
-                    </div>
-                    <Badge variant={order.feeStatus === "pending" ? "gold" : "teal"}>{order.feeStatus}</Badge>
-                  </div>
-                  <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-                    <Metric label="Order value" value={`${order.currency} ${order.agreedPrice.toLocaleString()}`} />
-                    <Metric label="Fee rate" value={`${Math.round(fee.feeRate * 100)}%`} />
-                    <Metric label="Fee" value={`${order.currency} ${fee.feeAmount.toLocaleString()}`} />
-                  </div>
-                </div>
-              )
-            })}
+          <CardContent className="space-y-3">
+            <ValueRow icon={ShieldCheck} title="Progressive disclosure" text={t.masked} />
+            <ValueRow icon={FileText} title="Paper trail" text="Quotation、AWB、文件和評分留在平台，方便日後追蹤責任。" />
+            <ValueRow icon={TrendingUp} title="Reputation loop" text="每次完成交易都提升 Directory 排名和信譽資產。" />
           </CardContent>
         </Card>
       </section>
@@ -232,35 +185,93 @@ export default function LocalizedDashboardPage({
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function ShipmentRequestCard({ request, locale, primary = false }: { request: typeof v4ShipmentRequests[number]; locale: Locale; primary?: boolean }) {
+  const t = copy[locale]
+  const filled = Math.round((request.usedSlots / request.totalSlots) * 100)
+  const remaining = request.totalSlots - request.usedSlots
+
   return (
-    <div>
-      <div className="text-muted-foreground">{label}</div>
-      <div className="font-bold text-lblue">{value}</div>
+    <div className={`rounded-lg border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(27,43,94,0.09)] ${primary ? "border-red-200" : "border-lblue/10"}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="font-mono text-xs font-bold text-muted-foreground">{request.flags}</div>
+          <h3 className="mt-1 text-xl font-black text-lblue">{locale === "zh" ? request.lane : request.laneEn}</h3>
+          <div className="mt-1 text-sm text-muted-foreground">{request.cargo}</div>
+        </div>
+        <div className="rounded-md bg-red-50 px-3 py-2 text-right text-red-700">
+          <div className="flex items-center justify-end gap-1 text-xs font-bold uppercase">
+            <Clock3 className="h-3 w-3" />
+            {t.deadline}
+          </div>
+          <div className="font-mono text-lg font-black">{request.deadline}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center justify-between text-sm font-semibold">
+          <span>{request.usedSlots}/{request.totalSlots} {t.slotsUsed}</span>
+          <span className={remaining <= 2 ? "text-red-600" : "text-lblue"}>{remaining} {t.remaining}</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className={`h-full rounded-full ${remaining <= 2 ? "bg-red-600" : "bg-lgold"}`} style={{ width: `${filled}%` }} />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+        <Info icon={Star} label={t.score} value={`>= ${request.reputationRequired}`} />
+        <Info icon={Users} label={t.budget} value={request.budgetLevel} />
+        <Info icon={ShieldCheck} label={t.mode} value={request.mode} />
+      </div>
+
+      <p className="mt-3 rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm text-muted-foreground">{request.routeMask}</p>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button variant="gold">
+          {t.bidNow}
+        </Button>
+        <Button variant="outline">{t.priority}</Button>
+      </div>
     </div>
   )
 }
 
-function getCards(role: Role, t: typeof copy.en) {
-  if (role === "admin") {
-    return [
-      { label: t.openSr, value: inquiries.length.toString(), meta: "awaiting match quality review", icon: Radar },
-      { label: t.fee, value: "HKD 1.3k", meta: "pending introduction fees", icon: ReceiptText },
-      { label: t.quality, value: "96%", meta: "verified partner coverage", icon: ShieldCheck },
-    ]
-  }
+function Info({ icon: Icon, label, value }: { icon: typeof Star; label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-lblue/10 bg-white p-3">
+      <div className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+        <Icon className="h-3 w-3 text-lgold" />
+        {label}
+      </div>
+      <div className="mt-1 font-black text-lblue">{value}</div>
+    </div>
+  )
+}
 
-  if (role === "forwarder") {
-    return [
-      { label: t.openSr, value: "5", meta: "open for sealed bidding", icon: Radar },
-      { label: t.partners, value: matchRecords.length.toString(), meta: "active relationship records", icon: Handshake },
-      { label: t.fee, value: "HKD 1.3k", meta: "pending this month", icon: ReceiptText },
-    ]
-  }
+function ProgressSteps({ labels, active }: { labels: string[]; active: number }) {
+  return (
+    <div className="mt-4 grid grid-cols-5 gap-1">
+      {labels.map((label, index) => {
+        const done = index < active
+        const current = index === active
+        return (
+          <div key={label} className="text-center">
+            <div className={`mx-auto h-3 w-full rounded-full ${done ? "bg-green-600" : current ? "bg-lgold" : "bg-slate-200"}`} />
+            <div className="mt-1 text-[11px] font-semibold text-muted-foreground">{label}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
-  return [
-    { label: t.openSr, value: inquiries.length.toString(), meta: "active shipment requests", icon: PackagePlus },
-    { label: t.partners, value: matchRecords.length.toString(), meta: "preferred partners available", icon: Handshake },
-    { label: t.volume, value: "HKD 53.4k", meta: "tracked relationship value", icon: TrendingUp },
-  ]
+function ValueRow({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title: string; text: string }) {
+  return (
+    <div className="rounded-md border border-lblue/10 bg-slate-50 p-3">
+      <div className="flex items-center gap-2 font-black text-lblue">
+        <Icon className="h-4 w-4 text-lgold" />
+        {title}
+      </div>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
+    </div>
+  )
 }

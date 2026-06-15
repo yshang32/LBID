@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Calculator, CheckCircle2, FileText, LockKeyhole, Plus, Send, Trash2 } from "lucide-react"
+import { Calculator, CheckCircle2, Coins, FileText, LockKeyhole, Plus, Send, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,12 @@ const copy = {
     pdf: "PDF generated",
     reference: "Quotation reference",
     submitted: "Quotation submitted successfully",
+    confirmTitle: "確認提交 sealed quotation",
+    confirmBody: "提交後會扣 1 Token，報價會鎖定。其他 Forwarder 仍然看不到你嘅價格。",
+    confirmSubmit: "確認提交 -1 Token",
+    edit: "返回修改",
+    remaining: "提交後剩餘 Token",
+    pdfPreview: "PDF Preview",
     sealed: "其他 Forwarder 看不到你的報價。Agency 只會看到最終報價內容。",
     hidden: "Internal note 會在真實版本加密儲存，不會出現在 PDF。",
     summary: {
@@ -86,6 +92,12 @@ const copy = {
     pdf: "PDF generated",
     reference: "Quotation reference",
     submitted: "Quotation submitted successfully",
+    confirmTitle: "Confirm sealed quotation submission",
+    confirmBody: "Submitting spends 1 token and locks the quote. Other forwarders still cannot see your price.",
+    confirmSubmit: "Confirm submit -1 Token",
+    edit: "Back to edit",
+    remaining: "Remaining tokens",
+    pdfPreview: "PDF Preview",
     sealed: "Other forwarders cannot see your quotation. The agency only sees your final quotation content.",
     hidden: "Internal notes will be encrypted in production and never appear in the PDF.",
     summary: {
@@ -114,7 +126,9 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
   const t = copy[locale]
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems)
   const [submitted, setSubmitted] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const total = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+  const tokenBalance = companyProfile.tokenBalanceFree + companyProfile.tokenBalancePaid
 
   function updateLineItem(id: string, field: keyof LineItem, value: string) {
     setLineItems((items) =>
@@ -243,7 +257,7 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
               <div className="text-sm text-muted-foreground">USD</div>
               <div className="text-5xl font-black text-lgold">{formatUsd(total)}</div>
             </div>
-            <Button className="w-full" variant="gold" onClick={() => setSubmitted(true)}>
+            <Button className="w-full" variant="gold" onClick={() => setConfirming(true)}>
               <Send className="h-4 w-4" />
               {t.submit}
             </Button>
@@ -263,6 +277,42 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
           </Card>
         ) : null}
       </aside>
+      {confirming ? (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-lblue/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-lg border border-lblue/10 bg-white p-5 shadow-2xl">
+            <h2 className="text-2xl font-black text-lblue">{t.confirmTitle}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{t.confirmBody}</p>
+            <div className="mt-4 grid gap-3 text-sm">
+              <ConfirmLine label={t.total} value={`USD ${formatUsd(total)}`} />
+              <ConfirmLine label="Token cost" value="1 Token" />
+              <ConfirmLine label={t.remaining} value={`${Math.max(0, tokenBalance - 1)}`} />
+            </div>
+            <div className="mt-5 rounded-md border border-lblue/10 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 font-black text-lblue">
+                <FileText className="h-4 w-4 text-lgold" />
+                {t.pdfPreview}
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">{companyProfile.companyName} · {t.summary.route} · USD {formatUsd(total)}</div>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <Button className="flex-1" variant="outline" onClick={() => setConfirming(false)}>{t.edit}</Button>
+              <Button className="flex-1" variant="gold" onClick={() => { setConfirming(false); setSubmitted(true) }}>
+                <Coins className="h-4 w-4" />
+                {t.confirmSubmit}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
+  )
+}
+
+function ConfirmLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-lblue/10 bg-slate-50 p-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-black text-lblue">{value}</span>
+    </div>
   )
 }

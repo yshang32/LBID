@@ -6,27 +6,29 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { companyProfile, getMonthlyFreeTokenGrant, rateCards } from "@/lib/data"
 import { isLocale, type Locale } from "@/lib/i18n"
+import { v4Status } from "@/lib/v4"
 
 const copy = {
   zh: {
     badge: "Company Profile",
-    title: "Forwarder 公開 Profile 和營運狀態。",
-    intro: "Profile 同時展示公司資料、reputation、directory 排名、subscription、token balance 和 rate cards。",
+    title: "公司 Profile 同時係信譽資產。",
+    intro: "用家會透過 Profile 判斷你是否值得邀請 sealed bid。這裡集中管理公開資料、reputation、Directory 排名、Token 和會員狀態。",
     reputation: "Reputation score",
     rank: "Directory 排名",
-    subscription: "Subscription",
+    subscription: "會員狀態",
     tokens: "Token balance",
-    monthlyGrant: "下月 free token",
+    monthlyGrant: "下月 Token grant",
     manageTokens: "管理 Tokens",
     subscriptionCta: "管理訂閱",
-    tabs: ["公司資料", "服務優勢", "Quotation 設定", "Rate Cards"],
+    tabs: ["公開公司資料", "服務優勢", "Quotation 設定", "Rate Cards"],
     public: "Public profile",
     verified: "Reputation badge",
+    disclosure: "聯絡資料會在 Match award 後才完整解鎖，避免未成交前繞過平台。",
   },
   en: {
     badge: "Company Profile",
-    title: "Forwarder public profile and operating status.",
-    intro: "The profile combines company data, reputation, directory rank, subscription, token balance and rate cards.",
+    title: "Your company profile is a reputation asset.",
+    intro: "Clients use the profile to decide whether to invite you into sealed bids. Manage public data, reputation, Directory rank, tokens and membership here.",
     reputation: "Reputation score",
     rank: "Directory rank",
     subscription: "Subscription",
@@ -37,6 +39,7 @@ const copy = {
     tabs: ["Company", "Advantages", "Quotation Setup", "Rate Cards"],
     public: "Public profile",
     verified: "Reputation badge",
+    disclosure: "Full contacts unlock only after match award to keep pre-award workflow inside LBID.",
   },
 }
 
@@ -69,6 +72,7 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
             <div className="flex flex-wrap gap-2">
               {companyProfile.advantageTags.map((tag) => <Badge key={tag} variant="teal">{tag}</Badge>)}
             </div>
+            <div className="rounded-md border border-lblue/10 bg-white p-3 text-sm text-muted-foreground">{t.disclosure}</div>
           </CardContent>
         </Card>
       </section>
@@ -76,19 +80,19 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
       <section className="mt-8 grid gap-4 md:grid-cols-4">
         <StatusCard icon={Star} label={t.reputation} value={`${companyProfile.reputationScore}`} meta={companyProfile.reputationScore >= 50 ? t.verified : "Growing"} />
         <StatusCard icon={LineChart} label={t.rank} value={`#${companyProfile.directoryRank}`} meta="HK cold-chain lane" />
-        <StatusCard icon={ShieldCheck} label={t.subscription} value={companyProfile.membershipStatus} meta={`Until ${companyProfile.trialEndsAt}`} />
-        <StatusCard icon={Coins} label={t.tokens} value={`${totalTokens}`} meta={`${companyProfile.tokenBalanceFree} free / ${companyProfile.tokenBalancePaid} paid`} />
+        <StatusCard icon={ShieldCheck} label={t.subscription} value={locale === "zh" ? v4Status.membership : "Monthly Member"} meta={`Until ${companyProfile.trialEndsAt}`} />
+        <StatusCard icon={Coins} label={t.tokens} value={`${v4Status.tokens}`} meta={`${companyProfile.tokenBalanceFree} free / ${companyProfile.tokenBalancePaid} paid`} />
       </section>
 
       <section className="mt-6 grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <CardTitle>{t.public}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               {t.tabs.map((tab) => (
-                <div key={tab} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-sm font-semibold text-lblue">
+                <div key={tab} className="rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm font-semibold text-lblue">
                   {tab}
                 </div>
               ))}
@@ -110,13 +114,13 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <CardTitle>Rate Cards</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {rateCards.map((rateCard) => (
-              <div key={rateCard.id} className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
+              <div key={rateCard.id} className="rounded-md border border-lblue/10 bg-slate-50 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="font-black text-lblue">{rateCard.route}</div>
@@ -140,7 +144,7 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
 
 function StatusCard({ icon: Icon, label, value, meta }: { icon: typeof Star; label: string; value: string; meta: string }) {
   return (
-    <Card className="border-white/10 bg-white/[0.045]">
+    <Card>
       <CardHeader>
         <Icon className="h-5 w-5 text-lgold" />
         <CardTitle>{label}</CardTitle>

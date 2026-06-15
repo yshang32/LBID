@@ -39,6 +39,15 @@ export async function POST(request: Request) {
       if (error.message.includes("PROFILE_NOT_FOUND")) {
         return NextResponse.json({ error: "PROFILE_NOT_FOUND", redirect: "/onboarding/forwarder" }, { status: 404 })
       }
+      if (error.message.includes("BID_ALREADY_SUBMITTED")) {
+        return NextResponse.json({ error: "BID_ALREADY_SUBMITTED" }, { status: 409 })
+      }
+      if (error.message.includes("SHIPMENT_REQUEST_NOT_OPEN")) {
+        return NextResponse.json({ error: "SHIPMENT_REQUEST_NOT_OPEN" }, { status: 409 })
+      }
+      if (error.message.includes("UNAUTHORIZED")) {
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 403 })
+      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

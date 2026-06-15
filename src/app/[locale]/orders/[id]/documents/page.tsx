@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { AlertTriangle, CheckCircle2, Clock, FileCheck2, UploadCloud } from "lucide-react"
+import { AlertTriangle, BellRing, CheckCircle2, Clock, FileCheck2, UploadCloud } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,10 @@ const copy = {
     confirm: "電子確認",
     reminder: "提醒狀態",
     reminderText: "Packing List 尚未上傳，將在出貨前 24 小時觸發 email + 站內通知。",
+    sendReminder: "立即發送提醒",
+    reminderSent: "提醒已加入通知中心",
+    progress: "文件完成率",
+    next: "下一步",
     complete: "文件已齊",
     incomplete: "仍有必須文件待補",
     back: "返回訂單工作區",
@@ -65,6 +69,10 @@ const copy = {
     confirm: "E-confirm",
     reminder: "Reminder status",
     reminderText: "Packing List is still missing and will trigger email + in-app reminder 24 hours before ship date.",
+    sendReminder: "Send reminder now",
+    reminderSent: "Reminder queued in notification center",
+    progress: "Document progress",
+    next: "Next step",
     complete: "All required documents ready",
     incomplete: "Required documents still missing",
     back: "Back to order workspace",
@@ -76,7 +84,9 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
   const [documents, setDocuments] = useState(baseDocuments)
+  const [reminderSent, setReminderSent] = useState(false)
   const requiredComplete = documents.filter((doc) => doc.required).every((doc) => doc.uploaded)
+  const progress = Math.round((documents.filter((doc) => doc.uploaded).length / documents.length) * 100)
 
   function markUploaded(id: string) {
     setDocuments((items) => items.map((item) => item.id === id ? { ...item, uploaded: true } : item))
@@ -108,7 +118,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
         </Card>
       </section>
       <section className="mt-8 grid gap-5 lg:grid-cols-[1fr_360px]">
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <FileCheck2 className="h-5 w-5 text-lgold" />
             <CardTitle>{t.checklist}</CardTitle>
@@ -116,7 +126,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
           </CardHeader>
           <CardContent className="space-y-3">
             {documents.map((document) => (
-              <div key={document.id} className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-4 md:grid-cols-[1fr_auto] md:items-center">
+              <div key={document.id} className="grid gap-3 rounded-lg border border-lblue/10 bg-slate-50 p-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-bold">{document.name}</h2>
@@ -147,15 +157,47 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
               <CardTitle>{requiredComplete ? t.complete : t.incomplete}</CardTitle>
             </CardHeader>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.progress}</CardTitle>
+              <CardDescription>{progress}%</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-lgold" style={{ width: `${progress}%` }} />
+              </div>
+            </CardContent>
+          </Card>
           <Button asChild className="w-full" variant="gold">
             <Link href={`/${locale}/orders/${params.id}/awb`}>{t.awb}</Link>
           </Button>
-          <Card className="border-white/10 bg-white/[0.045]">
+          <Card>
             <CardHeader>
               <Clock className="h-5 w-5 text-lgold" />
               <CardTitle>{t.reminder}</CardTitle>
-              <CardDescription>{requiredComplete ? t.complete : t.reminderText}</CardDescription>
+              <CardDescription>{requiredComplete ? t.complete : reminderSent ? t.reminderSent : t.reminderText}</CardDescription>
             </CardHeader>
+            {!requiredComplete ? (
+              <CardContent>
+                <Button className="w-full" variant="outline" onClick={() => setReminderSent(true)}>
+                  <BellRing className="h-4 w-4" />
+                  {reminderSent ? t.reminderSent : t.sendReminder}
+                </Button>
+              </CardContent>
+            ) : null}
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.next}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/${locale}/orders/${params.id}/messages`}>Open messages</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/${locale}/orders/${params.id}/review`}>Completion review</Link>
+              </Button>
+            </CardContent>
           </Card>
           <Button asChild className="w-full" variant="outline">
             <Link href={`/${locale}/orders/${params.id}`}>{t.back}</Link>

@@ -22,6 +22,11 @@ const copy = {
     preview: "AWB preview",
     generate: "生成 AWB PDF preview",
     generated: "AWB PDF preview 已生成",
+    saved: "已保存到文件清單",
+    save: "保存到文件清單",
+    status: "Preview 狀態",
+    markGenerated: "標記 AWB preview 已生成",
+    markSaved: "標記已保存到文件清單",
     back: "返回文件管理",
     shipper: "Shipper",
     consignee: "Consignee",
@@ -48,6 +53,11 @@ const copy = {
     preview: "AWB preview",
     generate: "Generate AWB PDF preview",
     generated: "AWB PDF preview generated",
+    saved: "Saved to document checklist",
+    save: "Save to documents",
+    status: "Preview status",
+    markGenerated: "Mark AWB preview generated",
+    markSaved: "Mark saved to document checklist",
     back: "Back to documents",
     shipper: "Shipper",
     consignee: "Consignee",
@@ -75,6 +85,7 @@ export default function AwbPage({ params }: { params: { locale: string; id: stri
   const [width, setWidth] = useState(45)
   const [height, setHeight] = useState(40)
   const [generated, setGenerated] = useState(false)
+  const [saved, setSaved] = useState(false)
   const volumetric = Math.ceil((length * width * height * pieces) / 6000)
   const chargeable = Math.max(gross, volumetric)
 
@@ -86,7 +97,7 @@ export default function AwbPage({ params }: { params: { locale: string; id: stri
           <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
           <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <Plane className="h-5 w-5 text-lgold" />
             <CardTitle>{t.parties}</CardTitle>
@@ -97,7 +108,7 @@ export default function AwbPage({ params }: { params: { locale: string; id: stri
             <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.airport}<Input defaultValue="BOM / HKG" /></label>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <Calculator className="h-5 w-5 text-lgold" />
             <CardTitle>{t.cargo}</CardTitle>
@@ -127,28 +138,52 @@ export default function AwbPage({ params }: { params: { locale: string; id: stri
               <div className="text-sm text-muted-foreground">{t.chargeable}</div>
               <div className="text-4xl font-black text-lgold">{chargeable.toLocaleString()} kg</div>
             </div>
-            <Button className="w-full" variant="gold" onClick={() => setGenerated(true)}>
+            <button
+              type="button"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-b from-[#d8bc66] to-lgold px-4 py-2 text-sm font-semibold text-[#171104] shadow-[0_12px_28px_rgba(201,168,76,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#dfc777] hover:to-[#bd9b3e]"
+              onClick={() => setGenerated(true)}
+            >
               <Send className="h-4 w-4" />
               {t.generate}
-            </Button>
+            </button>
+            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-lblue/10 bg-white p-3 text-sm font-semibold text-lblue">
+              <input type="checkbox" checked={generated} onChange={(event) => setGenerated(event.target.checked)} />
+              {t.markGenerated}
+            </label>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-white/[0.045]">
+        <Card>
           <CardHeader>
             <FileText className="h-5 w-5 text-lgold" />
             <CardTitle>{t.preview}</CardTitle>
             <CardDescription>{t.note}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+            <div className="rounded-lg border border-lblue/10 bg-slate-50 p-3">
               <div className="font-mono text-lgold">AWB-DEMO-{params.id.slice(-4)}</div>
               <div>BOM → HKG · {pieces} pcs · {chargeable} kg</div>
             </div>
             {generated ? (
-              <div className="flex items-center gap-2 rounded-lg border border-teal-400/30 bg-teal-400/10 p-3 text-teal-200">
+              <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-green-800">
                 <CheckCircle2 className="h-4 w-4" />
                 {t.generated}
               </div>
+            ) : null}
+            {generated ? (
+              <button
+                type="button"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-b from-[#d8bc66] to-lgold px-4 py-2 text-sm font-semibold text-[#171104] shadow-[0_12px_28px_rgba(201,168,76,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#dfc777] hover:to-[#bd9b3e]"
+                onClick={() => setSaved(true)}
+              >
+                <FileText className="h-4 w-4" />
+                {saved ? t.saved : t.save}
+              </button>
+            ) : null}
+            {generated ? (
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm font-semibold text-lblue">
+                <input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} />
+                {t.markSaved}
+              </label>
             ) : null}
             <Button asChild className="w-full" variant="outline">
               <Link href={`/${locale}/orders/${params.id}/documents`}>{t.back}</Link>
@@ -162,9 +197,9 @@ export default function AwbPage({ params }: { params: { locale: string; id: stri
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+    <div className="rounded-lg border border-lblue/10 bg-white p-4">
       <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="text-2xl font-black">{value}</div>
+      <div className="text-2xl font-black text-lblue">{value}</div>
     </div>
   )
 }

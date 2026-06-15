@@ -1,3 +1,6 @@
+ "use client"
+
+import { useState } from "react"
 import { Banknote, CheckCircle2, Clock, CreditCard, XCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +23,9 @@ const copy = {
     amount: "金額",
     type: "類型",
     proof: "付款證明",
+    confirmed: "Confirmed",
+    rejected: "Rejected",
+    tokenEffect: "Token / membership effect",
   },
   en: {
     badge: "Pending Payments",
@@ -32,6 +38,9 @@ const copy = {
     amount: "Amount",
     type: "Type",
     proof: "Proof",
+    confirmed: "Confirmed",
+    rejected: "Rejected",
+    tokenEffect: "Token / membership effect",
   },
 }
 
@@ -59,6 +68,7 @@ const pendingPayments = [
 export default function PendingPaymentsPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
+  const [statuses, setStatuses] = useState<Record<string, "pending" | "confirmed" | "rejected">>({})
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
@@ -68,16 +78,16 @@ export default function PendingPaymentsPage({ params }: { params: { locale: stri
 
       <section className="mt-8 grid gap-4">
         {pendingPayments.map((payment) => (
-          <Card key={payment.id} className="border-white/10 bg-white/[0.055]">
+          <Card key={payment.id}>
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>{payment.company}</CardTitle>
                   <div className="mt-1 font-mono text-sm text-muted-foreground">{payment.reference}</div>
                 </div>
-                <Badge variant="gold">
+                <Badge variant={statuses[payment.id] === "confirmed" ? "teal" : statuses[payment.id] === "rejected" ? "secondary" : "gold"}>
                   <Clock className="mr-1 h-3 w-3" />
-                  {t.pending}
+                  {statuses[payment.id] === "confirmed" ? t.confirmed : statuses[payment.id] === "rejected" ? t.rejected : t.pending}
                 </Badge>
               </div>
             </CardHeader>
@@ -87,13 +97,14 @@ export default function PendingPaymentsPage({ params }: { params: { locale: stri
                 <Metric icon={Banknote} label={t.method} value={payment.method} />
                 <Metric icon={CreditCard} label={t.amount} value={payment.amount} />
                 <Metric icon={Clock} label={t.proof} value={payment.proof} />
+                <Metric icon={CheckCircle2} label={t.tokenEffect} value={payment.type === "token_purchase" ? "+20 tokens" : "Monthly member"} />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => setStatuses((items) => ({ ...items, [payment.id]: "rejected" }))}>
                   <XCircle className="h-4 w-4" />
                   {t.reject}
                 </Button>
-                <Button variant="gold">
+                <Button variant="gold" onClick={() => setStatuses((items) => ({ ...items, [payment.id]: "confirmed" }))}>
                   <CheckCircle2 className="h-4 w-4" />
                   {t.confirm}
                 </Button>

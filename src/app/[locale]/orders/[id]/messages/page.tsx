@@ -70,6 +70,7 @@ const copy = {
     read: "已讀",
     unread: "未讀",
     realtime: "Production 會用 Supabase Realtime 訂閱 messages table。",
+    guarded: "偵測到外部聯絡資料。請把交易溝通留在 LBID，避免違反平台守則。",
     back: "返回訂單工作區",
     placeholder: "例如：請確認 AWB 草稿、ship date 或文件狀態。",
     sentPrefix: "Agency",
@@ -89,6 +90,7 @@ const copy = {
     read: "Read",
     unread: "Unread",
     realtime: "Production subscribes to the messages table with Supabase Realtime.",
+    guarded: "External contact details detected. Keep trade communication inside LBID to follow platform rules.",
     back: "Back to order workspace",
     placeholder: "Example: Please confirm AWB draft, ship date or document status.",
     sentPrefix: "Agency",
@@ -100,6 +102,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
   const t = copy[locale]
   const [messages, setMessages] = useState(initialMessages)
   const [draft, setDraft] = useState(locale === "zh" ? "請確認 AWB 草稿和 pickup window。" : "Please confirm AWB draft and pickup window.")
+  const contactDetected = /(\+?\d[\d\s-]{7,}|@|whatsapp|wa\.me|電話|電郵|email)/i.test(draft)
 
   function sendMessage() {
     const content = draft.trim()
@@ -126,7 +129,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
           <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
           <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
-        <Card className="border-white/10 bg-white/[0.055]">
+        <Card>
           <CardHeader>
             <MessageSquare className="h-5 w-5 text-lgold" />
             <CardTitle>{t.thread}</CardTitle>
@@ -136,7 +139,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`rounded-lg border p-4 ${message.system ? "border-lgold/30 bg-lgold/10" : message.sender === "Agency" ? "border-teal-400/20 bg-teal-400/10" : "border-white/10 bg-white/[0.035]"}`}
+                className={`rounded-lg border p-4 ${message.system ? "border-lgold/30 bg-lgold/10" : message.sender === "Agency" ? "border-teal-400/20 bg-teal-400/10" : "border-lblue/10 bg-slate-50"}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -150,7 +153,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
                 </div>
                 <p className="mt-3 text-sm leading-6">{message.content}</p>
                 {message.attachment ? (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 py-2 text-sm text-lgold">
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-lblue/10 bg-white px-3 py-2 text-sm text-lgold">
                     <Paperclip className="h-4 w-4" />
                     {message.attachment}
                   </div>
@@ -161,7 +164,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
         </Card>
       </section>
       <aside className="space-y-5">
-        <Card className="border-white/10 bg-white/[0.045]">
+        <Card>
           <CardContent className="space-y-3 p-4">
             <div>
               <div className="text-sm text-muted-foreground">{t.order}</div>
@@ -170,18 +173,21 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
             <div>
               <div className="text-sm text-muted-foreground">{t.participants}</div>
               <div className="mt-2 grid gap-2 text-sm">
-                <div className="rounded-md border border-white/10 bg-white/[0.035] p-2">{t.agency}</div>
-                <div className="rounded-md border border-white/10 bg-white/[0.035] p-2">{t.forwarder}</div>
+                <div className="rounded-md border border-lblue/10 bg-slate-50 p-2">{t.agency}</div>
+                <div className="rounded-md border border-lblue/10 bg-slate-50 p-2">{t.forwarder}</div>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="sticky top-24 border-white/10 bg-white/[0.055]">
+        <Card className="sticky top-24">
           <CardHeader>
             <CardTitle>{t.compose}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={t.placeholder} />
+            {contactDetected ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{t.guarded}</div>
+            ) : null}
             <Input type="file" />
             <Button className="w-full" variant="gold" onClick={sendMessage}>
               <Send className="h-4 w-4" />
