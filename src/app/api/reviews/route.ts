@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
@@ -29,8 +29,28 @@ export async function POST(request: Request) {
   const scoreChange = rating >= 4 ? 2 : rating <= 2 ? -3 : 0
 
   if (session) {
-    if (!body.orderId || !body.forwarderId) {
-      return NextResponse.json({ error: "ORDER_AND_FORWARDER_REQUIRED" }, { status: 400 })
+    if (!body.orderId) {
+      return NextResponse.json({ error: "ORDER_REQUIRED" }, { status: 400 })
+    }
+
+    let forwarderId = body.forwarderId
+    if (!forwarderId) {
+      const service = getApiSupabaseServiceClient()
+      if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+
+      const { data: order, error: orderError } = await service
+        .from("orders")
+        .select("quotation_id, quotations(forwarder_id)")
+        .eq("id", body.orderId)
+        .maybeSingle()
+
+      if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 })
+      const quotation = Array.isArray(order?.quotations) ? order?.quotations[0] : order?.quotations
+      forwarderId = quotation?.forwarder_id
+    }
+
+    if (!forwarderId) {
+      return NextResponse.json({ error: "FORWARDER_NOT_FOUND_FOR_ORDER" }, { status: 404 })
     }
 
     const { data, error } = await session.supabase
@@ -38,7 +58,7 @@ export async function POST(request: Request) {
       .insert({
         order_id: body.orderId,
         agency_id: session.user.id,
-        forwarder_id: body.forwarderId,
+        forwarder_id: forwarderId,
         rating,
         comment: body.comment ?? null,
       })
