@@ -1,12 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Award, CheckCircle2, FileText, ShieldCheck, Star, Timer } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 type Quote = {
@@ -90,6 +91,10 @@ export default function QuotationComparePage({ params }: { params: { locale: str
   const [acceptedQuote, setAcceptedQuote] = useState<Quote | null>(null)
   const [sort, setSort] = useState<"price" | "transit" | "rating">("price")
   const [shortlisted, setShortlisted] = useState<string[]>([])
+  const [bidId, setBidId] = useState("")
+  const [orderId, setOrderId] = useState("LBID-ORD-2026-0001")
+  const [accepting, setAccepting] = useState(false)
+  const [error, setError] = useState("")
   const sortedQuotes = [...quotes].sort((a, b) => {
     if (sort === "rating") return b.rating - a.rating
     if (sort === "transit") return Number.parseInt(a.transit) - Number.parseInt(b.transit)
@@ -98,6 +103,35 @@ export default function QuotationComparePage({ params }: { params: { locale: str
 
   function toggleShortlist(id: string) {
     setShortlisted((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id])
+  }
+
+  useEffect(() => {
+    setBidId(new URLSearchParams(window.location.search).get("bidId") ?? "")
+  }, [])
+
+  async function acceptQuote(quote: Quote) {
+    setError("")
+    setAccepting(true)
+
+    if (bidId) {
+      const { response, body } = await apiJson(`/api/bids/${bidId}/accept`, {
+        method: "POST",
+        body: JSON.stringify({ totalAmount: quote.total }),
+      })
+
+      setAccepting(false)
+      if (!response.ok) {
+        setError(body.error || "Unable to accept bid")
+        return
+      }
+
+      setOrderId(body.order?.id || "LBID-ORD-2026-0001")
+      setAcceptedQuote(quote)
+      return
+    }
+
+    setAccepting(false)
+    setAcceptedQuote(quote)
   }
 
   return (
@@ -148,8 +182,8 @@ export default function QuotationComparePage({ params }: { params: { locale: str
                   <Button variant={shortlisted.includes(quote.id) ? "secondary" : "outline"} onClick={() => toggleShortlist(quote.id)}>
                     {shortlisted.includes(quote.id) ? t.shortlisted : t.shortlist}
                   </Button>
-                  <Button variant={isAccepted ? "secondary" : "gold"} onClick={() => setAcceptedQuote(quote)}>
-                    {isAccepted ? t.accepted : t.accept}
+                  <Button variant={isAccepted ? "secondary" : "gold"} disabled={accepting} onClick={() => acceptQuote(quote)}>
+                    {accepting ? "Accepting..." : isAccepted ? t.accepted : t.accept}
                   </Button>
                 </div>
               </CardContent>
@@ -160,6 +194,11 @@ export default function QuotationComparePage({ params }: { params: { locale: str
       <Card className="mt-5 border-white/10 bg-white/[0.045]">
         <CardContent className="p-4 text-sm text-muted-foreground">{t.note}</CardContent>
       </Card>
+      {error ? (
+        <Card className="mt-5 border-red-400/30 bg-red-400/10">
+          <CardContent className="p-4 text-sm font-semibold text-red-100">{error}</CardContent>
+        </Card>
+      ) : null}
       {acceptedQuote ? (
         <Card className="mt-5 border-teal-400/30 bg-teal-400/10">
           <CardHeader>
@@ -170,11 +209,11 @@ export default function QuotationComparePage({ params }: { params: { locale: str
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm text-muted-foreground">{t.orderRef}</div>
-              <div className="font-mono text-2xl font-black text-lgold">LBID-ORD-2026-0001</div>
+              <div className="break-all font-mono text-2xl font-black text-lgold">{orderId}</div>
               <div className="mt-1 text-sm text-muted-foreground">{acceptedQuote.forwarder} · USD {formatMoney(acceptedQuote.total)}</div>
             </div>
             <Button asChild variant="gold">
-              <Link href={`/${locale}/orders/LBID-ORD-2026-0001`}>{t.next}</Link>
+              <Link href={`/${locale}/orders/${orderId}`}>{t.next}</Link>
             </Button>
           </CardContent>
         </Card>

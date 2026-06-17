@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 type RatingKey = "overall" | "communication" | "price" | "speed" | "documents" | "resolution"
@@ -16,30 +17,26 @@ type RatingKey = "overall" | "communication" | "price" | "speed" | "documents" |
 const copy = {
   zh: {
     badge: "Completion review",
-    title: "完成後評價 Forwarder。",
-    intro: "Agency 在訂單完成後提交評價。評分會影響 Forwarder profile、badge、points 和搜尋排序。",
+    title: "完成後評價 Forwarder",
+    intro: "訂單完成後，Agency 可提交評價。評分會影響 Forwarder profile、徽章、points 和搜尋排名。",
     order: "Order reference",
     forwarder: "Forwarder",
     submit: "提交評價",
     submitted: "評價已提交",
-    back: "返回訂單工作區",
+    back: "返回訂單工作台",
     wouldRecommend: "會否推薦",
     comment: "評價內容",
-    placeholder: "例如：回覆快，文件清楚，派送準時。",
-    note: "Production 會寫入 reviews table，並為 Forwarder 自動加 points。",
+    placeholder: "例如：回覆快、文件清楚、準時送達。",
+    note: "Production 會寫入 reviews table。",
     labels: {
-      overall: "整體評分",
+      overall: "整體",
       communication: "溝通",
       price: "價格",
       speed: "速度",
       documents: "文件處理",
       resolution: "問題處理",
     },
-    recommend: {
-      yes: "會",
-      maybe: "視乎情況",
-      no: "不會",
-    },
+    recommend: { yes: "會", maybe: "可能", no: "不會" },
     points: "Forwarder earned +80 points for 5-star review preview.",
     average: "平均分",
   },
@@ -55,7 +52,7 @@ const copy = {
     wouldRecommend: "Would recommend",
     comment: "Review comment",
     placeholder: "Example: Fast response, clear documents, on-time delivery.",
-    note: "Production writes to the reviews table and automatically awards forwarder points.",
+    note: "Production writes to the reviews table.",
     labels: {
       overall: "Overall",
       communication: "Communication",
@@ -64,11 +61,7 @@ const copy = {
       documents: "Documents",
       resolution: "Problem resolution",
     },
-    recommend: {
-      yes: "Yes",
-      maybe: "Maybe",
-      no: "No",
-    },
+    recommend: { yes: "Yes", maybe: "Maybe", no: "No" },
     points: "Forwarder earned +80 points for 5-star review preview.",
     average: "Average score",
   },
@@ -88,13 +81,36 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
     resolution: 4,
   })
   const [recommend, setRecommend] = useState("yes")
-  const [comment, setComment] = useState(locale === "zh" ? "回覆快，文件清楚，派送準時。" : "Fast response, clear documents, on-time delivery.")
+  const [comment, setComment] = useState(locale === "zh" ? "回覆快，文件清楚，準時送達。" : "Fast response, clear documents, on-time delivery.")
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
   const average = Number((Object.values(ratings).reduce((sum, value) => sum + value, 0) / ratingKeys.length).toFixed(1))
   const pointPreview = average >= 4.8 ? 80 : average >= 4.2 ? 50 : 20
 
   function updateRating(key: RatingKey, value: number) {
     setRatings((items) => ({ ...items, [key]: value }))
+  }
+
+  async function submitReview() {
+    setSubmitting(true)
+    setError("")
+    const { response, body } = await apiJson("/api/reviews", {
+      method: "POST",
+      body: JSON.stringify({
+        orderId: params.id,
+        rating: Math.round(average),
+        comment: `${comment}\nRecommend: ${recommend}`,
+      }),
+    })
+
+    setSubmitting(false)
+    if (!response.ok) {
+      setError(body.error || "Unable to submit review")
+      return
+    }
+
+    setSubmitted(true)
   }
 
   return (
@@ -113,12 +129,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {ratingKeys.map((key) => (
-              <RatingControl
-                key={key}
-                label={t.labels[key]}
-                value={ratings[key]}
-                onChange={(value) => updateRating(key, value)}
-              />
+              <RatingControl key={key} label={t.labels[key]} value={ratings[key]} onChange={(value) => updateRating(key, value)} />
             ))}
             <label className="space-y-2 text-sm font-semibold">
               {t.wouldRecommend}
@@ -132,9 +143,10 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
               {t.comment}
               <Textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder={t.placeholder} />
             </label>
-            <Button className="md:col-span-2" variant="gold" onClick={() => setSubmitted(true)}>
+            {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 md:col-span-2">{error}</div> : null}
+            <Button className="md:col-span-2" variant="gold" disabled={submitting} onClick={submitReview}>
               <MessageSquareReply className="h-4 w-4" />
-              {t.submit}
+              {submitting ? "Submitting..." : t.submit}
             </Button>
           </CardContent>
         </Card>
@@ -144,11 +156,11 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
           <CardContent className="space-y-3 p-4">
             <div>
               <div className="text-sm text-muted-foreground">{t.order}</div>
-              <div className="font-mono text-xl font-black text-lgold">{params.id}</div>
+              <div className="break-all font-mono text-xl font-black text-lgold">{params.id}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.forwarder}</div>
-              <div className="font-bold">HarbourLink Cargo</div>
+              <div className="font-bold">Forwarder ID from URL</div>
             </div>
           </CardContent>
         </Card>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { v4ShipmentRequests, v4Status } from "@/lib/v4"
 
@@ -72,7 +73,7 @@ export default function MarketplaceDetailPage({ params }: { params: { locale: st
   if (!isLocale(params.locale)) notFound()
   const locale = params.locale as Locale
   const t = copy[locale]
-  const request = v4ShipmentRequests.find((item) => item.id === params.id)
+  const request = v4ShipmentRequests.find((item) => item.id === params.id) ?? makeLiveRequest(params.id)
   if (!request) notFound()
 
   const [amount, setAmount] = useState("1500")
@@ -80,6 +81,9 @@ export default function MarketplaceDetailPage({ params }: { params: { locale: st
   const [remarks, setRemarks] = useState("Includes local delivery and document handling.")
   const [confirming, setConfirming] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+  const [bidId, setBidId] = useState("")
   const remaining = request.totalSlots - request.usedSlots
   const filled = Math.round((request.usedSlots / request.totalSlots) * 100)
   const remainingTokens = Math.max(0, v4Status.tokens - request.tokenCost)
@@ -89,6 +93,32 @@ export default function MarketplaceDetailPage({ params }: { params: { locale: st
     { name: "Forwarder B", score: 38, transit: "6 days" },
     { name: "Forwarder C", score: 51, transit: "4-5 days" },
   ].slice(0, request.usedSlots), [request.usedSlots])
+
+  async function submitBid() {
+    setSubmitting(true)
+    setError("")
+
+    const { response, body } = await apiJson("/api/bids", {
+      method: "POST",
+      body: JSON.stringify({
+        sr_id: params.id,
+        price: Number(amount),
+        currency: "HKD",
+        transit_time: transit,
+        terms: remarks,
+      }),
+    })
+
+    setSubmitting(false)
+    if (!response.ok) {
+      setError(body.error || "Unable to submit bid")
+      return
+    }
+
+    setBidId(body.bid_id || body.bid?.id || "")
+    setConfirming(false)
+    setSubmitted(true)
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
@@ -209,6 +239,17 @@ export default function MarketplaceDetailPage({ params }: { params: { locale: st
               <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-800">
                 <CheckCircle2 className="mr-1 inline h-4 w-4" />
                 {t.success}
+                {bidId ? <div className="mt-1 break-all font-mono text-xs">Bid ID: {bidId}</div> : null}
+                {bidId ? (
+                  <Button asChild className="mt-3 w-full" variant="outline">
+                    <Link href={`/${locale}/quotations/compare?bidId=${bidId}`}>Review / accept bid</Link>
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            {error ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                {error}
               </div>
             ) : null}
           </CardContent>
@@ -227,13 +268,36 @@ export default function MarketplaceDetailPage({ params }: { params: { locale: st
             </div>
             <div className="mt-5 flex gap-2">
               <Button className="flex-1" variant="outline" onClick={() => setConfirming(false)}>{t.edit}</Button>
-              <Button className="flex-1" variant="gold" onClick={() => { setConfirming(false); setSubmitted(true) }}>{t.confirm}</Button>
+              <Button className="flex-1" variant="gold" disabled={submitting} onClick={submitBid}>
+                {submitting ? "Submitting..." : t.confirm}
+              </Button>
             </div>
           </div>
         </div>
       ) : null}
     </main>
   )
+}
+
+function makeLiveRequest(id: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null
+
+  return {
+    id,
+    lane: "即時 SR",
+    laneEn: "Live shipment request",
+    flags: "Live",
+    cargo: "Shipment request created from LBID",
+    routeMask: "Origin -> Hong Kong",
+    mode: "Air / Sea",
+    deadline: "3h",
+    usedSlots: 0,
+    totalSlots: 5,
+    reputationRequired: 0,
+    budgetLevel: "sealed",
+    tokenCost: 1,
+    hot: false,
+  }
 }
 
 function Info({ label, value }: { label: string; value: string }) {

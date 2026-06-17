@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { v4Status } from "@/lib/v4"
 
@@ -118,12 +119,54 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
   const [selectedServices, setSelectedServices] = useState<string[]>([t.serviceOptions[0], t.serviceOptions[2]])
   const [overQuota, setOverQuota] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [origin, setOrigin] = useState("Ho Chi Minh City, Vietnam")
+  const [destination, setDestination] = useState("Hong Kong, Kwai Chung / Airport area")
+  const [shipDate, setShipDate] = useState("2026-07-08")
+  const [bidDeadline, setBidDeadline] = useState("2026-06-15T18:00")
+  const [commodity, setCommodity] = useState("Chilled food samples, non-DG")
+  const [pieces, setPieces] = useState("18")
+  const [notes, setNotes] = useState("Temperature controlled handling preferred. Client contact unlocks after award only.")
+  const [srReference, setSrReference] = useState("SR-2026-00126")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
   const volumetricWeight = Math.round(volume * 167)
   const chargeableWeight = mode === "air" ? Math.max(grossWeight, volumetricWeight) : grossWeight
   const tokenAfterSubmit = useMemo(() => Math.max(0, v4Status.tokens - (overQuota ? 1 : 0)), [overQuota])
 
   function toggleService(service: string) {
     setSelectedServices((items) => items.includes(service) ? items.filter((item) => item !== service) : [...items, service])
+  }
+
+  async function submitShipmentRequest() {
+    setSubmitting(true)
+    setError("")
+
+    const { response, body } = await apiJson("/api/shipment-requests", {
+      method: "POST",
+      body: JSON.stringify({
+        mode,
+        origin,
+        destination,
+        shipDate: new Date(`${shipDate}T00:00:00`).toISOString(),
+        bidDeadline: new Date(bidDeadline).toISOString(),
+        commodity,
+        grossWeight,
+        volume,
+        pieces: Number(pieces) || 0,
+        servicesNeeded: selectedServices,
+        notes,
+        status: "OPEN",
+      }),
+    })
+
+    setSubmitting(false)
+    if (!response.ok) {
+      setError(body.error || "Unable to submit shipment request")
+      return
+    }
+
+    setSrReference(body.shipmentRequest?.id || body.shipmentRequest?.id || "SR-2026-00126")
+    setSubmitted(true)
   }
 
   return (
@@ -150,10 +193,10 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
                 <option value="truck">Cross-border Truck</option>
               </Select>
             </label>
-            <Field label={t.origin} defaultValue="Ho Chi Minh City, Vietnam" />
-            <Field label={t.destination} defaultValue="Hong Kong, Kwai Chung / Airport area" />
-            <label className="space-y-2 text-sm font-semibold">{t.shipDate}<Input type="date" defaultValue="2026-07-08" /></label>
-            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.deadline}<Input type="datetime-local" defaultValue="2026-06-15T18:00" /></label>
+            <label className="space-y-2 text-sm font-semibold">{t.origin}<Input value={origin} onChange={(event) => setOrigin(event.target.value)} /></label>
+            <label className="space-y-2 text-sm font-semibold">{t.destination}<Input value={destination} onChange={(event) => setDestination(event.target.value)} /></label>
+            <label className="space-y-2 text-sm font-semibold">{t.shipDate}<Input type="date" value={shipDate} onChange={(event) => setShipDate(event.target.value)} /></label>
+            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.deadline}<Input type="datetime-local" value={bidDeadline} onChange={(event) => setBidDeadline(event.target.value)} /></label>
           </CardContent>
         </Card>
 
@@ -164,8 +207,8 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold">{t.cargoType}<Select defaultValue="general"><option value="general">General Cargo</option><option>Dangerous Goods</option><option>Cold Chain</option><option>Oversized</option></Select></label>
-            <Field label={t.commodity} defaultValue="Chilled food samples, non-DG" />
-            <label className="space-y-2 text-sm font-semibold">{t.pieces}<Input type="number" defaultValue="18" /></label>
+            <label className="space-y-2 text-sm font-semibold">{t.commodity}<Input value={commodity} onChange={(event) => setCommodity(event.target.value)} /></label>
+            <label className="space-y-2 text-sm font-semibold">{t.pieces}<Input type="number" value={pieces} onChange={(event) => setPieces(event.target.value)} /></label>
             <label className="space-y-2 text-sm font-semibold">{t.grossWeight}<Input type="number" value={grossWeight} onChange={(event) => setGrossWeight(Number(event.target.value) || 0)} /></label>
             <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.volume}<Input type="number" value={volume} onChange={(event) => setVolume(Number(event.target.value) || 0)} /></label>
           </CardContent>
@@ -179,7 +222,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
           <CardContent className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold">{t.incoterms}<Select defaultValue="FOB"><option>EXW</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></Select></label>
             <label className="space-y-2 text-sm font-semibold">{t.budget}<Select defaultValue="medium"><option>HKD 3,000 - 6,000</option><option value="medium">HKD 6,000 - 12,000</option><option>HKD 12,000+</option><option>Prefer not to show</option></Select></label>
-            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.notes}<Textarea defaultValue="Temperature controlled handling preferred. Client contact unlocks after award only." /></label>
+            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.notes}<Textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
           </CardContent>
         </Card>
 
@@ -212,10 +255,11 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
               <div className="text-sm text-muted-foreground">{t.chargeable}</div>
               <div className="mt-1 text-3xl font-black text-lblue">{chargeableWeight.toLocaleString()} kg</div>
             </div>
-            <Button className="w-full" variant="gold" onClick={() => setSubmitted(true)}>
+            <Button className="w-full" variant="gold" disabled={submitting} onClick={submitShipmentRequest}>
               <Send className="h-4 w-4" />
-              {t.submit}
+              {submitting ? "Submitting..." : t.submit}
             </Button>
+            {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
           </CardContent>
         </Card>
 
@@ -264,10 +308,15 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">{t.reference}</div>
-              <div className="font-mono text-2xl font-black text-lblue">SR-2026-00126</div>
-              <Button asChild className="mt-4" variant="gold">
-                <Link href={`/${locale}/dashboard?role=forwarder`}>{t.viewMarket}</Link>
-              </Button>
+              <div className="break-all font-mono text-2xl font-black text-lblue">{srReference}</div>
+              <div className="mt-4 flex flex-col gap-2">
+                <Button asChild variant="gold">
+                  <Link href={`/${locale}/marketplace/${srReference}`}>{t.viewMarket}</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/${locale}/dashboard?role=agency`}>Agency dashboard</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : null}

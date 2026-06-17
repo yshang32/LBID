@@ -2,13 +2,13 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { CheckCheck, Clock, MessageSquare, Paperclip, Send } from "lucide-react"
+import { CheckCheck, Clock, MessageSquare, Send } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 type Message = {
@@ -17,7 +17,6 @@ type Message = {
   content: string
   time: string
   system?: boolean
-  attachment?: string
   read?: boolean
 }
 
@@ -25,75 +24,49 @@ const initialMessages: Message[] = [
   {
     id: "sys-1",
     sender: "System",
-    content: "Order created from accepted quotation LBID-Q-2026-0001.",
+    content: "Order created from accepted quotation.",
     time: "10:24",
     system: true,
     read: true,
-  },
-  {
-    id: "msg-1",
-    sender: "Forwarder",
-    content: "Booking request received. We are checking BOM-HKG space for the requested ship date.",
-    time: "10:31",
-    read: true,
-  },
-  {
-    id: "msg-2",
-    sender: "Agency",
-    content: "Please confirm if pickup from Mumbai warehouse is included.",
-    time: "10:36",
-    read: true,
-  },
-  {
-    id: "msg-3",
-    sender: "Forwarder",
-    content: "Confirmed. Pickup within Mumbai city limits is included. AWB draft attached for checking.",
-    time: "10:42",
-    attachment: "AWB-DEMO-0001.pdf",
-    read: false,
   },
 ]
 
 const copy = {
   zh: {
     badge: "Order messages",
-    title: "訂單訊息欄。",
-    intro: "每張訂單有獨立訊息 thread。重要節點會自動產生 system message，雙方無需再用外部 email。",
+    title: "訂單訊息",
+    intro: "每張訂單都有獨立訊息欄。重要節點會留下系統紀錄，減少外部 email 溝通。",
     order: "Order reference",
     participants: "Participants",
-    agency: "ABC Company",
-    forwarder: "HarbourLink Cargo",
+    agency: "Agency",
+    forwarder: "Forwarder",
     thread: "Message thread",
     compose: "輸入訊息",
     send: "發送訊息",
-    attach: "附件",
     read: "已讀",
     unread: "未讀",
-    realtime: "Production 會用 Supabase Realtime 訂閱 messages table。",
-    guarded: "偵測到外部聯絡資料。請把交易溝通留在 LBID，避免違反平台守則。",
-    back: "返回訂單工作區",
-    placeholder: "例如：請確認 AWB 草稿、ship date 或文件狀態。",
-    sentPrefix: "Agency",
+    realtime: "下一步可加入 Supabase Realtime 訂閱 messages table。",
+    guarded: "偵測到外部聯絡資料，建議把交易溝通留在 LBID 內。",
+    back: "返回訂單工作台",
+    placeholder: "例如：請確認 AWB 草稿、船期或文件狀態。",
   },
   en: {
     badge: "Order messages",
     title: "Order message thread.",
-    intro: "Each order has its own message thread. Key events create system messages so both parties can avoid external email.",
+    intro: "Each order has its own message thread. Key events create system records so both parties can avoid external email.",
     order: "Order reference",
     participants: "Participants",
-    agency: "ABC Company",
-    forwarder: "HarbourLink Cargo",
+    agency: "Agency",
+    forwarder: "Forwarder",
     thread: "Message thread",
     compose: "Type message",
     send: "Send message",
-    attach: "Attachment",
     read: "Read",
     unread: "Unread",
-    realtime: "Production subscribes to the messages table with Supabase Realtime.",
-    guarded: "External contact details detected. Keep trade communication inside LBID to follow platform rules.",
+    realtime: "Next step: subscribe to the messages table with Supabase Realtime.",
+    guarded: "External contact details detected. Keep trade communication inside LBID.",
     back: "Back to order workspace",
     placeholder: "Example: Please confirm AWB draft, ship date or document status.",
-    sentPrefix: "Agency",
   },
 }
 
@@ -102,19 +75,34 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
   const t = copy[locale]
   const [messages, setMessages] = useState(initialMessages)
   const [draft, setDraft] = useState(locale === "zh" ? "請確認 AWB 草稿和 pickup window。" : "Please confirm AWB draft and pickup window.")
-  const contactDetected = /(\+?\d[\d\s-]{7,}|@|whatsapp|wa\.me|電話|電郵|email)/i.test(draft)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState("")
+  const contactDetected = /(\+?\d[\d\s-]{7,}|@|whatsapp|wa\.me|email)/i.test(draft)
 
-  function sendMessage() {
+  async function sendMessage() {
     const content = draft.trim()
     if (!content) return
+
+    setSending(true)
+    setError("")
+    const { response, body } = await apiJson(`/api/orders/${params.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    })
+
+    setSending(false)
+    if (!response.ok) {
+      setError(body.error || "Unable to send message")
+      return
+    }
 
     setMessages((items) => [
       ...items,
       {
-        id: `msg-${Date.now()}`,
+        id: body.message?.id || `msg-${Date.now()}`,
         sender: "Agency",
         content,
-        time: "Now",
+        time: body.message?.created_at ? new Date(body.message.created_at).toLocaleTimeString() : "Now",
         read: false,
       },
     ])
@@ -152,12 +140,6 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-6">{message.content}</p>
-                {message.attachment ? (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-lblue/10 bg-white px-3 py-2 text-sm text-lgold">
-                    <Paperclip className="h-4 w-4" />
-                    {message.attachment}
-                  </div>
-                ) : null}
               </div>
             ))}
           </CardContent>
@@ -168,7 +150,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
           <CardContent className="space-y-3 p-4">
             <div>
               <div className="text-sm text-muted-foreground">{t.order}</div>
-              <div className="font-mono text-xl font-black text-lgold">{params.id}</div>
+              <div className="break-all font-mono text-xl font-black text-lgold">{params.id}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.participants}</div>
@@ -185,13 +167,11 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={t.placeholder} />
-            {contactDetected ? (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{t.guarded}</div>
-            ) : null}
-            <Input type="file" />
-            <Button className="w-full" variant="gold" onClick={sendMessage}>
+            {contactDetected ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{t.guarded}</div> : null}
+            {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
+            <Button className="w-full" variant="gold" disabled={sending} onClick={sendMessage}>
               <Send className="h-4 w-4" />
-              {t.send}
+              {sending ? "Sending..." : t.send}
             </Button>
             <Button asChild className="w-full" variant="outline">
               <Link href={`/${locale}/orders/${params.id}`}>{t.back}</Link>

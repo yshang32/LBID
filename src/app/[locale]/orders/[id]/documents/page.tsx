@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 type DocumentItem = {
@@ -85,11 +86,32 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
   const t = copy[locale]
   const [documents, setDocuments] = useState(baseDocuments)
   const [reminderSent, setReminderSent] = useState(false)
+  const [savingId, setSavingId] = useState("")
+  const [error, setError] = useState("")
   const requiredComplete = documents.filter((doc) => doc.required).every((doc) => doc.uploaded)
   const progress = Math.round((documents.filter((doc) => doc.uploaded).length / documents.length) * 100)
 
-  function markUploaded(id: string) {
-    setDocuments((items) => items.map((item) => item.id === id ? { ...item, uploaded: true } : item))
+  async function markUploaded(id: string) {
+    const item = documents.find((document) => document.id === id)
+    if (!item) return
+
+    setSavingId(id)
+    setError("")
+    const { response, body } = await apiJson(`/api/orders/${params.id}/documents`, {
+      method: "POST",
+      body: JSON.stringify({
+        type: item.name,
+        fileUrl: `https://example.com/lbid/${params.id}/${id}.pdf`,
+      }),
+    })
+
+    setSavingId("")
+    if (!response.ok) {
+      setError(body.error || "Unable to save document")
+      return
+    }
+
+    setDocuments((items) => items.map((document) => document.id === id ? { ...document, uploaded: true } : document))
   }
 
   function confirmDocument(id: string) {
@@ -136,9 +158,9 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
                   </div>
                   <div className="mt-3 flex items-center gap-3">
                     <Input type="file" className="max-w-sm" />
-                    <Button variant="outline" onClick={() => markUploaded(document.id)}>
+                    <Button variant="outline" disabled={savingId === document.id} onClick={() => markUploaded(document.id)}>
                       <UploadCloud className="h-4 w-4" />
-                      {t.upload}
+                      {savingId === document.id ? "Saving..." : t.upload}
                     </Button>
                   </div>
                 </div>
@@ -148,6 +170,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
                 </Button>
               </div>
             ))}
+            {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
           </CardContent>
         </Card>
         <aside className="space-y-5">

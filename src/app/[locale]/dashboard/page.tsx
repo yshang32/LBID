@@ -4,8 +4,11 @@ import { ArrowRight, Clock3, Coins, FileText, Flame, PackagePlus, ShieldCheck, S
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { LiveDashboardPanel } from "@/components/dashboard/live-dashboard-panel"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { v4Matches, v4ShipmentRequests, v4Status } from "@/lib/v4"
+
+type DashboardRole = "agency" | "forwarder" | "admin"
 
 const copy = {
   zh: {
@@ -64,10 +67,48 @@ const copy = {
   },
 }
 
-export default function LocalizedDashboardPage({ params }: { params: { locale: string } }) {
+const roleCopy = {
+  agency: {
+    badge: "Agency Workspace",
+    zhSummary: "管理你發出嘅 SR、收到嘅 sealed bids、已接受訂單同文件狀態。",
+    enSummary: "Manage your SRs, received sealed bids, accepted orders and document status.",
+    primaryHref: "inquiries/new",
+    primaryLabelZh: "建立新 SR",
+    primaryLabelEn: "Create SR",
+    secondaryHref: "quotations/compare",
+    secondaryLabelZh: "比較報價",
+    secondaryLabelEn: "Compare bids",
+  },
+  forwarder: {
+    badge: "Forwarder Workspace",
+    zhSummary: "查看可投標 SR、token balance、已提交 bids 同進行中 orders。",
+    enSummary: "Review open SRs, token balance, submitted bids and active orders.",
+    primaryHref: "marketplace",
+    primaryLabelZh: "接單市場",
+    primaryLabelEn: "Marketplace",
+    secondaryHref: "tokens",
+    secondaryLabelZh: "Token wallet",
+    secondaryLabelEn: "Token wallet",
+  },
+  admin: {
+    badge: "Admin Workspace",
+    zhSummary: "管理 payment approval、forwarder verification、tiers 同平台 analytics。",
+    enSummary: "Manage payment approvals, forwarder verification, tiers and platform analytics.",
+    primaryHref: "admin/pending-payments",
+    primaryLabelZh: "待確認付款",
+    primaryLabelEn: "Pending payments",
+    secondaryHref: "admin",
+    secondaryLabelZh: "Admin panel",
+    secondaryLabelEn: "Admin panel",
+  },
+}
+
+export default function LocalizedDashboardPage({ params, searchParams }: { params: { locale: string }; searchParams?: { role?: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
   const prefix = `/${locale}`
+  const role: DashboardRole = searchParams?.role === "agency" || searchParams?.role === "admin" ? searchParams.role : "forwarder"
+  const current = roleCopy[role]
   const hotRequest = v4ShipmentRequests[0]
 
   return (
@@ -75,26 +116,28 @@ export default function LocalizedDashboardPage({ params }: { params: { locale: s
       <section className="rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <Badge variant="gold">LBID v4 Workspace</Badge>
+            <Badge variant="gold">{current.badge}</Badge>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-lblue sm:text-5xl">
               {locale === "zh" ? `${v4Status.companyName} ${t.hello}` : `${t.hello}, ${v4Status.companyName}`}
             </h1>
-            <p className="mt-2 text-muted-foreground">{t.summary}</p>
+            <p className="mt-2 text-muted-foreground">{locale === "zh" ? current.zhSummary : current.enSummary}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="gold">
-              <Link href={`${prefix}/marketplace`}>
-                {t.marketplace} <ArrowRight className="h-4 w-4" />
+              <Link href={`${prefix}/${current.primaryHref}`}>
+                {locale === "zh" ? current.primaryLabelZh : current.primaryLabelEn} <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href={`${prefix}/inquiries/new`}>
-                {t.createSr} <PackagePlus className="h-4 w-4" />
+              <Link href={`${prefix}/${current.secondaryHref}`}>
+                {locale === "zh" ? current.secondaryLabelZh : current.secondaryLabelEn} <PackagePlus className="h-4 w-4" />
               </Link>
             </Button>
           </div>
         </div>
       </section>
+
+      <LiveDashboardPanel locale={locale} role={role} />
 
       <section className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <Card className="border-red-200 bg-white">
@@ -104,12 +147,12 @@ export default function LocalizedDashboardPage({ params }: { params: { locale: s
                 <Flame className="h-4 w-4" />
                 {t.hot}
               </div>
-              <CardTitle className="mt-2 text-2xl">{hotRequest.lane}</CardTitle>
+              <CardTitle className="mt-2 text-2xl">{role === "agency" ? "Latest SR activity" : role === "admin" ? "Platform watchlist" : hotRequest.lane}</CardTitle>
             </div>
             <Badge variant="gold">{hotRequest.id}</Badge>
           </CardHeader>
           <CardContent>
-            <ShipmentRequestCard request={hotRequest} locale={locale} primary />
+            {role === "admin" ? <AdminSnapshot locale={locale} /> : <ShipmentRequestCard request={hotRequest} locale={locale} primary />}
           </CardContent>
         </Card>
 
@@ -137,13 +180,18 @@ export default function LocalizedDashboardPage({ params }: { params: { locale: s
 
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-black text-lblue">{t.open}</h2>
+          <h2 className="text-xl font-black text-lblue">{role === "agency" ? "My Shipment Requests" : role === "admin" ? "Admin queue" : t.open}</h2>
           <Button asChild variant="outline" size="sm">
             <Link href={`${prefix}/marketplace`}>{t.marketplace}</Link>
           </Button>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          {v4ShipmentRequests.slice(1).map((request) => (
+          {role === "admin" ? (
+            <>
+              <QueueCard title="Forwarder verification" value="8 pending" href={`${prefix}/admin`} />
+              <QueueCard title="Manual payment review" value="3 pending" href={`${prefix}/admin/pending-payments`} />
+            </>
+          ) : v4ShipmentRequests.slice(1).map((request) => (
             <ShipmentRequestCard key={request.id} request={request} locale={locale} />
           ))}
         </div>
@@ -273,5 +321,30 @@ function ValueRow({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title
       </div>
       <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
     </div>
+  )
+}
+
+function AdminSnapshot({ locale }: { locale: Locale }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Info icon={Users} label={locale === "zh" ? "待審公司" : "Pending forwarders"} value="8" />
+      <Info icon={Coins} label={locale === "zh" ? "待確認付款" : "Pending payments"} value="3" />
+      <Info icon={TrendingUp} label={locale === "zh" ? "今日交易" : "Today flows"} value="12" />
+      <div className="rounded-md border border-lblue/10 bg-slate-50 p-3 sm:col-span-3">
+        <div className="font-black text-lblue">{locale === "zh" ? "Admin priorities" : "Admin priorities"}</div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {locale === "zh" ? "先處理付款確認和 Forwarder verification，確保 marketplace 供應質素。" : "Review payment confirmations and forwarder verification before expanding marketplace supply."}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function QueueCard({ title, value, href }: { title: string; value: string; href: string }) {
+  return (
+    <Link href={href} className="rounded-lg border border-lblue/10 bg-white p-4 shadow-sm transition hover:border-lgold/40 hover:bg-lgold/10">
+      <div className="text-sm text-muted-foreground">{title}</div>
+      <div className="mt-2 text-2xl font-black text-lblue">{value}</div>
+    </Link>
   )
 }

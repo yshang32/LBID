@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { CheckCircle2, Eye, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
 
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { isLocale, type Locale } from "@/lib/i18n"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type Role = "agency" | "forwarder" | "admin"
 type AuthResult = { type: "register" | "login"; role: Role; email: string } | null
@@ -77,6 +79,7 @@ const copy = {
 export default function LocalizedAuthPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
+  const router = useRouter()
   const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   const [mode, setMode] = useState<"login" | "register">("login")
   const [role, setRole] = useState<Role>("forwarder")
@@ -85,16 +88,72 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [result, setResult] = useState<AuthResult>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const dashboardHref = `/${locale}/dashboard?role=${result?.role ?? role}`
 
-  function submitLogin() {
+  async function submitLogin() {
     if (!email || !password) return
+    setError("")
+    setLoading(true)
+    const supabase = getSupabaseBrowserClient()
+    if (supabase) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        setError(signInError.message)
+        setLoading(false)
+        return
+      }
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", signInData.user.id)
+        .maybeSingle()
+
+      const dbRole = userRow?.role as Role | undefined
+      const nextRole = dbRole ?? role
+      if (dbRole) setRole(dbRole)
+      setResult({ type: "login", role: nextRole, email })
+      setLoading(false)
+      router.push(`/${locale}/dashboard?role=${nextRole}`)
+      return
+    }
+    setLoading(false)
     setResult({ type: "login", role, email })
+    router.push(`/${locale}/dashboard?role=${role}`)
   }
 
-  function submitRegister() {
+  async function submitRegister() {
     if (!company || !fullName || !email || !password) return
+    setError("")
+    setLoading(true)
+    const supabase = getSupabaseBrowserClient()
+    if (supabase) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { role, company_name: company, full_name: fullName },
+        },
+      })
+      if (signUpError) {
+        setError(signUpError.message)
+        setLoading(false)
+        return
+      }
+      if (signUpData.user) {
+        await supabase.from("users").upsert({
+          id: signUpData.user.id,
+          role,
+          company_name: company,
+          country: "Hong Kong",
+          email,
+          referral_code: `LBID-${signUpData.user.id.slice(0, 8)}`,
+        })
+      }
+    }
+    setLoading(false)
     setResult({ type: "register", role, email })
   }
 
@@ -203,11 +262,18 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
 
               <Button
                 className="h-12 w-full border border-[#3d6fb5] bg-transparent text-[#62a8ff] shadow-none hover:bg-[#162235] hover:text-[#8ec2ff]"
+                disabled={loading}
                 onClick={mode === "login" ? submitLogin : submitRegister}
               >
-                {mode === "login" ? t.signIn : t.create}
+                {loading ? "Working..." : mode === "login" ? t.signIn : t.create}
               </Button>
             </div>
+
+            {error ? (
+              <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
+                {error}
+              </div>
+            ) : null}
 
             <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-[#8f96a3]">
               <div className="flex items-center gap-2 font-semibold text-[#c7ccd6]">
