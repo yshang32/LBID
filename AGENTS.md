@@ -45,6 +45,45 @@ Visual direction:
 
 LBID helps overseas logistics agencies with cargo needing Hong Kong delivery connect with Hong Kong local logistics providers through sealed bidding.
 
+## Codebase Decision
+
+The **only primary product codebase** is the **Next.js 14 App Router + Supabase** application under:
+
+- `src/app`
+- `src/components`
+- `src/lib`
+- Supabase SQL / RPC files in the repository root
+
+The old static demo files are **legacy concept-demo assets only**:
+
+- `index.html`
+- `backend/server.mjs`
+
+Do not build new product features in the static `index.html` / in-memory `backend/server.mjs` path unless the user explicitly asks for a quick legacy demo. For Cyberport / CCMF and real MVP work, always implement in the Next.js + Supabase codebase.
+
+Why:
+
+- The static backend is in-memory and loses data on restart.
+- It cannot support real users, persistent token ledger, RPC transaction safety, or payment/admin workflows.
+- The current product specs, Supabase RPC, auth, storage, and Vercel deployment are all based on Next.js + Supabase.
+
+## Product Decisions
+
+Award mechanism:
+
+- LBID uses a **hybrid award model**.
+- After the bid window closes, the system highlights the lowest valid bid with a "Lowest quote" badge.
+- Agency can still choose another bid based on reputation, transit time, service fit, or trust.
+- If Agency chooses a non-lowest bid, show a confirmation modal explaining the price difference and requiring explicit confirmation.
+
+Role model:
+
+- LBID should move toward a **dual-capability company account** model.
+- One company account can enable:
+  - Client capability: create SRs and accept bids.
+  - Forwarder capability: bid on SRs and fulfill orders.
+- Current UI may still use Agency / Forwarder / Admin as role labels, but future navigation and dashboards should be capability-based.
+
 Core logic:
 
 1. Overseas agency submits a delivery request.
@@ -54,7 +93,7 @@ Core logic:
 5. A fixed 3-hour bid window opens.
 6. Hong Kong logistics providers submit exactly one sealed bid.
 7. Providers cannot view competitor prices, names, or bid details.
-8. After expiry, the lowest valid bid wins.
+8. After expiry, the lowest valid bid is highlighted, but Agency may choose any valid bid with confirmation.
 9. Contact details unlock only after award.
 10. A responsibility / legal record is generated.
 11. Agency has 3 refusal chances.
@@ -69,18 +108,11 @@ Important positioning:
 
 ## Current Frontend
 
-Main frontend file:
+Primary frontend:
 
-`index.html`
+`src/app`
 
-This is currently a Vite static frontend with inline CSS/JS.
-
-Current pages / views:
-
-- Home
-- Dashboard
-- Bid Cockpit
-- Packages
+This is the Next.js 14 App Router frontend deployed to Vercel.
 
 Language:
 
@@ -88,41 +120,29 @@ Language:
 - Chinese text is written mostly as HTML entities to avoid Windows PowerShell encoding issues.
 - Be careful when editing Chinese text. Prefer UTF-8 `.NET WriteAllText(..., UTF8Encoding(false))` or HTML entities.
 
-Current frontend API target:
+Static legacy demo:
 
-`http://127.0.0.1:5340`
+`index.html`
 
-Current verified preview URL:
-
-`http://127.0.0.1:5199/`
+Keep this only as a historical concept demo. Do not use it as the main development target.
 
 ## Current Backend
 
-Backend file:
+Primary backend:
 
-`backend/server.mjs`
+- Next.js route handlers under `src/app/api`
+- Supabase PostgreSQL
+- Supabase Auth
+- Supabase Storage
+- Supabase RPC functions:
+  - `submit_bid_with_token`
+  - `adjust_token_balance`
 
-Backend is an in-memory Node HTTP server.
+Legacy backend:
 
-Current verified backend:
-
-`http://127.0.0.1:5340`
-
-Important endpoints:
-
-- `GET /api/health`
-- `GET /api/leads`
-- `GET /api/lead-summary`
-- `GET /api/requests`
-- `GET /api/plans`
-- `POST /api/requests`
-- `POST /api/admin/requests/:id/publish`
-- `POST /api/requests/:id/bids`
-- `POST /api/requests/:id/auto-award`
-- `POST /api/agency/requests/:id/refuse-award`
-- `POST /api/agency/requests/:id/cancel`
-
-Note: backend state is in-memory. If tests mutate state, start a fresh backend on a new port or restart the backend.
+- `backend/server.mjs`
+- In-memory only
+- Do not use for real MVP work.
 
 ## Data / Scraping
 
@@ -165,13 +185,13 @@ npm.cmd run build
 Start backend on fresh port example:
 
 ```powershell
-$env:PORT=5340; node backend/server.mjs
+npm.cmd run dev -- --hostname 127.0.0.1 --port 5301
 ```
 
-Start preview example:
+Start production build locally:
 
 ```powershell
-npx.cmd vite preview --host 127.0.0.1 --port 5199 --strictPort
+npm.cmd run build
 ```
 
 If opening a new preview after major changes, use a fresh port to avoid browser cache confusion.
@@ -182,24 +202,22 @@ Before saying work is done, run at least:
 
 ```powershell
 npm.cmd run build
-Invoke-WebRequest -Uri http://127.0.0.1:<preview-port>/ -UseBasicParsing
-Invoke-WebRequest -Uri http://127.0.0.1:<preview-port>/assets/lbid-logo-horizontal.png -UseBasicParsing
-Invoke-RestMethod -Uri http://127.0.0.1:<backend-port>/api/health
 ```
 
 For workflow changes, verify:
 
-1. Create request: `POST /api/requests`
-2. Publish request: `POST /api/admin/requests/:id/publish`
-3. Submit sealed bid: `POST /api/requests/:id/bids`
-4. Auto award: `POST /api/requests/:id/auto-award`
-5. Confirm legal record includes `workflow_platform_not_carrier_of_record`
+1. Create SR: `POST /api/shipment-requests`
+2. Submit sealed bid: `POST /api/bids`
+3. Confirm token ledger changes through RPC / token transactions
+4. Accept bid: `POST /api/bids/[id]/accept`
+5. Confirm quotation, order, and match record are created
+6. Confirm platform role remains `workflow_platform_not_carrier_of_record`
 
 ## Coding Preferences
 
 - Keep changes focused and avoid touching unrelated files.
 - Do not modify `hkjc_quant` for LBID work.
-- Prefer simple, demo-ready improvements over broad rewrites unless requested.
+- Prefer production-MVP improvements in the Next.js + Supabase path over legacy static-demo work.
 - Preserve dark futuristic LBID brand direction.
 - Avoid corrupting Chinese text through PowerShell encoding.
 - Use `npm.cmd` on Windows.
@@ -209,10 +227,11 @@ For workflow changes, verify:
 
 Good next steps:
 
-1. Make the proposal/client-demo flow more polished.
-2. Improve mobile layout for the Bid Cockpit.
-3. Add package detail screens for website/app/ERP/CRM services.
-4. Add a visible compliance/process page.
-5. Convert static frontend to React components if the UI grows larger.
-6. Deploy frontend to Vercel when ready for client viewing.
-7. Later replace in-memory backend with persistent storage.
+1. Clean corrupted Traditional Chinese copy across Next.js pages.
+2. Build bid comparison by SR ID with lowest-bid badge and non-lowest confirmation modal.
+3. Move role model toward dual-capability company accounts.
+4. Connect Forwarder Directory frontend to live `/api/directory`.
+5. Create Supabase Storage bucket and policy for `documents`.
+6. Implement Quotation PDF generation.
+7. Implement Supabase Realtime messages.
+8. Add Admin forwarder verification workflow.
