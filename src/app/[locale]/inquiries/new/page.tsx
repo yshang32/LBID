@@ -1,19 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
 import Link from "next/link"
-import {
-  Bell,
-  Calculator,
-  CheckCircle2,
-  ClipboardList,
-  Coins,
-  PackageSearch,
-  Plane,
-  Send,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react"
+import { useMemo, useState } from "react"
+import { Bell, Calculator, CheckCircle2, ClipboardList, Coins, PackageSearch, Plane, Send, ShieldCheck, Sparkles } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -28,16 +17,14 @@ import { v4Status } from "@/lib/v4"
 const copy = {
   zh: {
     badge: "Create Shipment Request",
-    title: "用 Client 身份建立一張 SR。",
-    intro: "每間公司都可以同時係 Client 同 Forwarder。建立 SR 後，LBID 會先做資料整理，再向合資格 Forwarder 開放 5 個密封 Bid 名額。",
+    title: "以 Client 身份建立一張 SR。",
+    intro: "每間公司都可以同時是 Client 和 Forwarder。提交後，LBID 會把 SR 放入 sealed bidding 流程，讓合資格 Forwarder 在限時內提交報價。",
     basics: "SR 基本資料",
     cargo: "貨物資料",
     commercial: "商業條件",
-    disclosure: "資料公開層級",
     matching: "配對預覽",
-    result: "提交結果",
-    mode: "運輸方式",
-    origin: "起運地",
+    mode: "運輸模式",
+    origin: "出發地",
     destination: "目的地",
     shipDate: "預計出貨日期",
     deadline: "Bid 截止時間",
@@ -49,34 +36,35 @@ const copy = {
     incoterms: "Incoterms",
     budget: "預算範圍",
     services: "需要服務",
-    notes: "補充要求",
+    notes: "額外要求",
     chargeable: "Chargeable weight",
-    formula: "空運 volumetric = CBM x 167；系統會取 gross weight 同 volumetric 較高者。",
+    formula: "空運 volumetric = CBM x 167。LBID 會用 gross weight 和 volumetric weight 之間較高者。",
     quota: "本月 SR quota",
-    quotaText: "月費會員每月 5 張 SR。超額建立會扣 1 Token。",
-    quotaUsed: "已用 4 / 5",
+    quotaText: "Standard member 每月有 5 張 SR。超出 quota 後，每張 SR 扣 1 Token。",
+    quotaUsed: "已使用 4 / 5",
     costFree: "今次不扣 Token",
-    costOver: "超額建立 -1 Token",
-    submit: "提交 SR 進入審核",
-    submitted: "SR 已建立並進入審核",
-    reference: "SR 編號",
-    viewMarket: "返回工作台",
-    notice: "審核通過後，Forwarder 只會先看到路線、貨類、範圍資料和 bid window；完整聯絡資料會在 award 後解鎖。",
-    matched: "預計匹配 5 間合資格 Forwarder",
+    costOver: "額外建立 -1 Token",
+    submit: "提交 SR",
+    submitting: "提交中...",
+    submitted: "SR 已建立",
+    reference: "SR reference",
+    viewMarket: "查看 SR / Marketplace",
+    dashboard: "Client dashboard",
+    notice: "審核或發布後，Forwarder 只會先看到路線、貨物類型、範圍和 bid window。完整聯絡資料只會在 award 後解鎖。",
+    matched: "預計可配對 5 個合資格 Forwarder",
     window: "固定 3 小時 sealed bid window",
-    hidden: "Client 名稱、聯絡、完整地址會先隱藏",
-    serviceOptions: ["清關", "倉儲", "香港本地派送", "Door-to-Door", "冷鏈處理", "危險品處理"],
+    hidden: "Client 名稱、聯絡人和完整地址會先隱藏",
+    tokenAfter: "提交後 Token 餘額",
+    serviceOptions: ["清關", "倉儲", "香港本地派送", "Door-to-Door", "冷鏈", "危險品"],
   },
   en: {
     badge: "Create Shipment Request",
     title: "Create an SR as the Client side.",
-    intro: "Every company can be both Client and Forwarder. After submission, LBID reviews and opens 5 sealed bid slots to qualified forwarders.",
+    intro: "Every company can be both Client and Forwarder. After submission, LBID opens a sealed bidding workflow for qualified forwarders.",
     basics: "SR basics",
     cargo: "Cargo details",
     commercial: "Commercial conditions",
-    disclosure: "Disclosure level",
     matching: "Matching preview",
-    result: "Submission result",
     mode: "Shipment mode",
     origin: "Origin",
     destination: "Destination",
@@ -94,18 +82,21 @@ const copy = {
     chargeable: "Chargeable weight",
     formula: "Air volumetric = CBM x 167. LBID uses the higher of gross and volumetric weight.",
     quota: "Monthly SR quota",
-    quotaText: "Monthly members get 5 SRs per month. Extra SRs cost 1 token.",
+    quotaText: "Standard members get 5 SRs per month. Extra SRs cost 1 token.",
     quotaUsed: "Used 4 / 5",
     costFree: "No token cost this time",
     costOver: "Extra SR -1 Token",
-    submit: "Submit SR for review",
-    submitted: "SR created and under review",
+    submit: "Submit SR",
+    submitting: "Submitting...",
+    submitted: "SR created",
     reference: "SR reference",
-    viewMarket: "Back to Workspace",
-    notice: "After review, forwarders first see route, cargo category, ranges and bid window only. Full contacts unlock after award.",
+    viewMarket: "View SR / Marketplace",
+    dashboard: "Client dashboard",
+    notice: "After review or publish, forwarders first see route, cargo category, ranges and bid window only. Full contacts unlock after award.",
     matched: "Estimated 5 qualified forwarders matched",
     window: "Fixed 3-hour sealed bid window",
     hidden: "Client name, contact and full address are hidden first",
+    tokenAfter: "Token balance after submit",
     serviceOptions: ["Customs clearance", "Warehousing", "HK local delivery", "Door-to-Door", "Cold chain", "Dangerous goods"],
   },
 }
@@ -122,7 +113,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
   const [origin, setOrigin] = useState("Ho Chi Minh City, Vietnam")
   const [destination, setDestination] = useState("Hong Kong, Kwai Chung / Airport area")
   const [shipDate, setShipDate] = useState("2026-07-08")
-  const [bidDeadline, setBidDeadline] = useState("2026-06-15T18:00")
+  const [bidDeadline, setBidDeadline] = useState("2026-07-07T18:00")
   const [commodity, setCommodity] = useState("Chilled food samples, non-DG")
   const [pieces, setPieces] = useState("18")
   const [notes, setNotes] = useState("Temperature controlled handling preferred. Client contact unlocks after award only.")
@@ -165,7 +156,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
       return
     }
 
-    setSrReference(body.shipmentRequest?.id || body.shipmentRequest?.id || "SR-2026-00126")
+    setSrReference(body.shipmentRequest?.id || "SR-2026-00126")
     setSubmitted(true)
   }
 
@@ -257,7 +248,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
             </div>
             <Button className="w-full" variant="gold" disabled={submitting} onClick={submitShipmentRequest}>
               <Send className="h-4 w-4" />
-              {submitting ? "Submitting..." : t.submit}
+              {submitting ? t.submitting : t.submit}
             </Button>
             {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
           </CardContent>
@@ -280,7 +271,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
               <input type="checkbox" checked={overQuota} onChange={(event) => setOverQuota(event.target.checked)} />
               {overQuota ? t.costOver : t.costFree}
             </label>
-            <Metric label="Token balance after submit" value={`${tokenAfterSubmit}`} />
+            <Metric label={t.tokenAfter} value={`${tokenAfterSubmit}`} />
           </CardContent>
         </Card>
 
@@ -314,7 +305,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
                   <Link href={`/${locale}/marketplace/${srReference}`}>{t.viewMarket}</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href={`/${locale}/dashboard?role=agency`}>Agency dashboard</Link>
+                  <Link href={`/${locale}/dashboard?role=agency`}>{t.dashboard}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -322,15 +313,6 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
         ) : null}
       </aside>
     </main>
-  )
-}
-
-function Field({ label, defaultValue }: { label: string; defaultValue: string }) {
-  return (
-    <label className="space-y-2 text-sm font-semibold">
-      {label}
-      <Input defaultValue={defaultValue} />
-    </label>
   )
 }
 
