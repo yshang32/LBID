@@ -1,7 +1,7 @@
 export const v4Status = {
   tokens: 8,
   reputation: 57,
-  membership: "月費會員",
+  membership: "Standard Member",
   notifications: 3,
   companyName: "HarbourLink Cargo",
 }
@@ -19,7 +19,7 @@ export const v4ShipmentRequests = [
     reputationRequired: 30,
     budgetLevel: "$$$$",
     mode: "Sea Freight",
-    routeMask: "香港九龍區 -> Metro Manila",
+    routeMask: "Hong Kong port area -> Metro Manila",
     tokenCost: 1,
     priorityCost: 2,
     hot: true,
@@ -65,35 +65,35 @@ export const v4Matches = [
     id: "MATCH-1234",
     title: "Saigon Freight Agency x HarbourLink Cargo",
     stage: 3,
-    status: "交易中：等對方確認文件",
+    status: "In trade",
     route: "Ho Chi Minh City -> Hong Kong",
   },
   {
     id: "MATCH-1235",
     title: "Penang Export Desk x Kowloon Gateway Logistics",
     stage: 2,
-    status: "資料已解鎖：準備 quotation",
+    status: "Quotation accepted",
     route: "Penang -> Hong Kong",
   },
 ]
 
 export const v4TokenPackages = [
-  { id: "starter", name: "Starter", tokens: 5, price: "$200", unit: "$40/token" },
-  { id: "basic", name: "Basic", tokens: 10, price: "$380", unit: "$38/token" },
-  { id: "popular", name: "Popular", tokens: 50, price: "$1,750", unit: "$35/token", popular: true },
-  { id: "growth", name: "Growth", tokens: 100, price: "$3,200", unit: "$32/token" },
-  { id: "business", name: "Business", tokens: 200, price: "$5,800", unit: "$29/token" },
-  { id: "scale", name: "Scale", tokens: 500, price: "$13,000", unit: "$26/token" },
-  { id: "enterprise", name: "Enterprise", tokens: 1000, price: "$22,000", unit: "$22/token" },
+  { id: "starter", name: "Starter", tokens: 5, price: "HKD 200", unit: "HKD 40/token" },
+  { id: "basic", name: "Basic", tokens: 10, price: "HKD 380", unit: "HKD 38/token" },
+  { id: "popular", name: "Popular", tokens: 50, price: "HKD 1,750", unit: "HKD 35/token", popular: true },
+  { id: "growth", name: "Growth", tokens: 100, price: "HKD 3,200", unit: "HKD 32/token" },
+  { id: "business", name: "Business", tokens: 200, price: "HKD 5,800", unit: "HKD 29/token" },
+  { id: "scale", name: "Scale", tokens: 500, price: "HKD 13,000", unit: "HKD 26/token" },
+  { id: "enterprise", name: "Enterprise", tokens: 1000, price: "HKD 22,000", unit: "HKD 22/token" },
 ]
 
 export const v4CommunityPosts = [
   {
     company: "ABC Logistics",
     score: 47,
-    time: "1小時前",
-    type: "公司展示",
-    content: "我哋公司啱啱完成一張 HK -> Sydney 嘅大柜，Transit Time 縮短咗 1 日。",
+    time: "1 hour ago",
+    type: "Market update",
+    content: "Looking for reliable HK to Sydney air freight capacity this week. Transit time matters more than lowest cost.",
     likes: 12,
     comments: 3,
     shares: 1,
@@ -101,9 +101,9 @@ export const v4CommunityPosts = [
   {
     company: "HarbourLink Cargo",
     score: 57,
-    time: "今日",
-    type: "行業資訊",
-    content: "本週香港機場冷鏈倉位比較緊，建議 Agent 提早 48 小時建立 SR。",
+    time: "Today",
+    type: "Operations note",
+    content: "We completed two sealed-bid matches this week. Clear SR details reduced quotation back-and-forth significantly.",
     likes: 18,
     comments: 5,
     shares: 2,
@@ -111,7 +111,7 @@ export const v4CommunityPosts = [
 ]
 
 export const v4Services = [
-  { name: "Logistics Website", description: "為 forwarder 建立公司網站、SEO landing page 和查詢表單。", price: "From HKD 18,000" },
-  { name: "Quotation CRM", description: "把 Excel / WhatsApp 報價流程轉成可追蹤的 CRM。", price: "From HKD 38,000" },
-  { name: "ERP / Workflow", description: "客製化 booking、AWB、文件、對帳和報表流程。", price: "Custom" },
+  { name: "Logistics Website", description: "A focused lead-generation website for forwarders, with SEO landing pages and enquiry capture.", price: "From HKD 18,000" },
+  { name: "Quotation CRM", description: "Replace Excel and WhatsApp quotation tracking with a structured CRM workflow.", price: "From HKD 38,000" },
+  { name: "ERP / Workflow", description: "Custom booking, AWB, document checklist and operations workflow for logistics teams.", price: "Custom" },
 ]

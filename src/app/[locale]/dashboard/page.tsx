@@ -1,10 +1,10 @@
 import Link from "next/link"
 import { ArrowRight, Clock3, Coins, FileText, Flame, PackagePlus, ShieldCheck, Star, TrendingUp, Users } from "lucide-react"
 
+import { LiveDashboardPanel } from "@/components/dashboard/live-dashboard-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LiveDashboardPanel } from "@/components/dashboard/live-dashboard-panel"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { v4Matches, v4ShipmentRequests, v4Status } from "@/lib/v4"
 
@@ -12,40 +12,48 @@ type DashboardRole = "agency" | "forwarder" | "admin"
 
 const copy = {
   zh: {
-    hello: "今日工作台",
-    summary: "你今日有 3 個接單機會 + 2 個交易進行中",
+    hello: "歡迎回來",
     hot: "即將截標",
-    open: "可接單 Request",
-    matches: "進行中 Matches",
-    month: "本月概況",
-    bidNow: "立即 Bid -1 Token",
+    open: "Open Shipment Requests",
+    matches: "Active Matches",
+    month: "本月概覽",
+    bidNow: "Submit Bid -1 Token",
     priority: "Priority Bid -2 Tokens",
-    remaining: "剩餘名額",
-    score: "信譽要求",
+    remaining: "個名額剩餘",
+    score: "所需評分",
     budget: "預算範圍",
-    deadline: "截標倒數",
-    slotsUsed: "已用名額",
-    mode: "運輸方式",
-    masked: "階段 1 顯示：路線、貨類、範圍資料；中標後先解鎖完整聯絡。",
-    view: "查看",
-    createSr: "建立新 SR",
-    marketplace: "更多接單機會",
-    stage: ["配對成立", "報價已扣", "資料解鎖", "交易中", "完成"],
+    deadline: "截標時間",
+    slotsUsed: "已用 bid slots",
+    mode: "運輸模式",
+    masked: "第一階段只顯示路線、貨物類型和範圍資料。聯絡資料只會在 award 後解鎖。",
+    createSr: "建立 SR",
+    marketplace: "更多機會",
+    stage: ["Matched", "Token used", "Contact unlocked", "In trade", "Completed"],
     stats: [
-      ["發出 SR", "4"],
-      ["Bid 次數", "6"],
-      ["成功配對", "2"],
-      ["信譽分 +", "10"],
+      ["已建立 SR", "4"],
+      ["已收到 Bids", "6"],
+      ["已中標 Matches", "2"],
+      ["新增評分", "+10"],
     ],
+    tokenBalance: "Token 餘額",
+    latestActivity: "最新 SR 活動",
+    platformWatchlist: "平台監察",
+    whyTitle: "LBID 如何保護交易價值",
+    paperTrail: "Quotation、AWB、文件、訊息和確認紀錄會留在同一個 order workspace，方便雙方追蹤責任。",
+    reputationLoop: "完成訂單和獲得好評會提升 directory 排名，令有實力的 forwarder 更容易被看見。",
+    pendingForwarders: "待審 Forwarders",
+    pendingPayments: "待確認付款",
+    todayFlows: "今日流程",
+    adminPriorities: "Admin priorities",
+    adminText: "先處理 payment confirmation 和 forwarder verification，再擴大 marketplace 供應。",
   },
   en: {
     hello: "Welcome back",
-    summary: "You have 3 bid opportunities and 2 active matches today",
     hot: "Closing soon",
-    open: "Open Requests",
+    open: "Open Shipment Requests",
     matches: "Active Matches",
     month: "Monthly Snapshot",
-    bidNow: "Bid Now -1 Token",
+    bidNow: "Submit Bid -1 Token",
     priority: "Priority Bid -2 Tokens",
     remaining: "slots left",
     score: "Required score",
@@ -54,26 +62,36 @@ const copy = {
     slotsUsed: "bid slots used",
     mode: "Mode",
     masked: "Stage 1 shows route, cargo category and ranges only. Full contacts unlock after award.",
-    view: "View",
     createSr: "Create SR",
     marketplace: "More opportunities",
     stage: ["Matched", "Token used", "Contact unlocked", "In trade", "Completed"],
     stats: [
       ["SR created", "4"],
-      ["Bids submitted", "6"],
+      ["Bids received", "6"],
       ["Matches won", "2"],
-      ["Score gained", "10"],
+      ["Score gained", "+10"],
     ],
+    tokenBalance: "Token balance",
+    latestActivity: "Latest SR activity",
+    platformWatchlist: "Platform watchlist",
+    whyTitle: "How LBID keeps value inside",
+    paperTrail: "Quotation, AWB, documents, messages and confirmations stay inside the same order workspace for traceability.",
+    reputationLoop: "Completed orders and strong reviews improve directory ranking, helping capable forwarders become more visible.",
+    pendingForwarders: "Pending forwarders",
+    pendingPayments: "Pending payments",
+    todayFlows: "Today flows",
+    adminPriorities: "Admin priorities",
+    adminText: "Review payment confirmations and forwarder verification before expanding marketplace supply.",
   },
 }
 
 const roleCopy = {
   agency: {
-    badge: "Agency Workspace",
-    zhSummary: "管理你發出嘅 SR、收到嘅 sealed bids、已接受訂單同文件狀態。",
-    enSummary: "Manage your SRs, received sealed bids, accepted orders and document status.",
+    badge: "Client Workspace",
+    zhSummary: "管理你發出的 Shipment Requests、收到的 sealed bids、accepted orders 和文件狀態。",
+    enSummary: "Manage your shipment requests, received sealed bids, accepted orders and document status.",
     primaryHref: "inquiries/new",
-    primaryLabelZh: "建立新 SR",
+    primaryLabelZh: "建立 SR",
     primaryLabelEn: "Create SR",
     secondaryHref: "quotations/compare",
     secondaryLabelZh: "比較報價",
@@ -81,10 +99,10 @@ const roleCopy = {
   },
   forwarder: {
     badge: "Forwarder Workspace",
-    zhSummary: "查看可投標 SR、token balance、已提交 bids 同進行中 orders。",
+    zhSummary: "查看可 bid 的 SR、token balance、已提交 bids 和 active orders。",
     enSummary: "Review open SRs, token balance, submitted bids and active orders.",
     primaryHref: "marketplace",
-    primaryLabelZh: "接單市場",
+    primaryLabelZh: "Marketplace",
     primaryLabelEn: "Marketplace",
     secondaryHref: "tokens",
     secondaryLabelZh: "Token wallet",
@@ -92,7 +110,7 @@ const roleCopy = {
   },
   admin: {
     badge: "Admin Workspace",
-    zhSummary: "管理 payment approval、forwarder verification、tiers 同平台 analytics。",
+    zhSummary: "管理 payment approval、forwarder verification、membership tiers 和 platform analytics。",
     enSummary: "Manage payment approvals, forwarder verification, tiers and platform analytics.",
     primaryHref: "admin/pending-payments",
     primaryLabelZh: "待確認付款",
@@ -118,7 +136,7 @@ export default function LocalizedDashboardPage({ params, searchParams }: { param
           <div>
             <Badge variant="gold">{current.badge}</Badge>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-lblue sm:text-5xl">
-              {locale === "zh" ? `${v4Status.companyName} ${t.hello}` : `${t.hello}, ${v4Status.companyName}`}
+              {locale === "zh" ? `${v4Status.companyName}，${t.hello}` : `${t.hello}, ${v4Status.companyName}`}
             </h1>
             <p className="mt-2 text-muted-foreground">{locale === "zh" ? current.zhSummary : current.enSummary}</p>
           </div>
@@ -147,7 +165,7 @@ export default function LocalizedDashboardPage({ params, searchParams }: { param
                 <Flame className="h-4 w-4" />
                 {t.hot}
               </div>
-              <CardTitle className="mt-2 text-2xl">{role === "agency" ? "Latest SR activity" : role === "admin" ? "Platform watchlist" : hotRequest.lane}</CardTitle>
+              <CardTitle className="mt-2 text-2xl">{role === "agency" ? t.latestActivity : role === "admin" ? t.platformWatchlist : hotRequest.lane}</CardTitle>
             </div>
             <Badge variant="gold">{hotRequest.id}</Badge>
           </CardHeader>
@@ -170,7 +188,7 @@ export default function LocalizedDashboardPage({ params, searchParams }: { param
             <div className="col-span-2 rounded-md border border-lgold/25 bg-lgold/10 p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-[#6f5514]">
                 <Coins className="h-4 w-4" />
-                Token 餘額
+                {t.tokenBalance}
               </div>
               <div className="mt-1 text-3xl font-black text-lblue">{v4Status.tokens}</div>
             </div>
@@ -220,12 +238,12 @@ export default function LocalizedDashboardPage({ params, searchParams }: { param
 
         <Card>
           <CardHeader>
-            <CardTitle>Why LBID keeps value inside</CardTitle>
+            <CardTitle>{t.whyTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <ValueRow icon={ShieldCheck} title="Progressive disclosure" text={t.masked} />
-            <ValueRow icon={FileText} title="Paper trail" text="Quotation、AWB、文件和評分留在平台，方便日後追蹤責任。" />
-            <ValueRow icon={TrendingUp} title="Reputation loop" text="每次完成交易都提升 Directory 排名和信譽資產。" />
+            <ValueRow icon={FileText} title="Paper trail" text={t.paperTrail} />
+            <ValueRow icon={TrendingUp} title="Reputation loop" text={t.reputationLoop} />
           </CardContent>
         </Card>
       </section>
@@ -237,6 +255,7 @@ function ShipmentRequestCard({ request, locale, primary = false }: { request: ty
   const t = copy[locale]
   const filled = Math.round((request.usedSlots / request.totalSlots) * 100)
   const remaining = request.totalSlots - request.usedSlots
+  const detailHref = `/${locale}/marketplace/${request.id}`
 
   return (
     <div className={`rounded-lg border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(27,43,94,0.09)] ${primary ? "border-red-200" : "border-lblue/10"}`}>
@@ -274,10 +293,12 @@ function ShipmentRequestCard({ request, locale, primary = false }: { request: ty
       <p className="mt-3 rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm text-muted-foreground">{request.routeMask}</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="gold">
-          {t.bidNow}
+        <Button asChild variant="gold">
+          <Link href={detailHref}>{t.bidNow}</Link>
         </Button>
-        <Button variant="outline">{t.priority}</Button>
+        <Button asChild variant="outline">
+          <Link href={detailHref}>{t.priority}</Link>
+        </Button>
       </div>
     </div>
   )
@@ -325,16 +346,16 @@ function ValueRow({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title
 }
 
 function AdminSnapshot({ locale }: { locale: Locale }) {
+  const t = copy[locale]
+
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <Info icon={Users} label={locale === "zh" ? "待審公司" : "Pending forwarders"} value="8" />
-      <Info icon={Coins} label={locale === "zh" ? "待確認付款" : "Pending payments"} value="3" />
-      <Info icon={TrendingUp} label={locale === "zh" ? "今日交易" : "Today flows"} value="12" />
+      <Info icon={Users} label={t.pendingForwarders} value="8" />
+      <Info icon={Coins} label={t.pendingPayments} value="3" />
+      <Info icon={TrendingUp} label={t.todayFlows} value="12" />
       <div className="rounded-md border border-lblue/10 bg-slate-50 p-3 sm:col-span-3">
-        <div className="font-black text-lblue">{locale === "zh" ? "Admin priorities" : "Admin priorities"}</div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {locale === "zh" ? "先處理付款確認和 Forwarder verification，確保 marketplace 供應質素。" : "Review payment confirmations and forwarder verification before expanding marketplace supply."}
-        </p>
+        <div className="font-black text-lblue">{t.adminPriorities}</div>
+        <p className="mt-1 text-sm text-muted-foreground">{t.adminText}</p>
       </div>
     </div>
   )

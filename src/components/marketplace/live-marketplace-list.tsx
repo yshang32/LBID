@@ -25,13 +25,14 @@ const copy = {
   zh: {
     bid: "提交 sealed bid",
     priority: "Priority Bid",
-    sealed: "Sealed bid：競爭者報價會保持隱藏，限時完結後才揭示結果。",
+    sealed: "Sealed bid：競爭對手在截標前看不到你的價格或條款。",
     detail: "查看 SR 詳情",
     deadline: "Deadline",
     slots: "slots",
     left: "left",
     live: "Live",
-    empty: "暫時未有 open SR。",
+    empty: "暫時沒有 open SR。",
+    servicePending: "Service details pending",
   },
   en: {
     bid: "Submit sealed bid",
@@ -43,6 +44,7 @@ const copy = {
     left: "left",
     live: "Live",
     empty: "No open SRs yet.",
+    servicePending: "Service details pending",
   },
 }
 
@@ -102,7 +104,7 @@ function LiveCard({ request, locale }: { request: LiveRequest; locale: Locale })
         <div className="flex items-start justify-between gap-3">
           <div>
             <Badge variant="gold">{t.live}</Badge>
-            <CardTitle className="mt-3">{origin} → {destination}</CardTitle>
+            <CardTitle className="mt-3">{origin} -&gt; {destination}</CardTitle>
           </div>
           <Deadline label={t.deadline} value={deadline} />
         </div>
@@ -111,7 +113,7 @@ function LiveCard({ request, locale }: { request: LiveRequest; locale: Locale })
         <div>
           <div className="font-semibold text-lblue">{cargo}</div>
           <div className="text-sm text-muted-foreground">
-            {(request.services_needed || []).join(", ") || "Service details pending"}
+            {(request.services_needed || []).join(", ") || t.servicePending}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
@@ -149,7 +151,7 @@ function DemoCard({ request, locale }: { request: typeof v4ShipmentRequests[numb
         <div>
           <div className="mb-1 flex items-center justify-between text-sm font-semibold">
             <span>{request.usedSlots}/{request.totalSlots} {t.slots}</span>
-            <span className={remaining <= 2 ? "text-red-600" : "text-lblue"}>{t.left} {remaining}</span>
+            <span className={remaining <= 2 ? "text-red-600" : "text-lblue"}>{remaining} {t.left}</span>
           </div>
           <div className="h-2 rounded-full bg-slate-100">
             <div className={`h-full rounded-full ${remaining <= 2 ? "bg-red-600" : "bg-lgold"}`} style={{ width: `${filled}%` }} />

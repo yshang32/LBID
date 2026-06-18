@@ -35,10 +35,10 @@ const initialState: LiveState = {
 
 const copy = {
   zh: {
-    title: "即時工作台",
-    loading: "正在讀取 Supabase 資料",
-    demo: "尚未登入真帳戶，以下頁面會保留 demo 資料。",
-    error: "即時資料暫時未能讀取",
+    title: "即時工作區",
+    loading: "正在載入 Supabase 工作區資料",
+    demo: "登入真實帳號後，這裡會顯示你的 live workspace data。",
+    error: "暫時未能載入即時資料",
     live: "Live Supabase",
     agencyPrimary: "我的 SR",
     forwarderPrimary: "可投標 SR",
@@ -46,10 +46,9 @@ const copy = {
     matches: "Match records",
     tokens: "Token balance",
     reputation: "Reputation",
-    onboarding: "Onboarding",
-    openMarketplace: "前往 Marketplace",
+    openMarketplace: "打開 Marketplace",
     createSr: "建立 SR",
-    adminQueue: "處理 Admin queue",
+    adminQueue: "打開 Admin queue",
   },
   en: {
     title: "Live workspace",
@@ -63,7 +62,6 @@ const copy = {
     matches: "Match records",
     tokens: "Token balance",
     reputation: "Reputation",
-    onboarding: "Onboarding",
     openMarketplace: "Open Marketplace",
     createSr: "Create SR",
     adminQueue: "Open Admin queue",
