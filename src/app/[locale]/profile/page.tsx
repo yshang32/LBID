@@ -4,6 +4,7 @@ import { BadgeCheck, Building2, Coins, Gem, LineChart, ShieldCheck, Star } from 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { LiveProfileSummary } from "@/components/profile/live-profile-summary"
 import { companyProfile, getMonthlyFreeTokenGrant, rateCards } from "@/lib/data"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { v4Status } from "@/lib/v4"
@@ -83,6 +84,8 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
         <StatusCard icon={ShieldCheck} label={t.subscription} value={locale === "zh" ? v4Status.membership : "Monthly Member"} meta={`Until ${companyProfile.trialEndsAt}`} />
         <StatusCard icon={Coins} label={t.tokens} value={`${v4Status.tokens}`} meta={`${companyProfile.tokenBalanceFree} free / ${companyProfile.tokenBalancePaid} paid`} />
       </section>
+
+      <LiveProfileSummary locale={locale} />
 
       <section className="mt-6 grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
         <Card>

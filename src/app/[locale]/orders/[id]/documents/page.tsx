@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { apiJson } from "@/lib/api-client"
+import { getAuthHeaders } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 type DocumentItem = {
@@ -88,22 +88,32 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
   const [reminderSent, setReminderSent] = useState(false)
   const [savingId, setSavingId] = useState("")
   const [error, setError] = useState("")
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({})
   const requiredComplete = documents.filter((doc) => doc.required).every((doc) => doc.uploaded)
   const progress = Math.round((documents.filter((doc) => doc.uploaded).length / documents.length) * 100)
 
   async function markUploaded(id: string) {
     const item = documents.find((document) => document.id === id)
     if (!item) return
+    const file = selectedFiles[id]
+    if (!file) {
+      setError("Please choose a file first")
+      return
+    }
 
     setSavingId(id)
     setError("")
-    const { response, body } = await apiJson(`/api/orders/${params.id}/documents`, {
+    const authHeaders = await getAuthHeaders()
+    const formData = new FormData()
+    formData.append("type", item.name)
+    formData.append("file", file)
+
+    const response = await fetch(`/api/orders/${params.id}/documents`, {
       method: "POST",
-      body: JSON.stringify({
-        type: item.name,
-        fileUrl: `https://example.com/lbid/${params.id}/${id}.pdf`,
-      }),
+      headers: authHeaders,
+      body: formData,
     })
+    const body = await response.json().catch(() => ({}))
 
     setSavingId("")
     if (!response.ok) {
@@ -157,7 +167,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
                     {document.confirmed ? <Badge variant="teal">{t.confirmed}</Badge> : null}
                   </div>
                   <div className="mt-3 flex items-center gap-3">
-                    <Input type="file" className="max-w-sm" />
+                    <Input type="file" className="max-w-sm" onChange={(event) => setSelectedFiles((items) => ({ ...items, [document.id]: event.target.files?.[0] || null }))} />
                     <Button variant="outline" disabled={savingId === document.id} onClick={() => markUploaded(document.id)}>
                       <UploadCloud className="h-4 w-4" />
                       {savingId === document.id ? "Saving..." : t.upload}

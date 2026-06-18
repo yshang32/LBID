@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { LiveOrderPanel } from "@/components/orders/live-order-panel"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { getLocalizedDocumentChecklist } from "@/lib/localized-data"
 
@@ -89,6 +90,9 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
         <Summary label={t.route} value="Ho Chi Minh City -> Hong Kong" />
         <Summary label={t.total} value="HKD 12,800" />
       </section>
+
+      <LiveOrderPanel locale={locale} orderId={params.id} />
+
       <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>

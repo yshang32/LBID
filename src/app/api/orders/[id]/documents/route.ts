@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getApiSupabaseSession(request)
@@ -20,7 +20,40 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const session = await getApiSupabaseSession(request)
   if (!session) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
-  const body = await request.json().catch(() => ({}))
+  const contentType = request.headers.get("content-type") || ""
+  let body: Record<string, any> = {}
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData()
+    const type = String(formData.get("type") || "")
+    const file = formData.get("file")
+    if (!type || !(file instanceof File)) {
+      return NextResponse.json({ error: "DOCUMENT_TYPE_AND_FILE_REQUIRED" }, { status: 400 })
+    }
+
+    const service = getApiSupabaseServiceClient()
+    if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+
+    const extension = file.name.includes(".") ? file.name.split(".").pop() : "bin"
+    const safeType = type.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+    const path = `${params.id}/${safeType}-${crypto.randomUUID()}.${extension}`
+    const bytes = Buffer.from(await file.arrayBuffer())
+
+    const { error: uploadError } = await service.storage
+      .from("documents")
+      .upload(path, bytes, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      })
+
+    if (uploadError) return NextResponse.json({ error: uploadError.message, bucket: "documents" }, { status: 500 })
+
+    const { data: publicData } = service.storage.from("documents").getPublicUrl(path)
+    body = { type, fileUrl: publicData.publicUrl }
+  } else {
+    body = await request.json().catch(() => ({}))
+  }
+
   if (!body.type || !body.fileUrl) {
     return NextResponse.json({ error: "DOCUMENT_TYPE_AND_FILE_URL_REQUIRED" }, { status: 400 })
   }

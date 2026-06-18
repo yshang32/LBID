@@ -9,7 +9,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   const { data, error } = await session.supabase
     .from("orders")
-    .select("id, quotation_id, status, created_at")
+    .select("id, quotation_id, status, created_at, quotations(id, shipment_request_id, forwarder_id, total_amount, line_items, status, created_at)")
     .eq("id", params.id)
     .maybeSingle()
 
@@ -34,7 +34,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .from("orders")
     .update({ status })
     .eq("id", params.id)
-    .select("id, quotation_id, status, created_at")
+    .select("id, quotation_id, status, created_at, quotations(id, shipment_request_id, forwarder_id, total_amount, line_items, status, created_at)")
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

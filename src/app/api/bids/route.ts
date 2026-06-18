@@ -3,6 +3,27 @@ import { NextResponse } from "next/server"
 import { checkAccess, spendToken } from "@/lib/backend"
 import { getApiSupabaseSession } from "@/lib/supabase/api"
 
+export async function GET(request: Request) {
+  const session = await getApiSupabaseSession(request)
+  if (!session) return NextResponse.json({ bids: [] })
+
+  const { searchParams } = new URL(request.url)
+  const srId = searchParams.get("sr_id")
+
+  let query = session.supabase
+    .from("bids")
+    .select("id, sr_id, forwarder_id, price, currency, transit_time, terms, submitted_at")
+    .order("submitted_at", { ascending: false })
+    .limit(100)
+
+  if (srId) query = query.eq("sr_id", srId)
+
+  const { data, error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ bids: data })
+}
+
 export async function POST(request: Request) {
   const session = await getApiSupabaseSession(request)
   const body = await request.json().catch(() => ({}))

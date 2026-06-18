@@ -1,11 +1,12 @@
  "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Banknote, CheckCircle2, Clock, CreditCard, XCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 export const dynamic = "force-dynamic"
@@ -68,7 +69,32 @@ const pendingPayments = [
 export default function PendingPaymentsPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
+  const [payments, setPayments] = useState(pendingPayments)
   const [statuses, setStatuses] = useState<Record<string, "pending" | "confirmed" | "rejected">>({})
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      const { response, body } = await apiJson("/api/admin/pending-payments")
+      if (!cancelled && response.ok && Array.isArray(body.paymentIntents) && body.paymentIntents.length > 0) {
+        setPayments(body.paymentIntents.map(normalizePayment))
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function confirmPayment(paymentId: string) {
+    const { response } = await apiJson("/api/admin/pending-payments", {
+      method: "POST",
+      body: JSON.stringify({ action: "confirm", paymentIntentId: paymentId }),
+    })
+    setStatuses((items) => ({ ...items, [paymentId]: response.ok ? "confirmed" : "rejected" }))
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
@@ -77,7 +103,7 @@ export default function PendingPaymentsPage({ params }: { params: { locale: stri
       <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
 
       <section className="mt-8 grid gap-4">
-        {pendingPayments.map((payment) => (
+        {payments.map((payment) => (
           <Card key={payment.id}>
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -104,7 +130,7 @@ export default function PendingPaymentsPage({ params }: { params: { locale: stri
                   <XCircle className="h-4 w-4" />
                   {t.reject}
                 </Button>
-                <Button variant="gold" onClick={() => setStatuses((items) => ({ ...items, [payment.id]: "confirmed" }))}>
+                <Button variant="gold" onClick={() => confirmPayment(payment.id)}>
                   <CheckCircle2 className="h-4 w-4" />
                   {t.confirm}
                 </Button>
@@ -115,6 +141,18 @@ export default function PendingPaymentsPage({ params }: { params: { locale: stri
       </section>
     </main>
   )
+}
+
+function normalizePayment(payment: any) {
+  return {
+    id: payment.id,
+    company: payment.company || payment.user_id || "LBID member",
+    type: payment.type,
+    method: String(payment.payment_method || payment.method || "").toUpperCase(),
+    amount: `${payment.currency || "HKD"} ${Number(payment.amount || 0).toLocaleString()}`,
+    reference: payment.fps_reference || payment.reference || payment.id,
+    proof: payment.proof_url || payment.proof || "-",
+  }
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof CreditCard; label: string; value: string }) {

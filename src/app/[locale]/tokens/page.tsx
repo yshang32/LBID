@@ -3,6 +3,7 @@ import { ArrowUpRight, Coins, Gem, Megaphone, RotateCcw, Sparkles } from "lucide
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { LiveTokenWallet } from "@/components/tokens/live-token-wallet"
 import { companyProfile, directoryBoosts, getMonthlyFreeTokenGrant } from "@/lib/data"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { v4TokenPackages } from "@/lib/v4"
@@ -68,6 +69,8 @@ export default function TokensPage({ params }: { params: { locale: string } }) {
         <WalletCard icon={Gem} label={t.paid} value={`${companyProfile.tokenBalancePaid}`} meta={t.noExpiry} />
         <WalletCard icon={RotateCcw} label={t.grant} value={`${freeGrant}`} meta={`${t.score}: ${companyProfile.reputationScore}`} />
       </section>
+
+      <LiveTokenWallet locale={locale} />
 
       <Card className="mt-6 border-lgold/30 bg-lgold/10">
         <CardContent className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">

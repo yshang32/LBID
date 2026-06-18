@@ -4,7 +4,20 @@ import { confirmPaymentIntent as confirmDemoPaymentIntent, listPaymentIntents } 
 import { confirmPaymentIntent } from "@/lib/payment/confirmPaymentIntent"
 import { getApiSupabaseServiceClient } from "@/lib/supabase/api"
 
-export function GET() {
+export async function GET() {
+  const supabase = getApiSupabaseServiceClient()
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("payment_intents")
+      .select("id, user_id, type, amount, currency, payment_method, status, fps_reference, proof_url, related_plan, related_token_package, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(100)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ paymentIntents: data })
+  }
+
   return NextResponse.json({ paymentIntents: listPaymentIntents().filter((intent) => intent.status === "pending") })
 }
 
