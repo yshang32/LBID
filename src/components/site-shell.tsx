@@ -43,7 +43,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/[0.88] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_12px_36px_rgba(27,43,94,0.08)] backdrop-blur-2xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/[0.9] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_10px_28px_rgba(27,43,94,0.055)] backdrop-blur-2xl">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
           <Link href={prefix} className="flex h-12 w-[158px] shrink-0 items-center">
             <Image
@@ -57,7 +57,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
             />
           </Link>
 
-          <div className="hidden h-10 flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-white/70 px-3 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.9)_inset] md:flex">
+          <div className="hidden h-10 flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-white/80 px-3 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.9)_inset] md:flex">
             <Search className="h-4 w-4" />
             <span>{locale === "zh" ? "搜尋 SR、Forwarder、Match Record..." : "Search SR, forwarders, match records..."}</span>
           </div>
@@ -66,7 +66,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
             <StatusPill icon={Coins} value={`${v4Status.tokens}`} label="Token" tone="gold" />
             <StatusPill icon={Star} value={`${v4Status.reputation}`} label={locale === "zh" ? "信譽" : "Score"} tone="blue" />
             <StatusPill icon={Gem} value={v4Status.membership} label={locale === "zh" ? "會員" : "Plan"} tone="blue" hideOnMobile />
-            <div className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/80 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.06)] sm:flex">
+            <div className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/80 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.05)] sm:flex">
               <Bell className="h-4 w-4" />
               <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
                 {v4Status.notifications}
@@ -79,14 +79,14 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         </div>
       </header>
 
-      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-64 border-r border-lblue/10 bg-white/[0.82] px-3 py-4 shadow-[1px_0_0_rgba(255,255,255,0.9)_inset,18px_0_55px_rgba(27,43,94,0.065)] backdrop-blur-2xl lg:block">
+      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-64 border-r border-lblue/10 bg-white/[0.86] px-3 py-4 shadow-[1px_0_0_rgba(255,255,255,0.9)_inset,14px_0_42px_rgba(27,43,94,0.045)] backdrop-blur-2xl lg:block">
         <nav className="space-y-1">
           {nav.map((item, index) => (
             <Link
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${
-                index === 0 ? "bg-gradient-to-r from-lblue to-[#243a77] text-white shadow-[0_12px_26px_rgba(27,43,94,0.2)]" : "text-lblue hover:bg-white/80 hover:shadow-[0_8px_18px_rgba(27,43,94,0.05)]"
+                index === 0 ? "bg-lblue text-white shadow-[0_12px_24px_rgba(27,43,94,0.16)]" : "text-lblue hover:bg-slate-50"
               }`}
             >
               <item.icon className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
       <div className="pt-16 lg:pl-64">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-lblue/10 bg-white/[0.88] px-2 py-2 shadow-[0_-14px_38px_rgba(27,43,94,0.1)] backdrop-blur-2xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-lblue/10 bg-white/[0.9] px-2 py-2 shadow-[0_-14px_34px_rgba(27,43,94,0.075)] backdrop-blur-2xl lg:hidden">
         {bottomNav.map((item) => (
           <Link key={item.href} href={item.href} className="relative flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] font-semibold text-lblue">
             <item.icon className="h-5 w-5" />
@@ -130,8 +130,8 @@ function StatusPill({
   hideOnMobile?: boolean
 }) {
   return (
-    <div className={`h-9 items-center gap-2 rounded-md border px-2 text-sm font-bold shadow-[0_8px_18px_rgba(27,43,94,0.055)] ${hideOnMobile ? "hidden md:flex" : "flex"} ${
-      tone === "gold" ? "border-lgold/25 bg-lgold/[0.12] text-[#6f5514]" : "border-lblue/10 bg-white/[0.78] text-lblue"
+    <div className={`h-9 items-center gap-2 rounded-md border px-2 text-sm font-bold shadow-[0_8px_18px_rgba(27,43,94,0.045)] ${hideOnMobile ? "hidden md:flex" : "flex"} ${
+      tone === "gold" ? "border-lgold/25 bg-lgold/[0.12] text-[#6f5514]" : "border-lblue/10 bg-white/[0.82] text-lblue"
     }`}>
       <Icon className="h-4 w-4" />
       <span>{value}</span>

@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { CheckCircle2, Eye, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
+import { ArrowRight, CheckCircle2, Eye, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,28 +18,31 @@ type AuthResult = { type: "register" | "login"; role: Role; email: string } | nu
 const copy = {
   zh: {
     title: "登入 LBID",
-    subtitle: "連接東南亞 Agency 與香港 Forwarder 的 matching-first logistics network。",
-    newUser: "第一次使用 LBID？",
-    signUp: "建立試用帳戶",
+    registerTitle: "建立試用帳戶",
+    subtitle: "一個為東南亞 Agency 與香港 Forwarder 而設的 sealed bidding logistics workspace。",
+    eyebrow: "Matching-first logistics platform",
+    newUser: "第一次使用？",
+    signUp: "建立試用",
+    backToLogin: "返回登入",
     email: "Email",
     password: "密碼",
     remember: "記住我",
     forgot: "忘記密碼？",
     signIn: "登入",
-    role: "登入身份",
-    registerTitle: "建立試用帳戶",
+    role: "身份",
     company: "公司名稱",
     fullName: "聯絡人",
     create: "建立 7 日試用",
     demo: "Demo mode",
     configured: "Supabase connected",
-    demoText: "如已設定 Supabase env，登入會使用真實 Auth；否則會以 demo flow 進入工作台。",
+    demoText: "連接 Supabase 後會使用真實 Auth。未登入時仍可先預覽 demo workspace。",
     loginReady: "已登入，可以進入工作台。",
     verifyTitle: "試用帳戶已建立",
-    verifyBody: "如 Supabase 啟用 email verification，請先完成驗證；之後可進入 onboarding。",
+    verifyBody: "如 Supabase 啟用 email verification，請完成驗證後再進入 onboarding。",
     dashboard: "進入工作台",
     working: "處理中...",
-    trust: ["Sealed bid", "Token ledger", "Preferred partner"],
+    promise: "價格公平、能力透明、流程留痕。",
+    trust: ["Sealed bid", "Token ledger", "Order workspace"],
     roles: [
       { value: "agency", label: "Client / Agency" },
       { value: "forwarder", label: "Forwarder" },
@@ -48,28 +51,31 @@ const copy = {
   },
   en: {
     title: "Sign in to LBID",
-    subtitle: "A matching-first logistics network connecting Southeast Asian agencies with Hong Kong forwarders.",
-    newUser: "New to LBID?",
+    registerTitle: "Create trial account",
+    subtitle: "A sealed bidding logistics workspace for Southeast Asian agencies and Hong Kong forwarders.",
+    eyebrow: "Matching-first logistics platform",
+    newUser: "New here?",
     signUp: "Start trial",
+    backToLogin: "Back to sign in",
     email: "Email",
     password: "Password",
     remember: "Remember me",
     forgot: "Forgot your password?",
     signIn: "Sign In",
     role: "Role",
-    registerTitle: "Create trial account",
     company: "Company name",
     fullName: "Contact person",
     create: "Create 7-day trial",
     demo: "Demo mode",
     configured: "Supabase connected",
-    demoText: "When Supabase env vars are configured, this form uses real Auth. Otherwise it falls back to demo navigation.",
+    demoText: "When Supabase is connected, this form uses real Auth. Demo workspace remains available for preview.",
     loginReady: "Signed in. Ready to enter the workspace.",
     verifyTitle: "Trial account created",
     verifyBody: "If email verification is enabled in Supabase, verify your email before onboarding.",
     dashboard: "Go to workspace",
     working: "Working...",
-    trust: ["Sealed bid", "Token ledger", "Preferred partner"],
+    promise: "Fair pricing. Transparent capability. Traceable workflow.",
+    trust: ["Sealed bid", "Token ledger", "Order workspace"],
     roles: [
       { value: "agency", label: "Client / Agency" },
       { value: "forwarder", label: "Forwarder" },
@@ -164,44 +170,62 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#050607] text-white">
-      <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl place-items-center px-4 py-14 sm:px-6">
-        <div className="w-full max-w-[440px]">
-          <div className="mb-12 flex justify-center">
+    <main className="min-h-[calc(100vh-4rem)] bg-white text-lblue">
+      <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.95fr_440px]">
+        <div className="hidden lg:block">
+          <div className="inline-flex rounded-full border border-lblue/10 bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-lgold shadow-sm">
+            {t.eyebrow}
+          </div>
+          <h1 className="mt-6 max-w-2xl text-5xl font-black leading-[1.04] tracking-tight text-lblue">
+            {t.promise}
+          </h1>
+          <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
+          <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
+            {t.trust.map((item) => (
+              <div key={item} className="rounded-lg border border-lblue/10 bg-slate-50 p-4 text-sm font-bold text-lblue">
+                <CheckCircle2 className="mb-3 h-5 w-5 text-lgold" />
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mx-auto w-full max-w-[440px]">
+          <div className="mb-8 flex justify-center">
             <Image
-              src="/assets/lbid-logo-enterprise-dark.png"
+              src="/assets/lbid-logo-enterprise-light.png"
               alt="LBID"
               width={260}
               height={78}
-              className="h-[76px] w-auto object-contain drop-shadow-[0_0_24px_rgba(148,163,184,0.18)]"
+              className="h-[64px] w-auto object-contain"
               priority
             />
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-[#111216] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <div className="rounded-xl border border-lblue/10 bg-white p-7 shadow-[0_24px_70px_rgba(27,43,94,0.10)]">
             <div className="text-center">
-              <h1 className="text-2xl font-black tracking-tight">{mode === "login" ? t.title : t.registerTitle}</h1>
-              <p className="mt-2 text-sm text-[#8f96a3]">{t.subtitle}</p>
-              <p className="mt-3 text-sm text-[#8f96a3]">
+              <h2 className="text-2xl font-black tracking-tight text-lblue">{mode === "login" ? t.title : t.registerTitle}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.subtitle}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
                 {mode === "login" ? (
                   <>
                     {t.newUser}{" "}
-                    <button className="font-semibold text-[#62a8ff] hover:text-[#8ec2ff]" onClick={() => setMode("register")}>
+                    <button className="font-bold text-lblue underline decoration-lgold/50 underline-offset-4 hover:text-lgold" onClick={() => setMode("register")}>
                       {t.signUp}
                     </button>
                   </>
                 ) : (
-                  <button className="font-semibold text-[#62a8ff] hover:text-[#8ec2ff]" onClick={() => setMode("login")}>
-                    {t.title}
+                  <button className="font-bold text-lblue underline decoration-lgold/50 underline-offset-4 hover:text-lgold" onClick={() => setMode("login")}>
+                    {t.backToLogin}
                   </button>
                 )}
               </p>
             </div>
 
-            <div className="mt-8 space-y-5">
-              <label className="space-y-2 text-sm font-bold text-white">
+            <div className="mt-7 space-y-4">
+              <label className="space-y-2 text-sm font-bold text-lblue">
                 {t.role}
-                <Select value={role} onChange={(event) => setRole(event.target.value as Role)} className="border-[#2a2d36] bg-[#17191f] text-white shadow-none focus-visible:ring-[#3c82f6]">
+                <Select value={role} onChange={(event) => setRole(event.target.value as Role)}>
                   {t.roles.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
@@ -210,77 +234,72 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
 
               {mode === "register" ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2 text-sm font-bold text-white">
+                  <label className="space-y-2 text-sm font-bold text-lblue">
                     {t.company}
-                    <Input value={company} onChange={(event) => setCompany(event.target.value)} className="border-[#2a2d36] bg-[#17191f] text-white shadow-none focus-visible:ring-[#3c82f6]" />
+                    <Input value={company} onChange={(event) => setCompany(event.target.value)} />
                   </label>
-                  <label className="space-y-2 text-sm font-bold text-white">
+                  <label className="space-y-2 text-sm font-bold text-lblue">
                     {t.fullName}
-                    <Input value={fullName} onChange={(event) => setFullName(event.target.value)} className="border-[#2a2d36] bg-[#17191f] text-white shadow-none focus-visible:ring-[#3c82f6]" />
+                    <Input value={fullName} onChange={(event) => setFullName(event.target.value)} />
                   </label>
                 </div>
               ) : null}
 
-              <label className="space-y-2 text-sm font-bold text-white">
+              <label className="space-y-2 text-sm font-bold text-lblue">
                 {t.email}
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-[#697080]" />
-                  <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" className="border-[#2a2d36] bg-[#17191f] pl-9 text-white shadow-none placeholder:text-[#697080] focus-visible:ring-[#3c82f6]" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" className="pl-9" />
                 </div>
               </label>
 
-              <label className="space-y-2 text-sm font-bold text-white">
+              <label className="space-y-2 text-sm font-bold text-lblue">
                 {t.password}
                 <div className="relative">
-                  <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-[#697080]" />
-                  <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="border-[#2a2d36] bg-[#17191f] pl-9 pr-9 text-white shadow-none placeholder:text-[#697080] focus-visible:ring-[#3c82f6]" />
-                  <Eye className="absolute right-3 top-3 h-4 w-4 text-[#697080]" />
+                  <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="pl-9 pr-9" />
+                  <Eye className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                 </div>
               </label>
 
               {mode === "login" ? (
-                <div className="flex items-center justify-between text-sm text-[#9aa1ae]">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" className="h-4 w-4 rounded border-[#3a3d47] bg-[#17191f]" />
+                    <input type="checkbox" className="h-4 w-4 rounded border-lblue/20" />
                     {t.remember}
                   </label>
-                  <button className="font-semibold text-[#62a8ff] hover:text-[#8ec2ff]">{t.forgot}</button>
+                  <button className="font-semibold text-lblue hover:text-lgold">{t.forgot}</button>
                 </div>
               ) : null}
 
-              <Button className="h-12 w-full border border-[#3d6fb5] bg-transparent text-[#62a8ff] shadow-none hover:bg-[#162235] hover:text-[#8ec2ff]" disabled={loading} onClick={mode === "login" ? submitLogin : submitRegister}>
+              <Button className="h-11 w-full" variant="gold" disabled={loading} onClick={mode === "login" ? submitLogin : submitRegister}>
                 {loading ? t.working : mode === "login" ? t.signIn : t.create}
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
 
-            {error ? <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm font-semibold text-red-100">{error}</div> : null}
+            {error ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
 
-            <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-[#8f96a3]">
-              <div className="flex items-center gap-2 font-semibold text-[#c7ccd6]">
-                <ShieldCheck className="h-4 w-4 text-[#c9a84c]" />
+            <div className="mt-5 rounded-lg border border-lblue/10 bg-slate-50 p-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 font-bold text-lblue">
+                <ShieldCheck className="h-4 w-4 text-lgold" />
                 {hasSupabase ? t.configured : t.demo}
               </div>
-              <p className="mt-1">{t.demoText}</p>
+              <p className="mt-1 leading-5">{t.demoText}</p>
             </div>
 
             {result ? (
-              <div className="mt-5 rounded-lg border border-[#2d6d53] bg-[#0e211b] p-4 text-sm text-[#d9fff0]">
+              <div className="mt-5 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
                 <div className="flex items-center gap-2 font-bold">
                   <CheckCircle2 className="h-4 w-4" />
                   {result.type === "login" ? t.loginReady : t.verifyTitle}
                 </div>
-                <p className="mt-1 text-[#9ecfbd]">{result.type === "login" ? result.email : t.verifyBody}</p>
-                <Button asChild className="mt-4 w-full bg-[#c9a84c] text-[#171104] hover:bg-[#b9973e]">
+                <p className="mt-1 text-teal-700">{result.type === "login" ? result.email : t.verifyBody}</p>
+                <Button asChild className="mt-4 w-full" variant="outline">
                   <Link href={dashboardHref}>{t.dashboard}</Link>
                 </Button>
               </div>
             ) : null}
-          </div>
-
-          <div className="mt-12 grid grid-cols-3 items-center gap-6 opacity-40">
-            {t.trust.map((item) => (
-              <div key={item} className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#9aa1ae]">{item}</div>
-            ))}
           </div>
         </div>
       </section>

@@ -29,14 +29,11 @@
   body {
     @apply bg-background text-foreground;
     background:
-      radial-gradient(circle at 18% 10%, rgba(201, 168, 76, 0.16), transparent 28rem),
-      radial-gradient(circle at 82% 4%, rgba(61, 132, 180, 0.12), transparent 24rem),
-      linear-gradient(rgba(27, 43, 94, 0.038) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(27, 43, 94, 0.028) 1px, transparent 1px),
-      linear-gradient(135deg, rgba(27, 43, 94, 0.026) 0 1px, transparent 1px 18px),
-      linear-gradient(180deg, #ffffff 0%, #fbfcff 46%, #f2f6fc 100%);
+      radial-gradient(circle at 18% 0%, rgba(201, 168, 76, 0.1), transparent 26rem),
+      radial-gradient(circle at 86% 4%, rgba(42, 94, 180, 0.08), transparent 24rem),
+      linear-gradient(180deg, #ffffff 0%, #fbfcff 52%, #f5f8fc 100%);
     background-attachment: fixed;
-    background-size: auto, auto, 48px 48px, 48px 48px, 18px 18px, auto;
+    background-size: auto, auto, auto;
     min-height: 100vh;
     text-rendering: geometricPrecision;
   }
