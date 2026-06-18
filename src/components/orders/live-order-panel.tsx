@@ -15,11 +15,22 @@ const statuses = ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "c
 const copy = {
   zh: {
     title: "Live order status",
-    loading: "正在讀取 order 資料",
-    unauthenticated: "登入後會顯示真 order、文件和訊息資料。",
-    documents: "文件",
-    messages: "訊息",
+    loading: "正在載入 order 資料",
+    unauthenticated: "登入後可以查看真實 order、documents 和 messages 資料。",
+    documents: "Documents",
+    messages: "Messages",
     saveFailed: "狀態更新失敗",
+    order: "Order",
+    saving: "儲存中...",
+    statusLabels: {
+      confirmed: "Confirmed",
+      shipment_booked: "Shipment booked",
+      in_transit: "In transit",
+      arrived_hk: "Arrived HK",
+      customs_cleared: "Customs cleared",
+      delivered: "Delivered",
+      completed: "Completed",
+    },
   },
   en: {
     title: "Live order status",
@@ -28,6 +39,17 @@ const copy = {
     documents: "Documents",
     messages: "Messages",
     saveFailed: "Status update failed",
+    order: "Order",
+    saving: "Saving...",
+    statusLabels: {
+      confirmed: "Confirmed",
+      shipment_booked: "Shipment booked",
+      in_transit: "In transit",
+      arrived_hk: "Arrived HK",
+      customs_cleared: "Customs cleared",
+      delivered: "Delivered",
+      completed: "Completed",
+    },
   },
 }
 
@@ -114,20 +136,14 @@ export function LiveOrderPanel({ locale, orderId }: { locale: Locale; orderId: s
           <>
             <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-7">
               {statuses.map((status, index) => (
-                <Button
-                  key={status}
-                  variant={index <= activeIndex ? "gold" : "outline"}
-                  className="h-auto min-h-16 justify-start whitespace-normal text-left"
-                  disabled={saving === status}
-                  onClick={() => updateStatus(status)}
-                >
+                <Button key={status} variant={index <= activeIndex ? "gold" : "outline"} className="h-auto min-h-16 justify-start whitespace-normal text-left" disabled={saving === status} onClick={() => updateStatus(status)}>
                   <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  {saving === status ? "Saving..." : status}
+                  {saving === status ? t.saving : t.statusLabels[status as keyof typeof t.statusLabels]}
                 </Button>
               ))}
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <Metric label="Order" value={order?.status || "confirmed"} />
+              <Metric label={t.order} value={t.statusLabels[(order?.status || "confirmed") as keyof typeof t.statusLabels] || order?.status || "confirmed"} />
               <Metric label={t.documents} value={documents.length} />
               <Metric label={t.messages} value={messages.length} />
             </div>

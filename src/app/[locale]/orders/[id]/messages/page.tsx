@@ -21,34 +21,29 @@ type Message = {
 }
 
 const initialMessages: Message[] = [
-  {
-    id: "sys-1",
-    sender: "System",
-    content: "Order created from accepted quotation.",
-    time: "10:24",
-    system: true,
-    read: true,
-  },
+  { id: "sys-1", sender: "System", content: "Order created from accepted quotation.", time: "10:24", system: true, read: true },
 ]
 
 const copy = {
   zh: {
     badge: "Order messages",
-    title: "訂單訊息",
-    intro: "每張訂單都有獨立訊息欄。重要節點會留下系統紀錄，減少外部 email 溝通。",
+    title: "Order message thread",
+    intro: "每個 order 都有獨立訊息欄。重要節點會形成 system record，減少外部 email 來回。",
     order: "Order reference",
     participants: "Participants",
     agency: "Agency",
     forwarder: "Forwarder",
     thread: "Message thread",
     compose: "輸入訊息",
-    send: "發送訊息",
-    read: "已讀",
-    unread: "未讀",
-    realtime: "下一步可加入 Supabase Realtime 訂閱 messages table。",
-    guarded: "偵測到外部聯絡資料，建議把交易溝通留在 LBID 內。",
-    back: "返回訂單工作台",
-    placeholder: "例如：請確認 AWB 草稿、船期或文件狀態。",
+    send: "Send message",
+    sending: "Sending...",
+    read: "Read",
+    unread: "Unread",
+    realtime: "下一步會接 Supabase Realtime，讓雙方即時收到新訊息。",
+    guarded: "偵測到外部聯絡資料。建議把交易溝通留在 LBID 內，方便保留紀錄。",
+    back: "返回 order workspace",
+    placeholder: "例如：請確認 AWB draft、ship date 或文件狀態。",
+    defaultDraft: "請確認 AWB draft 和 pickup window。",
   },
   en: {
     badge: "Order messages",
@@ -61,12 +56,14 @@ const copy = {
     thread: "Message thread",
     compose: "Type message",
     send: "Send message",
+    sending: "Sending...",
     read: "Read",
     unread: "Unread",
     realtime: "Next step: subscribe to the messages table with Supabase Realtime.",
     guarded: "External contact details detected. Keep trade communication inside LBID.",
     back: "Back to order workspace",
     placeholder: "Example: Please confirm AWB draft, ship date or document status.",
+    defaultDraft: "Please confirm AWB draft and pickup window.",
   },
 }
 
@@ -74,7 +71,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
   const [messages, setMessages] = useState(initialMessages)
-  const [draft, setDraft] = useState(locale === "zh" ? "請確認 AWB 草稿和 pickup window。" : "Please confirm AWB draft and pickup window.")
+  const [draft, setDraft] = useState(t.defaultDraft)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
   const contactDetected = /(\+?\d[\d\s-]{7,}|@|whatsapp|wa\.me|email)/i.test(draft)
@@ -125,10 +122,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
           </CardHeader>
           <CardContent className="space-y-4">
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`rounded-lg border p-4 ${message.system ? "border-lgold/30 bg-lgold/10" : message.sender === "Agency" ? "border-teal-400/20 bg-teal-400/10" : "border-lblue/10 bg-slate-50"}`}
-              >
+              <div key={message.id} className={`rounded-lg border p-4 ${message.system ? "border-lgold/30 bg-lgold/10" : message.sender === "Agency" ? "border-teal-400/20 bg-teal-400/10" : "border-lblue/10 bg-slate-50"}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Badge variant={message.system ? "gold" : message.sender === "Agency" ? "teal" : "secondary"}>{message.sender}</Badge>
@@ -171,7 +165,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
             {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
             <Button className="w-full" variant="gold" disabled={sending} onClick={sendMessage}>
               <Send className="h-4 w-4" />
-              {sending ? "Sending..." : t.send}
+              {sending ? t.sending : t.send}
             </Button>
             <Button asChild className="w-full" variant="outline">
               <Link href={`/${locale}/orders/${params.id}`}>{t.back}</Link>

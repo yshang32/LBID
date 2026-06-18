@@ -1,40 +1,40 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
+import { useState } from "react"
 import { CheckCircle2, FileCheck2, MessageSquare, PackageCheck, Star } from "lucide-react"
 
+import { LiveOrderPanel } from "@/components/orders/live-order-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { LiveOrderPanel } from "@/components/orders/live-order-panel"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { getLocalizedDocumentChecklist } from "@/lib/localized-data"
 
 const copy = {
   zh: {
     badge: "Order workspace",
-    title: "訂單工作區：文件、訊息、狀態都要留痕。",
-    intro: "Bid 被接受後，Match Record 會轉成 Order。雙方在同一個工作區處理狀態、文件、訊息和完成後評價。",
-    forwarder: "中標 Forwarder",
-    agency: "Client / Agent",
-    route: "路線",
-    cargo: "貨物",
-    total: "中標報價",
-    status: "訂單狀態",
-    documents: "文件清單",
+    title: "Order workspace：文件、訊息和狀態集中管理。",
+    intro: "Bid accepted 後，Match Record 會變成 Order。雙方在這裡追蹤狀態、文件、訊息和完成後 review。",
+    forwarder: "Winning forwarder",
+    agency: "Client / Agency",
+    route: "Route",
+    cargo: "Cargo",
+    total: "Accepted quotation",
+    status: "Order status",
+    documents: "Document checklist",
     manageDocuments: "管理文件",
-    uploaded: "已上傳",
-    pending: "待補",
-    messages: "訂單訊息",
-    openMessages: "打開訊息欄",
-    send: "發送訊息",
-    review: "完成後評價",
-    leaveReview: "提交評價",
+    uploaded: "Uploaded",
+    pending: "Pending",
+    messages: "Order messages",
+    openMessages: "打開 message thread",
+    send: "Send message",
+    review: "Completion review",
+    leaveReview: "提交 review",
+    message: "請確認 booking details 和 ship date。",
+    role: "Platform role: workflow_platform_not_carrier_of_record",
     statuses: ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"],
-    message: "請確認 booking 資料和 ship date。",
-    role: "平台角色：workflow_platform_not_carrier_of_record",
   },
   en: {
     badge: "Order workspace",
@@ -55,9 +55,9 @@ const copy = {
     send: "Send message",
     review: "Completion review",
     leaveReview: "Leave review",
-    statuses: ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"],
     message: "Please confirm booking details and ship date.",
     role: "Platform role: workflow_platform_not_carrier_of_record",
+    statuses: ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"],
   },
 }
 
@@ -79,11 +79,12 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
         <Card className="md:w-80">
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Order reference</div>
-            <div className="font-mono text-xl font-black text-lgold">{params.id}</div>
+            <div className="break-all font-mono text-xl font-black text-lgold">{params.id}</div>
             <div className="mt-2 rounded-md border border-lblue/10 bg-slate-50 p-2 text-xs text-muted-foreground">{t.role}</div>
           </CardContent>
         </Card>
       </section>
+
       <section className="mt-8 grid gap-4 md:grid-cols-4">
         <Summary label={t.forwarder} value="HarbourLink Cargo" />
         <Summary label={t.agency} value="Saigon Freight Agency" />
@@ -102,17 +103,14 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             {t.statuses.map((status, index) => (
-              <button
-                key={status}
-                className={`rounded-md border p-3 text-left text-xs font-semibold transition ${index <= activeStatus ? "border-lgold/50 bg-lgold/15 text-[#6f5514]" : "border-lblue/10 bg-slate-50 text-muted-foreground"}`}
-                onClick={() => setActiveStatus(index)}
-              >
+              <button key={status} className={`rounded-md border p-3 text-left text-xs font-semibold transition ${index <= activeStatus ? "border-lgold/50 bg-lgold/15 text-[#6f5514]" : "border-lblue/10 bg-slate-50 text-muted-foreground"}`} onClick={() => setActiveStatus(index)}>
                 <CheckCircle2 className="mb-2 h-4 w-4" />
                 {status}
               </button>
             ))}
           </CardContent>
         </Card>
+
         <div className="space-y-5">
           <Card>
             <CardHeader>
@@ -131,6 +129,7 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
               </Button>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
               <MessageSquare className="h-5 w-5 text-lgold" />
@@ -145,6 +144,7 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
               </Button>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
               <Star className="h-5 w-5 text-lgold" />

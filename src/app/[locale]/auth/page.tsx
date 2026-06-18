@@ -18,9 +18,9 @@ type AuthResult = { type: "register" | "login"; role: Role; email: string } | nu
 const copy = {
   zh: {
     title: "登入 LBID",
-    subtitle: "連接東南亞 Agent 與香港 Forwarder 的 matching-first logistics network。",
-    newUser: "未有帳戶？",
-    signUp: "申請試用",
+    subtitle: "連接東南亞 Agency 與香港 Forwarder 的 matching-first logistics network。",
+    newUser: "第一次使用 LBID？",
+    signUp: "建立試用帳戶",
     email: "Email",
     password: "密碼",
     remember: "記住我",
@@ -33,21 +33,22 @@ const copy = {
     create: "建立 7 日試用",
     demo: "Demo mode",
     configured: "Supabase connected",
-    demoText: "未設定 Supabase env 時，表單會以 demo flow 顯示。",
+    demoText: "如已設定 Supabase env，登入會使用真實 Auth；否則會以 demo flow 進入工作台。",
     loginReady: "已登入，可以進入工作台。",
     verifyTitle: "試用帳戶已建立",
-    verifyBody: "完成 email verification 後即可進入 onboarding，並獲得 10 tokens。",
+    verifyBody: "如 Supabase 啟用 email verification，請先完成驗證；之後可進入 onboarding。",
     dashboard: "進入工作台",
+    working: "處理中...",
     trust: ["Sealed bid", "Token ledger", "Preferred partner"],
     roles: [
-      { value: "agency", label: "Agency" },
+      { value: "agency", label: "Client / Agency" },
       { value: "forwarder", label: "Forwarder" },
       { value: "admin", label: "Admin" },
     ],
   },
   en: {
     title: "Sign in to LBID",
-    subtitle: "A matching-first logistics network connecting Southeast Asian agents with Hong Kong forwarders.",
+    subtitle: "A matching-first logistics network connecting Southeast Asian agencies with Hong Kong forwarders.",
     newUser: "New to LBID?",
     signUp: "Start trial",
     email: "Email",
@@ -62,14 +63,15 @@ const copy = {
     create: "Create 7-day trial",
     demo: "Demo mode",
     configured: "Supabase connected",
-    demoText: "Forms stay in demo flow until Supabase env vars are configured.",
+    demoText: "When Supabase env vars are configured, this form uses real Auth. Otherwise it falls back to demo navigation.",
     loginReady: "Signed in. Ready to enter the workspace.",
     verifyTitle: "Trial account created",
-    verifyBody: "After email verification, onboarding unlocks and 10 tokens are granted.",
+    verifyBody: "If email verification is enabled in Supabase, verify your email before onboarding.",
     dashboard: "Go to workspace",
+    working: "Working...",
     trust: ["Sealed bid", "Token ledger", "Preferred partner"],
     roles: [
-      { value: "agency", label: "Agency" },
+      { value: "agency", label: "Client / Agency" },
       { value: "forwarder", label: "Forwarder" },
       { value: "admin", label: "Admin" },
     ],
@@ -98,6 +100,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
     setError("")
     setLoading(true)
     const supabase = getSupabaseBrowserClient()
+
     if (supabase) {
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) {
@@ -105,6 +108,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
         setLoading(false)
         return
       }
+
       const { data: userRow } = await supabase
         .from("users")
         .select("role")
@@ -113,12 +117,12 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
 
       const dbRole = userRow?.role as Role | undefined
       const nextRole = dbRole ?? role
-      if (dbRole) setRole(dbRole)
       setResult({ type: "login", role: nextRole, email })
       setLoading(false)
       router.push(`/${locale}/dashboard?role=${nextRole}`)
       return
     }
+
     setLoading(false)
     setResult({ type: "login", role, email })
     router.push(`/${locale}/dashboard?role=${role}`)
@@ -129,19 +133,20 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
     setError("")
     setLoading(true)
     const supabase = getSupabaseBrowserClient()
+
     if (supabase) {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { role, company_name: company, full_name: fullName },
-        },
+        options: { data: { role, company_name: company, full_name: fullName } },
       })
+
       if (signUpError) {
         setError(signUpError.message)
         setLoading(false)
         return
       }
+
       if (signUpData.user) {
         await supabase.from("users").upsert({
           id: signUpData.user.id,
@@ -153,6 +158,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
         })
       }
     }
+
     setLoading(false)
     setResult({ type: "register", role, email })
   }
@@ -195,15 +201,9 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
             <div className="mt-8 space-y-5">
               <label className="space-y-2 text-sm font-bold text-white">
                 {t.role}
-                <Select
-                  value={role}
-                  onChange={(event) => setRole(event.target.value as Role)}
-                  className="border-[#2a2d36] bg-[#17191f] text-white shadow-none focus-visible:ring-[#3c82f6]"
-                >
+                <Select value={role} onChange={(event) => setRole(event.target.value as Role)} className="border-[#2a2d36] bg-[#17191f] text-white shadow-none focus-visible:ring-[#3c82f6]">
                   {t.roles.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
+                    <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </Select>
               </label>
@@ -225,13 +225,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
                 {t.email}
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-[#697080]" />
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="you@company.com"
-                    className="border-[#2a2d36] bg-[#17191f] pl-9 text-white shadow-none placeholder:text-[#697080] focus-visible:ring-[#3c82f6]"
-                  />
+                  <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" className="border-[#2a2d36] bg-[#17191f] pl-9 text-white shadow-none placeholder:text-[#697080] focus-visible:ring-[#3c82f6]" />
                 </div>
               </label>
 
@@ -239,13 +233,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
                 {t.password}
                 <div className="relative">
                   <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-[#697080]" />
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
-                    className="border-[#2a2d36] bg-[#17191f] pl-9 pr-9 text-white shadow-none placeholder:text-[#697080] focus-visible:ring-[#3c82f6]"
-                  />
+                  <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="border-[#2a2d36] bg-[#17191f] pl-9 pr-9 text-white shadow-none placeholder:text-[#697080] focus-visible:ring-[#3c82f6]" />
                   <Eye className="absolute right-3 top-3 h-4 w-4 text-[#697080]" />
                 </div>
               </label>
@@ -260,20 +248,12 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
                 </div>
               ) : null}
 
-              <Button
-                className="h-12 w-full border border-[#3d6fb5] bg-transparent text-[#62a8ff] shadow-none hover:bg-[#162235] hover:text-[#8ec2ff]"
-                disabled={loading}
-                onClick={mode === "login" ? submitLogin : submitRegister}
-              >
-                {loading ? "Working..." : mode === "login" ? t.signIn : t.create}
+              <Button className="h-12 w-full border border-[#3d6fb5] bg-transparent text-[#62a8ff] shadow-none hover:bg-[#162235] hover:text-[#8ec2ff]" disabled={loading} onClick={mode === "login" ? submitLogin : submitRegister}>
+                {loading ? t.working : mode === "login" ? t.signIn : t.create}
               </Button>
             </div>
 
-            {error ? (
-              <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
-                {error}
-              </div>
-            ) : null}
+            {error ? <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm font-semibold text-red-100">{error}</div> : null}
 
             <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-[#8f96a3]">
               <div className="flex items-center gap-2 font-semibold text-[#c7ccd6]">
@@ -299,9 +279,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
 
           <div className="mt-12 grid grid-cols-3 items-center gap-6 opacity-40">
             {t.trust.map((item) => (
-              <div key={item} className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#9aa1ae]">
-                {item}
-              </div>
+              <div key={item} className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#9aa1ae]">{item}</div>
             ))}
           </div>
         </div>

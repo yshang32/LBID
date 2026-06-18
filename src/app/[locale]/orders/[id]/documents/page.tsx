@@ -29,29 +29,33 @@ const baseDocuments: DocumentItem[] = [
 const copy = {
   zh: {
     badge: "Document management",
-    title: "訂單文件管理。",
-    intro: "每張訂單有獨立文件清單。缺少必要文件時，系統會在 ship date 前 24 小時自動提醒雙方。",
+    title: "管理 order documents",
+    intro: "每個 order 都有自己的 document checklist。必須文件未齊時，系統會在 ship date 前 24 小時提醒雙方。",
     order: "Order reference",
     storage: "Production storage path",
-    checklist: "文件清單",
-    upload: "上傳文件",
-    awb: "智能 AWB 填寫",
-    uploaded: "已上傳",
-    missing: "待補",
-    optional: "可選",
-    required: "必須",
-    confirmed: "已確認",
-    confirm: "電子確認",
-    reminder: "提醒狀態",
-    reminderText: "Packing List 尚未上傳，將在出貨前 24 小時觸發 email + 站內通知。",
-    sendReminder: "立即發送提醒",
-    reminderSent: "提醒已加入通知中心",
-    progress: "文件完成率",
-    next: "下一步",
-    complete: "文件已齊",
-    incomplete: "仍有必須文件待補",
-    back: "返回訂單工作區",
-    note: "Demo 版只顯示狀態變化；真實版本會寫入 Supabase Storage 和 documents table。",
+    checklist: "Document checklist",
+    upload: "Upload document",
+    awb: "Smart AWB fill",
+    uploaded: "Uploaded",
+    missing: "Missing",
+    optional: "Optional",
+    required: "Required",
+    confirmed: "Confirmed",
+    confirm: "E-confirm",
+    reminder: "Reminder status",
+    reminderText: "Packing List 仍未上載，會在 ship date 前 24 小時觸發 email + in-app reminder。",
+    sendReminder: "Send reminder now",
+    reminderSent: "Reminder queued in notification center",
+    progress: "Document progress",
+    next: "Next step",
+    complete: "All required documents ready",
+    incomplete: "Required documents still missing",
+    back: "返回 order workspace",
+    note: "Production 會寫入 Supabase Storage 和 documents table。",
+    chooseFile: "Please choose a file first",
+    saving: "Saving...",
+    openMessages: "Open messages",
+    completionReview: "Completion review",
   },
   en: {
     badge: "Document management",
@@ -77,7 +81,11 @@ const copy = {
     complete: "All required documents ready",
     incomplete: "Required documents still missing",
     back: "Back to order workspace",
-    note: "The demo only changes local UI state; production writes to Supabase Storage and the documents table.",
+    note: "Production writes to Supabase Storage and the documents table.",
+    chooseFile: "Please choose a file first",
+    saving: "Saving...",
+    openMessages: "Open messages",
+    completionReview: "Completion review",
   },
 }
 
@@ -97,7 +105,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
     if (!item) return
     const file = selectedFiles[id]
     if (!file) {
-      setError("Please choose a file first")
+      setError(t.chooseFile)
       return
     }
 
@@ -136,11 +144,11 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
           <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
           <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
-        <Card className="border-white/10 bg-white/[0.045] md:w-96">
+        <Card className="md:w-96">
           <CardContent className="space-y-2 p-4">
             <div>
               <div className="text-sm text-muted-foreground">{t.order}</div>
-              <div className="font-mono text-xl font-black text-lgold">{params.id}</div>
+              <div className="break-all font-mono text-xl font-black text-lgold">{params.id}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.storage}</div>
@@ -170,7 +178,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
                     <Input type="file" className="max-w-sm" onChange={(event) => setSelectedFiles((items) => ({ ...items, [document.id]: event.target.files?.[0] || null }))} />
                     <Button variant="outline" disabled={savingId === document.id} onClick={() => markUploaded(document.id)}>
                       <UploadCloud className="h-4 w-4" />
-                      {savingId === document.id ? "Saving..." : t.upload}
+                      {savingId === document.id ? t.saving : t.upload}
                     </Button>
                   </div>
                 </div>
@@ -225,10 +233,10 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
             </CardHeader>
             <CardContent className="grid gap-2">
               <Button asChild variant="outline">
-                <Link href={`/${locale}/orders/${params.id}/messages`}>Open messages</Link>
+                <Link href={`/${locale}/orders/${params.id}/messages`}>{t.openMessages}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href={`/${locale}/orders/${params.id}/review`}>Completion review</Link>
+                <Link href={`/${locale}/orders/${params.id}/review`}>{t.completionReview}</Link>
               </Button>
             </CardContent>
           </Card>

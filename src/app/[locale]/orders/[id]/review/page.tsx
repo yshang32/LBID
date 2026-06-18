@@ -17,28 +17,30 @@ type RatingKey = "overall" | "communication" | "price" | "speed" | "documents" |
 const copy = {
   zh: {
     badge: "Completion review",
-    title: "完成後評價 Forwarder",
-    intro: "訂單完成後，Agency 可提交評價。評分會影響 Forwarder profile、徽章、points 和搜尋排名。",
+    title: "完成訂單後評價 Forwarder。",
+    intro: "Order completed 後，Agency 可以提交 review。評分會影響 Forwarder profile、badges、points 和搜尋排序。",
     order: "Order reference",
     forwarder: "Forwarder",
-    submit: "提交評價",
-    submitted: "評價已提交",
-    back: "返回訂單工作台",
+    submit: "Submit review",
+    submitting: "Submitting...",
+    submitted: "Review submitted",
+    back: "返回 order workspace",
     wouldRecommend: "會否推薦",
-    comment: "評價內容",
+    comment: "Review comment",
     placeholder: "例如：回覆快、文件清楚、準時送達。",
     note: "Production 會寫入 reviews table。",
     labels: {
-      overall: "整體",
-      communication: "溝通",
-      price: "價格",
-      speed: "速度",
-      documents: "文件處理",
-      resolution: "問題處理",
+      overall: "Overall",
+      communication: "Communication",
+      price: "Price",
+      speed: "Speed",
+      documents: "Documents",
+      resolution: "Problem resolution",
     },
-    recommend: { yes: "會", maybe: "可能", no: "不會" },
+    recommend: { yes: "Yes", maybe: "Maybe", no: "No" },
     points: "Forwarder earned +80 points for 5-star review preview.",
-    average: "平均分",
+    average: "Average score",
+    defaultComment: "回覆快，文件清楚，準時送達。",
   },
   en: {
     badge: "Completion review",
@@ -47,6 +49,7 @@ const copy = {
     order: "Order reference",
     forwarder: "Forwarder",
     submit: "Submit review",
+    submitting: "Submitting...",
     submitted: "Review submitted",
     back: "Back to order workspace",
     wouldRecommend: "Would recommend",
@@ -64,6 +67,7 @@ const copy = {
     recommend: { yes: "Yes", maybe: "Maybe", no: "No" },
     points: "Forwarder earned +80 points for 5-star review preview.",
     average: "Average score",
+    defaultComment: "Fast response, clear documents, on-time delivery.",
   },
 }
 
@@ -81,7 +85,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
     resolution: 4,
   })
   const [recommend, setRecommend] = useState("yes")
-  const [comment, setComment] = useState(locale === "zh" ? "回覆快，文件清楚，準時送達。" : "Fast response, clear documents, on-time delivery.")
+  const [comment, setComment] = useState(t.defaultComment)
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -146,7 +150,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
             {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 md:col-span-2">{error}</div> : null}
             <Button className="md:col-span-2" variant="gold" disabled={submitting} onClick={submitReview}>
               <MessageSquareReply className="h-4 w-4" />
-              {submitting ? "Submitting..." : t.submit}
+              {submitting ? t.submitting : t.submit}
             </Button>
           </CardContent>
         </Card>
@@ -160,7 +164,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.forwarder}</div>
-              <div className="font-bold">Forwarder ID from URL</div>
+              <div className="font-bold">Forwarder ID from accepted order</div>
             </div>
           </CardContent>
         </Card>
