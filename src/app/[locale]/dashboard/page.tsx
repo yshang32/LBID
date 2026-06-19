@@ -14,38 +14,40 @@ const copy = {
   zh: {
     hello: "歡迎回來",
     hot: "即將截標",
-    open: "Open Shipment Requests",
-    matches: "Active Matches",
+    open: "可承接需求",
+    matches: "進行中的配對",
     month: "本月概覽",
-    bidNow: "Submit Bid -1 Token",
-    priority: "Priority Bid -2 Tokens",
-    remaining: "個名額剩餘",
-    score: "所需評分",
-    budget: "預算範圍",
-    deadline: "截標時間",
+    bidNow: "提交報價 -1 Token",
+    priority: "優先報價 -2 Token",
+    remaining: "名額剩餘",
+    score: "最低信譽分",
+    budget: "預算等級",
+    deadline: "截止時間",
     slotsUsed: "已用 bid slots",
     mode: "運輸模式",
-    masked: "第一階段只顯示路線、貨物類型和範圍資料。聯絡資料只會在 award 後解鎖。",
-    createSr: "建立 SR",
-    marketplace: "更多機會",
-    stage: ["Matched", "Token used", "Contact unlocked", "In trade", "Completed"],
+    masked: "第一階段只顯示路線、貨物類型和預算範圍。中標後才解鎖聯絡資料，保持 sealed bid 公平性。",
+    marketplace: "查看更多機會",
+    stage: ["已配對", "已扣 Token", "聯絡解鎖", "履約中", "完成"],
     stats: [
       ["已建立 SR", "4"],
-      ["已收到 Bids", "6"],
-      ["已中標 Matches", "2"],
-      ["新增評分", "+10"],
+      ["收到報價", "6"],
+      ["成功配對", "2"],
+      ["信譽提升", "+10"],
     ],
     tokenBalance: "Token 餘額",
-    latestActivity: "最新 SR 活動",
+    latestActivity: "最新需求動態",
     platformWatchlist: "平台監察",
-    whyTitle: "LBID 如何保護交易價值",
-    paperTrail: "Quotation、AWB、文件、訊息和確認紀錄會留在同一個 order workspace，方便雙方追蹤責任。",
-    reputationLoop: "完成訂單和獲得好評會提升 directory 排名，令有實力的 forwarder 更容易被看見。",
+    whyTitle: "LBID 如何建立可信流程",
+    paperTrail: "Quotation、AWB、文件、訊息和確認記錄保留在同一個 order workspace，方便追蹤責任。",
+    reputationLoop: "完成訂單和好評會提升 directory 排名，讓真正有能力的 forwarder 得到更多曝光。",
     pendingForwarders: "待審 Forwarders",
     pendingPayments: "待確認付款",
     todayFlows: "今日流程",
-    adminPriorities: "Admin priorities",
-    adminText: "先處理 payment confirmation 和 forwarder verification，再擴大 marketplace 供應。",
+    adminPriorities: "Admin 優先事項",
+    adminText: "先處理付款確認與 forwarder verification，再擴大 marketplace 供應。",
+    capabilityTitle: "公司能力模式",
+    capabilityText: "LBID 以公司能力為核心，一間公司可以同時發出 SR 及承接 SR。你可以在 onboarding 開關 Client / Forwarder 能力。",
+    manageCapability: "管理公司能力",
   },
   en: {
     hello: "Welcome back",
@@ -62,7 +64,6 @@ const copy = {
     slotsUsed: "bid slots used",
     mode: "Mode",
     masked: "Stage 1 shows route, cargo category and ranges only. Full contacts unlock after award.",
-    createSr: "Create SR",
     marketplace: "More opportunities",
     stage: ["Matched", "Token used", "Contact unlocked", "In trade", "Completed"],
     stats: [
@@ -74,7 +75,7 @@ const copy = {
     tokenBalance: "Token balance",
     latestActivity: "Latest SR activity",
     platformWatchlist: "Platform watchlist",
-    whyTitle: "How LBID keeps value inside",
+    whyTitle: "How LBID builds trust",
     paperTrail: "Quotation, AWB, documents, messages and confirmations stay inside the same order workspace for traceability.",
     reputationLoop: "Completed orders and strong reviews improve directory ranking, helping capable forwarders become more visible.",
     pendingForwarders: "Pending forwarders",
@@ -82,13 +83,16 @@ const copy = {
     todayFlows: "Today flows",
     adminPriorities: "Admin priorities",
     adminText: "Review payment confirmations and forwarder verification before expanding marketplace supply.",
+    capabilityTitle: "Company capability model",
+    capabilityText: "LBID is company-capability based. One company can create SRs and bid on SRs. Client / Forwarder capabilities can be managed in onboarding.",
+    manageCapability: "Manage capabilities",
   },
 }
 
 const roleCopy = {
   agency: {
-    badge: "Client Workspace",
-    zhSummary: "管理你發出的 Shipment Requests、收到的 sealed bids、accepted orders 和文件狀態。",
+    badge: "Client Capability",
+    zhSummary: "管理你發出的 Shipment Requests、收到的 sealed bids、已接受訂單和文件狀態。",
     enSummary: "Manage your shipment requests, received sealed bids, accepted orders and document status.",
     primaryHref: "inquiries/new",
     primaryLabelZh: "建立 SR",
@@ -98,19 +102,19 @@ const roleCopy = {
     secondaryLabelEn: "Compare bids",
   },
   forwarder: {
-    badge: "Forwarder Workspace",
-    zhSummary: "查看可 bid 的 SR、token balance、已提交 bids 和 active orders。",
+    badge: "Forwarder Capability",
+    zhSummary: "查看可投標 SR、Token 餘額、已提交報價和進行中訂單。",
     enSummary: "Review open SRs, token balance, submitted bids and active orders.",
     primaryHref: "marketplace",
-    primaryLabelZh: "Marketplace",
+    primaryLabelZh: "接單市場",
     primaryLabelEn: "Marketplace",
     secondaryHref: "tokens",
-    secondaryLabelZh: "Token wallet",
+    secondaryLabelZh: "Token 錢包",
     secondaryLabelEn: "Token wallet",
   },
   admin: {
     badge: "Admin Workspace",
-    zhSummary: "管理 payment approval、forwarder verification、membership tiers 和 platform analytics。",
+    zhSummary: "管理付款審批、forwarder verification、會員方案和平台數據。",
     enSummary: "Manage payment approvals, forwarder verification, tiers and platform analytics.",
     primaryHref: "admin/pending-payments",
     primaryLabelZh: "待確認付款",
@@ -156,6 +160,18 @@ export default function LocalizedDashboardPage({ params, searchParams }: { param
       </section>
 
       <LiveDashboardPanel locale={locale} role={role} />
+
+      <section className="mt-5 rounded-lg border border-lgold/25 bg-[linear-gradient(135deg,rgba(201,168,76,0.12),rgba(255,255,255,0.95)_42%,rgba(53,141,166,0.08))] p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-black text-lblue">{t.capabilityTitle}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{t.capabilityText}</p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href={`${prefix}/onboarding`}>{t.manageCapability}</Link>
+          </Button>
+        </div>
+      </section>
 
       <section className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <Card className="border-red-200 bg-white">

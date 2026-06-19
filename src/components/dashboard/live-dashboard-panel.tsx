@@ -35,20 +35,25 @@ const initialState: LiveState = {
 
 const copy = {
   zh: {
-    title: "即時工作區",
-    loading: "正在載入 Supabase 工作區資料",
-    demo: "登入真實帳號後，這裡會顯示你的 live workspace data。",
+    title: "即時工作台",
+    loading: "正在載入 Supabase 工作台資料",
+    demo: "登入真實帳戶後，這裡會顯示你的 live workspace data。",
     error: "暫時未能載入即時資料",
     live: "Live Supabase",
     agencyPrimary: "我的 SR",
     forwarderPrimary: "可投標 SR",
-    adminPrimary: "待處理付款",
+    adminPrimary: "待確認付款",
     matches: "Match records",
-    tokens: "Token balance",
-    reputation: "Reputation",
-    openMarketplace: "打開 Marketplace",
+    tokens: "Token 餘額",
+    reputation: "信譽分",
+    openMarketplace: "打開接單市場",
     createSr: "建立 SR",
     adminQueue: "打開 Admin queue",
+    clientEnabled: "Client 能力",
+    forwarderEnabled: "Forwarder 能力",
+    enabled: "已啟用",
+    disabled: "未啟用",
+    manage: "管理能力",
   },
   en: {
     title: "Live workspace",
@@ -65,6 +70,11 @@ const copy = {
     openMarketplace: "Open Marketplace",
     createSr: "Create SR",
     adminQueue: "Open Admin queue",
+    clientEnabled: "Client capability",
+    forwarderEnabled: "Forwarder capability",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    manage: "Manage capabilities",
   },
 }
 
@@ -130,6 +140,8 @@ export function LiveDashboardPanel({ locale, role }: { locale: Locale; role: Rol
   }, [role, state.paymentIntents.length, state.shipmentRequests.length, t.adminPrimary, t.agencyPrimary, t.forwarderPrimary])
 
   const tokenBalance = Number(state.companyProfile?.token_balance_free || 0) + Number(state.companyProfile?.token_balance_paid || 0)
+  const canBeClient = state.companyProfile?.can_be_client ?? role === "agency"
+  const canBeForwarder = state.companyProfile?.can_be_forwarder ?? role === "forwarder"
 
   return (
     <Card className="mt-5 border-lblue/10 bg-white shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
@@ -168,23 +180,42 @@ export function LiveDashboardPanel({ locale, role }: { locale: Locale; role: Rol
           </div>
         )}
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {role === "agency" ? (
-            <Button asChild variant="gold" size="sm">
-              <Link href={`/${locale}/inquiries/new`}>{t.createSr}</Link>
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="flex flex-wrap gap-2">
+            <CapabilityPill label={t.clientEnabled} active={Boolean(canBeClient)} enabledText={t.enabled} disabledText={t.disabled} />
+            <CapabilityPill label={t.forwarderEnabled} active={Boolean(canBeForwarder)} enabledText={t.enabled} disabledText={t.disabled} />
+          </div>
+          <div className="flex flex-wrap gap-2 md:justify-end">
+            {canBeClient ? (
+              <Button asChild variant="gold" size="sm">
+                <Link href={`/${locale}/inquiries/new`}>{t.createSr}</Link>
+              </Button>
+            ) : null}
+            {role === "admin" ? (
+              <Button asChild variant="gold" size="sm">
+                <Link href={`/${locale}/admin/pending-payments`}>{t.adminQueue}</Link>
+              </Button>
+            ) : null}
+            {canBeForwarder ? (
+              <Button asChild variant="gold" size="sm">
+                <Link href={`/${locale}/marketplace`}>{t.openMarketplace}</Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/${locale}/onboarding`}>{t.manage}</Link>
             </Button>
-          ) : role === "admin" ? (
-            <Button asChild variant="gold" size="sm">
-              <Link href={`/${locale}/admin/pending-payments`}>{t.adminQueue}</Link>
-            </Button>
-          ) : (
-            <Button asChild variant="gold" size="sm">
-              <Link href={`/${locale}/marketplace`}>{t.openMarketplace}</Link>
-            </Button>
-          )}
+          </div>
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function CapabilityPill({ label, active, enabledText, disabledText }: { label: string; active: boolean; enabledText: string; disabledText: string }) {
+  return (
+    <div className={`rounded-md border px-3 py-2 text-sm font-bold ${active ? "border-teal-200 bg-teal-50 text-teal-700" : "border-slate-200 bg-slate-50 text-muted-foreground"}`}>
+      {label}: {active ? enabledText : disabledText}
+    </div>
   )
 }
 
