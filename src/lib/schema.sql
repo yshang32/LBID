@@ -156,6 +156,8 @@ create table public.company_profiles (
   gallery_images jsonb not null default '[]'::jsonb,
   certifications jsonb not null default '[]'::jsonb,
   is_public boolean not null default false,
+  can_be_client boolean not null default true,
+  can_be_forwarder boolean not null default false,
   is_anonymous_default boolean not null default true,
   onboarding_completed boolean not null default false,
   onboarding_step integer not null default 0,

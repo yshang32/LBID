@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "INSUFFICIENT_TOKENS", redirect: "/tokens" }, { status: 402 })
       }
       if (error.message.includes("PROFILE_NOT_FOUND")) {
-        return NextResponse.json({ error: "PROFILE_NOT_FOUND", redirect: "/onboarding/forwarder" }, { status: 404 })
+        return NextResponse.json({ error: "PROFILE_NOT_FOUND", redirect: "/onboarding" }, { status: 404 })
       }
       if (error.message.includes("BID_ALREADY_SUBMITTED")) {
         return NextResponse.json({ error: "BID_ALREADY_SUBMITTED" }, { status: 409 })
