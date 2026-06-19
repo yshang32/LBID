@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type Message = {
   id: string
@@ -40,6 +41,7 @@ const copy = {
     read: "Read",
     unread: "Unread",
     realtime: "下一步可接 Supabase Realtime，讓訊息即時更新。",
+    realtimeOn: "Supabase Realtime 已連接，訊息會自動更新。",
     guarded: "偵測到外部聯絡資料。Phase 1 建議保持交易溝通在 LBID 內。",
     back: "返回 order workspace",
     placeholder: "例如：請確認 AWB draft、ship date 或文件狀態。",
@@ -61,6 +63,7 @@ const copy = {
     read: "Read",
     unread: "Unread",
     realtime: "Next step: subscribe to the messages table with Supabase Realtime.",
+    realtimeOn: "Supabase Realtime connected. Messages update automatically.",
     guarded: "External contact details detected. Keep trade communication inside LBID.",
     back: "Back to order workspace",
     placeholder: "Example: Please confirm AWB draft, ship date or document status.",
@@ -76,6 +79,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
   const [draft, setDraft] = useState(t.defaultDraft)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
+  const [realtimeReady, setRealtimeReady] = useState(false)
   const contactDetected = /(\+?\d[\d\s-]{7,}|@|whatsapp|wa\.me|email)/i.test(draft)
 
   useEffect(() => {
@@ -101,6 +105,42 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
       mounted = false
     }
   }, [params.id, t.loadFailed])
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    if (!supabase) return
+
+    const channel = supabase
+      .channel(`order-messages-${params.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `order_id=eq.${params.id}` },
+        (payload) => {
+          const row: any = payload.new
+          setMessages((items) => {
+            if (items.some((item) => item.id === row.id)) return items
+            return [
+              ...items,
+              {
+                id: row.id,
+                sender: "Forwarder",
+                content: row.content,
+                time: row.created_at ? new Date(row.created_at).toLocaleTimeString() : "Now",
+                read: true,
+              },
+            ]
+          })
+        },
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtimeReady(true)
+      })
+
+    return () => {
+      setRealtimeReady(false)
+      supabase.removeChannel(channel)
+    }
+  }, [params.id])
 
   async function sendMessage() {
     const content = draft.trim()
@@ -144,7 +184,7 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
           <CardHeader>
             <MessageSquare className="h-5 w-5 text-lgold" />
             <CardTitle>{t.thread}</CardTitle>
-            <CardDescription>{t.realtime}</CardDescription>
+            <CardDescription>{realtimeReady ? t.realtimeOn : t.realtime}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {messages.map((message) => (

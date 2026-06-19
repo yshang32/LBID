@@ -264,7 +264,9 @@ export default function QuotationComparePage({ params }: { params: { locale: str
                 <Metric icon={Timer} label={t.transit} value={quote.transit} />
                 <Metric icon={Star} label={t.rating} value={quote.rating ? String(quote.rating) : "-"} />
                 <div className="flex flex-wrap gap-2 lg:justify-end">
-                  <Button variant="outline">{t.pdf}</Button>
+                  <Button asChild variant="outline">
+                    <Link href={`/api/quotations/${quote.id}/pdf`} target="_blank">{t.pdf}</Link>
+                  </Button>
                   <Button variant={shortlisted.includes(quote.id) ? "secondary" : "outline"} onClick={() => toggleShortlist(quote.id)}>
                     {shortlisted.includes(quote.id) ? t.shortlisted : t.shortlist}
                   </Button>
