@@ -42,41 +42,41 @@ const demoQuotes: Quote[] = [
 
 const copy = {
   zh: {
-    badge: "報價比較",
-    title: "比較 Forwarder 報價，選擇最合適合作方。",
-    intro: "系統會清楚標示最低有效報價，但 Agency 仍可因服務能力、時效或信譽選擇其他 Forwarder。",
+    badge: "Quotation comparison",
+    title: "比較 Forwarder 報價，選擇最合適方案。",
+    intro: "LBID 會自動標示最低有效報價，但 Agency 仍可因信譽、時效或服務能力選擇其他 forwarder。",
     route: "Mumbai (BOM) 至 Hong Kong (HKG)",
     cargo: "Electronic components, 500kg / 3CBM",
     ref: "LBID-INQ-2026-0001",
     lowest: "最低報價",
     verified: "已驗證",
     total: "總價",
-    transit: "運輸時間",
+    transit: "時效",
     rating: "評分",
     pdf: "查看 PDF",
     accept: "接受報價",
-    accepting: "接受中...",
+    accepting: "處理中...",
     accepted: "已接受",
     sort: "排序",
-    byPrice: "最低價",
+    byPrice: "最低價格",
     byTransit: "最快時效",
     byRating: "最高評分",
     shortlist: "加入 shortlist",
     shortlisted: "已加入 shortlist",
     confirmTitle: "Order 已建立",
-    confirmBody: "得標 Forwarder 會收到通知，其他 Forwarder 會收到未中標通知。",
+    confirmBody: "中標 forwarder 會收到通知，其他 forwarder 會收到未中標更新。",
     orderRef: "Order reference",
     next: "查看訂單工作區",
-    note: "Forwarder 不會看到其他競爭者的報價。Agency 只會在自己的 Shipment Request 內看到比較結果。",
-    liveLoaded: "已載入真實 sealed bids",
+    note: "Forwarder 不會看到其他人的報價。Agency 只會在自己的 SR 內看到比較結果。",
+    liveLoaded: "已載入 live sealed bids",
     demoMode: "Demo comparison",
     nonLowestTitle: "確認選擇非最低報價",
-    nonLowestBody: "你選擇的報價不是最低價。請確認你是因為服務能力、時效或信譽等因素作出選擇。",
-    selected: "已選報價",
-    difference: "比最低價高",
+    nonLowestBody: "你選擇的報價不是最低價。若服務能力、時效或信譽更符合本次 shipment，請確認繼續。",
+    selected: "選擇報價",
+    difference: "高於最低價",
     cancel: "返回比較",
-    confirmNonLowest: "確認接受此報價",
-    unableToLoad: "未能載入報價，暫時顯示 demo data。",
+    confirmNonLowest: "接受此報價",
+    unableToLoad: "暫時未能載入 live quotations，先顯示 demo data。",
   },
   en: {
     badge: "Quotation comparison",
@@ -211,24 +211,26 @@ export default function QuotationComparePage({ params }: { params: { locale: str
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
-      <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant={liveQuotes.length > 0 ? "teal" : "secondary"}>{liveQuotes.length > 0 ? t.liveLoaded : t.demoMode}</Badge>
-            {srId ? <Badge variant="outline">SR {srId}</Badge> : null}
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
+      <section className="rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
+        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <Badge variant="gold">{t.badge}</Badge>
+            <h1 className="mt-4 max-w-4xl text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
+            <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge variant={liveQuotes.length > 0 ? "teal" : "secondary"}>{liveQuotes.length > 0 ? t.liveLoaded : t.demoMode}</Badge>
+              {srId ? <Badge variant="outline">SR {srId}</Badge> : null}
+            </div>
           </div>
+          <Card className="md:w-80">
+            <CardContent className="space-y-1 p-4 text-sm">
+              <div className="font-mono text-lgold">{srId || t.ref}</div>
+              <div className="font-semibold text-lblue">{t.route}</div>
+              <div className="text-muted-foreground">{t.cargo}</div>
+            </CardContent>
+          </Card>
         </div>
-        <Card className="border-white/10 bg-white/[0.045] md:w-80">
-          <CardContent className="space-y-1 p-4 text-sm">
-            <div className="font-mono text-lgold">{srId || t.ref}</div>
-            <div className="font-semibold">{t.route}</div>
-            <div className="text-muted-foreground">{t.cargo}</div>
-          </CardContent>
-        </Card>
       </section>
 
       <section className="mt-5 flex flex-wrap items-center gap-2">
@@ -238,17 +240,17 @@ export default function QuotationComparePage({ params }: { params: { locale: str
         <Button variant={sort === "rating" ? "gold" : "outline"} size="sm" onClick={() => setSort("rating")}>{t.byRating}</Button>
       </section>
 
-      <section className="mt-8 grid gap-4">
+      <section className="mt-5 grid gap-4">
         {sortedQuotes.map((quote) => {
           const isAccepted = acceptedQuote?.id === quote.id
           const isLowest = quote.total === lowestTotal
 
           return (
-            <Card key={quote.id} className={`border-white/10 bg-white/[0.045] ${isLowest ? "border-lgold/40 bg-lgold/10" : ""}`}>
+            <Card key={quote.id} className={isLowest ? "border-lgold/40 bg-lgold/10" : ""}>
               <CardContent className="grid gap-4 p-4 lg:grid-cols-[1.4fr_120px_120px_120px_auto] lg:items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-black">{quote.forwarder}</h2>
+                    <h2 className="text-xl font-black text-lblue">{quote.forwarder}</h2>
                     {isLowest ? <Badge variant="gold">{t.lowest}</Badge> : null}
                     {quote.verified ? <Badge variant="teal"><ShieldCheck className="mr-1 h-3 w-3" />{t.verified}</Badge> : null}
                   </div>
@@ -276,27 +278,27 @@ export default function QuotationComparePage({ params }: { params: { locale: str
         })}
       </section>
 
-      <Card className="mt-5 border-white/10 bg-white/[0.045]">
+      <Card className="mt-5">
         <CardContent className="p-4 text-sm text-muted-foreground">{t.note}</CardContent>
       </Card>
 
       {error ? (
-        <Card className="mt-5 border-red-400/30 bg-red-400/10">
-          <CardContent className="p-4 text-sm font-semibold text-red-100">{error}</CardContent>
+        <Card className="mt-5 border-red-200 bg-red-50">
+          <CardContent className="p-4 text-sm font-semibold text-red-700">{error}</CardContent>
         </Card>
       ) : null}
 
       {acceptedQuote ? (
-        <Card className="mt-5 border-teal-400/30 bg-teal-400/10">
+        <Card className="mt-5 border-teal-200 bg-teal-50">
           <CardHeader>
-            <CheckCircle2 className="h-5 w-5 text-teal-300" />
+            <CheckCircle2 className="h-5 w-5 text-teal-700" />
             <CardTitle>{t.confirmTitle}</CardTitle>
             <CardDescription>{t.confirmBody}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm text-muted-foreground">{t.orderRef}</div>
-              <div className="break-all font-mono text-2xl font-black text-lgold">{orderId}</div>
+              <div className="break-all font-mono text-2xl font-black text-lblue">{orderId}</div>
               <div className="mt-1 text-sm text-muted-foreground">{acceptedQuote.forwarder} - {acceptedQuote.currency} {formatMoney(acceptedQuote.total)}</div>
             </div>
             <Button asChild variant="gold">
@@ -307,8 +309,8 @@ export default function QuotationComparePage({ params }: { params: { locale: str
       ) : null}
 
       {pendingQuote ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg border-lgold/30 bg-[#101828] shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-lblue/40 px-4 backdrop-blur-sm">
+          <Card className="w-full max-w-lg border-lgold/30 bg-white shadow-2xl">
             <CardHeader>
               <CardTitle>{t.nonLowestTitle}</CardTitle>
               <CardDescription>{t.nonLowestBody}</CardDescription>
@@ -334,12 +336,12 @@ export default function QuotationComparePage({ params }: { params: { locale: str
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Award; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+    <div className="rounded-lg border border-lblue/10 bg-slate-50 p-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Icon className="h-4 w-4 text-lgold" />
         {label}
       </div>
-      <div className="mt-1 font-bold">{value}</div>
+      <div className="mt-1 font-bold text-lblue">{value}</div>
     </div>
   )
 }
