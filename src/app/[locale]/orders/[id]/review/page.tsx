@@ -17,8 +17,8 @@ type RatingKey = "overall" | "communication" | "price" | "speed" | "documents" |
 const copy = {
   zh: {
     badge: "Completion review",
-    title: "完成訂單後評價 Forwarder。",
-    intro: "Order completed 後，Agency 可以提交 review。評分會影響 Forwarder profile、badges、points 和搜尋排序。",
+    title: "完成訂單後評價 Forwarder",
+    intro: "Order completed 後，Agency 可提交 review。評分會影響 forwarder profile、badges、points 和 search ranking。",
     order: "Order reference",
     forwarder: "Forwarder",
     submit: "Submit review",
@@ -27,7 +27,7 @@ const copy = {
     back: "返回 order workspace",
     wouldRecommend: "會否推薦",
     comment: "Review comment",
-    placeholder: "例如：回覆快、文件清楚、準時送達。",
+    placeholder: "例如：回覆快、文件清晰、準時送達。",
     note: "Production 會寫入 reviews table。",
     labels: {
       overall: "Overall",
@@ -40,7 +40,7 @@ const copy = {
     recommend: { yes: "Yes", maybe: "Maybe", no: "No" },
     points: "Forwarder earned +80 points for 5-star review preview.",
     average: "Average score",
-    defaultComment: "回覆快，文件清楚，準時送達。",
+    defaultComment: "回覆快、文件清晰、準時送達。",
   },
   en: {
     badge: "Completion review",
@@ -118,12 +118,12 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_360px]">
+    <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 pb-24 pt-6 sm:px-6 lg:grid-cols-[1fr_360px] lg:pb-10">
       <section className="space-y-5">
-        <div>
+        <div className="rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
           <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
+          <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
         <Card>
           <CardHeader>
@@ -164,7 +164,7 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.forwarder}</div>
-              <div className="font-bold">Forwarder ID from accepted order</div>
+              <div className="font-bold text-lblue">Forwarder ID from accepted order</div>
             </div>
           </CardContent>
         </Card>
@@ -186,9 +186,9 @@ export default function OrderReviewPage({ params }: { params: { locale: string; 
           </CardContent>
         </Card>
         {submitted ? (
-          <Card className="border-teal-400/30 bg-teal-400/10">
+          <Card className="border-teal-200 bg-teal-50">
             <CardHeader>
-              <CheckCircle2 className="h-5 w-5 text-teal-300" />
+              <CheckCircle2 className="h-5 w-5 text-teal-700" />
               <CardTitle>{t.submitted}</CardTitle>
               <CardDescription>{average >= 4.8 ? t.points : `Forwarder earned +${pointPreview} points preview.`}</CardDescription>
             </CardHeader>

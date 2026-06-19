@@ -1,14 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AlertTriangle, BellRing, CheckCircle2, Clock, FileCheck2, UploadCloud } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { getAuthHeaders } from "@/lib/api-client"
+import { apiJson, getAuthHeaders } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 type DocumentItem = {
@@ -17,11 +17,12 @@ type DocumentItem = {
   required: boolean
   uploaded: boolean
   confirmed: boolean
+  fileUrl?: string
 }
 
 const baseDocuments: DocumentItem[] = [
-  { id: "awb", name: "AWB / B/L", required: true, uploaded: true, confirmed: true },
-  { id: "invoice", name: "Commercial Invoice", required: true, uploaded: true, confirmed: false },
+  { id: "awb", name: "AWB / B/L", required: true, uploaded: false, confirmed: false },
+  { id: "invoice", name: "Commercial Invoice", required: true, uploaded: false, confirmed: false },
   { id: "packing", name: "Packing List", required: true, uploaded: false, confirmed: false },
   { id: "co", name: "Certificate of Origin", required: false, uploaded: false, confirmed: false },
 ]
@@ -30,7 +31,7 @@ const copy = {
   zh: {
     badge: "Document management",
     title: "管理 order documents",
-    intro: "每個 order 都有自己的 document checklist。必須文件未齊時，系統會在 ship date 前 24 小時提醒雙方。",
+    intro: "每個 order 都有獨立 document checklist。必需文件未齊時，可在出貨前 24 小時觸發 email + in-app reminder。",
     order: "Order reference",
     storage: "Production storage path",
     checklist: "Document checklist",
@@ -43,7 +44,7 @@ const copy = {
     confirmed: "Confirmed",
     confirm: "E-confirm",
     reminder: "Reminder status",
-    reminderText: "Packing List 仍未上載，會在 ship date 前 24 小時觸發 email + in-app reminder。",
+    reminderText: "仍有必需文件未齊，系統應在 ship date 前 24 小時提醒雙方。",
     sendReminder: "Send reminder now",
     reminderSent: "Reminder queued in notification center",
     progress: "Document progress",
@@ -52,10 +53,11 @@ const copy = {
     incomplete: "Required documents still missing",
     back: "返回 order workspace",
     note: "Production 會寫入 Supabase Storage 和 documents table。",
-    chooseFile: "Please choose a file first",
+    chooseFile: "請先選擇文件",
     saving: "Saving...",
     openMessages: "Open messages",
     completionReview: "Completion review",
+    liveFailed: "暫時未能載入 live documents，先顯示 checklist。",
   },
   en: {
     badge: "Document management",
@@ -73,7 +75,7 @@ const copy = {
     confirmed: "Confirmed",
     confirm: "E-confirm",
     reminder: "Reminder status",
-    reminderText: "Packing List is still missing and will trigger email + in-app reminder 24 hours before ship date.",
+    reminderText: "Required documents are still missing and should trigger email + in-app reminders 24 hours before ship date.",
     sendReminder: "Send reminder now",
     reminderSent: "Reminder queued in notification center",
     progress: "Document progress",
@@ -86,6 +88,7 @@ const copy = {
     saving: "Saving...",
     openMessages: "Open messages",
     completionReview: "Completion review",
+    liveFailed: "Unable to load live documents. Showing checklist for now.",
   },
 }
 
@@ -97,6 +100,26 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
   const [savingId, setSavingId] = useState("")
   const [error, setError] = useState("")
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({})
+
+  useEffect(() => {
+    let mounted = true
+    apiJson(`/api/orders/${params.id}/documents`).then(({ response, body }) => {
+      if (!mounted) return
+      if (!response.ok) {
+        if (response.status !== 401) setError(t.liveFailed)
+        return
+      }
+      const liveDocs = Array.isArray(body.documents) ? body.documents : []
+      setDocuments((items) => items.map((item) => {
+        const live = liveDocs.find((doc: any) => String(doc.type).toLowerCase().includes(item.name.toLowerCase().split(" ")[0]))
+        return live ? { ...item, uploaded: true, confirmed: true, fileUrl: live.file_url } : item
+      }))
+    })
+    return () => {
+      mounted = false
+    }
+  }, [params.id, t.liveFailed])
+
   const requiredComplete = documents.filter((doc) => doc.required).every((doc) => doc.uploaded)
   const progress = Math.round((documents.filter((doc) => doc.uploaded).length / documents.length) * 100)
 
@@ -129,7 +152,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
       return
     }
 
-    setDocuments((items) => items.map((document) => document.id === id ? { ...document, uploaded: true } : document))
+    setDocuments((items) => items.map((document) => document.id === id ? { ...document, uploaded: true, fileUrl: body.document?.file_url } : document))
   }
 
   function confirmDocument(id: string) {
@@ -137,12 +160,12 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
-      <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
+      <section className="flex flex-col gap-5 rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)] md:flex-row md:items-end md:justify-between">
         <div>
           <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
+          <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
         <Card className="md:w-96">
           <CardContent className="space-y-2 p-4">
@@ -157,7 +180,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
           </CardContent>
         </Card>
       </section>
-      <section className="mt-8 grid gap-5 lg:grid-cols-[1fr_360px]">
+      <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
             <FileCheck2 className="h-5 w-5 text-lgold" />
@@ -169,12 +192,12 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
               <div key={document.id} className="grid gap-3 rounded-lg border border-lblue/10 bg-slate-50 p-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold">{document.name}</h2>
+                    <h2 className="font-bold text-lblue">{document.name}</h2>
                     <Badge variant={document.required ? "gold" : "secondary"}>{document.required ? t.required : t.optional}</Badge>
                     <Badge variant={document.uploaded ? "teal" : "secondary"}>{document.uploaded ? t.uploaded : t.missing}</Badge>
                     {document.confirmed ? <Badge variant="teal">{t.confirmed}</Badge> : null}
                   </div>
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                     <Input type="file" className="max-w-sm" onChange={(event) => setSelectedFiles((items) => ({ ...items, [document.id]: event.target.files?.[0] || null }))} />
                     <Button variant="outline" disabled={savingId === document.id} onClick={() => markUploaded(document.id)}>
                       <UploadCloud className="h-4 w-4" />
@@ -192,9 +215,9 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
           </CardContent>
         </Card>
         <aside className="space-y-5">
-          <Card className={requiredComplete ? "border-teal-400/30 bg-teal-400/10" : "border-lgold/30 bg-lgold/10"}>
+          <Card className={requiredComplete ? "border-teal-200 bg-teal-50" : "border-lgold/30 bg-lgold/10"}>
             <CardHeader>
-              {requiredComplete ? <CheckCircle2 className="h-5 w-5 text-teal-300" /> : <AlertTriangle className="h-5 w-5 text-lgold" />}
+              {requiredComplete ? <CheckCircle2 className="h-5 w-5 text-teal-700" /> : <AlertTriangle className="h-5 w-5 text-lgold" />}
               <CardTitle>{requiredComplete ? t.complete : t.incomplete}</CardTitle>
             </CardHeader>
           </Card>

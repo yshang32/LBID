@@ -3,37 +3,37 @@ import type { Locale } from "@/lib/i18n"
 
 const zhForwarderCopy: Record<string, { description: string; badges: string[]; coverage: string[]; responseTime: string }> = {
   "harbourlink-cargo": {
-    description: "專注香港冷鏈、醫藥和高價貨派送，熟悉機場提貨、溫控交收和最後一公里派送要求。",
-    badges: ["已驗證", "冷鏈", "快速回覆"],
+    description: "專注香港本地派送、清關及倉儲支援，適合需要穩定回覆和清晰文件流程的海外 agent。",
+    badges: ["已驗證", "清關", "快速回覆"],
     coverage: ["香港", "九龍", "新界"],
     responseTime: "18 分鐘",
   },
   "kowloon-gateway-logistics": {
-    description: "處理東南亞到香港的 LCL、FCL 和本地倉儲派送，適合中小型 Agent 建立長期 rate card。",
+    description: "擅長香港 LCL / FCL 海運銜接、本地拖車和倉儲協調，適合需要 rate card 和長期合作的 agent。",
     badges: ["已驗證", "海運"],
-    coverage: ["香港", "葵涌", "屯門"],
+    coverage: ["香港", "華南", "東南亞"],
     responseTime: "42 分鐘",
   },
   "aeroport-express-forwarding": {
-    description: "空運清關和 AWB 文件處理經驗較強，支援 urgent shipment、COD 和機場直送。",
-    badges: ["AWB 文件", "空運專線"],
-    coverage: ["香港機場", "觀塘", "荃灣"],
+    description: "空運和 AWB 文件處理能力強，適合 urgent shipment、POD 和高時效要求的訂單。",
+    badges: ["AWB 文件", "空運專家"],
+    coverage: ["香港機場", "亞洲", "歐洲"],
     responseTime: "25 分鐘",
   },
 }
 
 const zhTierCopy: Record<string, { name: string; price: string; perks: string[] }> = {
-  Free: { name: "免費", price: "HKD0", perks: ["Directory 基本曝光", "每月 3 次報價", "基本通知"] },
-  Standard: { name: "標準", price: "HKD500/月", perks: ["更多報價額度", "PDF 報價工具", "配對提醒"] },
-  Premium: { name: "高級", price: "HKD1500/月", perks: ["Profile boost", "優先配對", "營運分析"] },
-  Partner: { name: "合作夥伴", price: "洽談", perks: ["已驗證徽章", "專屬配對支援", "共同市場推廣"] },
+  Free: { name: "免費", price: "HKD0", perks: ["Directory 基本展示", "每月 3 次報價", "基本 profile"] },
+  Standard: { name: "標準", price: "HKD500/月", perks: ["更多報價額度", "PDF 報價模板", "基本數據"] },
+  Premium: { name: "進階", price: "HKD1500/月", perks: ["Profile boost", "更多曝光", "進階報表"] },
+  Partner: { name: "合作夥伴", price: "自訂", perks: ["已驗證標記", "專屬配對支援", "市場推廣合作"] },
 }
 
 const zhQuotationLabels = [
-  "機場 / 碼頭處理及 terminal handling",
-  "24 小時本地派送",
+  "港口 / 機場 terminal handling",
+  "24 小時香港本地派送",
   "清關文件處理",
-  "18 度溫控派送附加費",
+  "18 個月 rate record 保存",
 ]
 
 export function getLocalizedForwarders(locale: Locale) {
@@ -66,11 +66,11 @@ export function getLocalizedQuotation(locale: Locale) {
 export function getLocalizedDocumentChecklist(locale: Locale) {
   if (locale === "en") return documentChecklist
 
-  return ["AWB / B/L", "Commercial Invoice 商業發票", "Packing List 裝箱單", "Certificate of Origin 產地來源證"]
+  return ["AWB / B/L", "Commercial Invoice 商業發票", "Packing List 裝箱單", "Certificate of Origin 產地證"]
 }
 
 export function getLocalizedPointRules(locale: Locale) {
   if (locale === "en") return pointRules
 
-  return ["完成訂單：+120 分", "獲得評價：+80 分", "30 分鐘內回覆：+40 分", "成功推薦新用戶交易：+300 分"]
+  return ["完成訂單：+120 分", "5 星評價：+80 分", "30 分鐘內回覆：+40 分", "推薦客戶成功交易：+300 分"]
 }

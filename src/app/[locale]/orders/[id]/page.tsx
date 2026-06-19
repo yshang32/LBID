@@ -1,22 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
 import { CheckCircle2, FileCheck2, MessageSquare, PackageCheck, Star } from "lucide-react"
 
 import { LiveOrderPanel } from "@/components/orders/live-order-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { getLocalizedDocumentChecklist } from "@/lib/localized-data"
 
 const copy = {
   zh: {
     badge: "Order workspace",
-    title: "Order workspace：文件、訊息和狀態集中管理。",
-    intro: "Bid accepted 後，Match Record 會變成 Order。雙方在這裡追蹤狀態、文件、訊息和完成後 review。",
+    title: "Order workspace：文件、訊息和狀態保持可追蹤。",
+    intro: "Bid accepted 後，Match Record 會轉成 Order。雙方可以在這裡管理狀態、文件、訊息和完成後 review。",
     forwarder: "Winning forwarder",
     agency: "Client / Agency",
     route: "Route",
@@ -29,10 +27,8 @@ const copy = {
     pending: "Pending",
     messages: "Order messages",
     openMessages: "打開 message thread",
-    send: "Send message",
     review: "Completion review",
     leaveReview: "提交 review",
-    message: "請確認 booking details 和 ship date。",
     role: "Platform role: workflow_platform_not_carrier_of_record",
     statuses: ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"],
   },
@@ -52,10 +48,8 @@ const copy = {
     pending: "Pending",
     messages: "Order messages",
     openMessages: "Open message thread",
-    send: "Send message",
     review: "Completion review",
     leaveReview: "Leave review",
-    message: "Please confirm booking details and ship date.",
     role: "Platform role: workflow_platform_not_carrier_of_record",
     statuses: ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"],
   },
@@ -65,16 +59,14 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
   const documents = getLocalizedDocumentChecklist(locale)
-  const [activeStatus, setActiveStatus] = useState(1)
-  const [message, setMessage] = useState(t.message)
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
-      <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
+      <section className="flex flex-col gap-5 rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)] md:flex-row md:items-end md:justify-between">
         <div>
           <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
+          <h1 className="mt-4 max-w-4xl text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
+          <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
         <Card className="md:w-80">
           <CardContent className="p-4">
@@ -85,7 +77,7 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
         </Card>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-4">
+      <section className="mt-5 grid gap-4 md:grid-cols-4">
         <Summary label={t.forwarder} value="HarbourLink Cargo" />
         <Summary label={t.agency} value="Saigon Freight Agency" />
         <Summary label={t.route} value="Ho Chi Minh City -> Hong Kong" />
@@ -103,10 +95,10 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             {t.statuses.map((status, index) => (
-              <button key={status} className={`rounded-md border p-3 text-left text-xs font-semibold transition ${index <= activeStatus ? "border-lgold/50 bg-lgold/15 text-[#6f5514]" : "border-lblue/10 bg-slate-50 text-muted-foreground"}`} onClick={() => setActiveStatus(index)}>
+              <div key={status} className={`rounded-md border p-3 text-left text-xs font-semibold ${index <= 1 ? "border-lgold/50 bg-lgold/15 text-[#6f5514]" : "border-lblue/10 bg-slate-50 text-muted-foreground"}`}>
                 <CheckCircle2 className="mb-2 h-4 w-4" />
                 {status}
-              </button>
+              </div>
             ))}
           </CardContent>
         </Card>
@@ -135,11 +127,8 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
               <MessageSquare className="h-5 w-5 text-lgold" />
               <CardTitle>{t.messages}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm text-muted-foreground">Forwarder: AWB draft will be ready after booking confirmation.</div>
-              <Textarea value={message} onChange={(event) => setMessage(event.target.value)} />
-              <Button className="w-full" variant="gold">{t.send}</Button>
-              <Button asChild className="w-full" variant="outline">
+            <CardContent>
+              <Button asChild className="w-full" variant="gold">
                 <Link href={`/${locale}/orders/${params.id}/messages`}>{t.openMessages}</Link>
               </Button>
             </CardContent>

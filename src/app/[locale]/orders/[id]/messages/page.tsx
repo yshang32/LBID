@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CheckCheck, Clock, MessageSquare, Send } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +28,7 @@ const copy = {
   zh: {
     badge: "Order messages",
     title: "Order message thread",
-    intro: "每個 order 都有獨立訊息欄。重要節點會形成 system record，減少外部 email 來回。",
+    intro: "每個 order 都有獨立訊息欄。重要事件會形成 system record，雙方不需要再靠外部 email 追蹤。",
     order: "Order reference",
     participants: "Participants",
     agency: "Agency",
@@ -39,11 +39,12 @@ const copy = {
     sending: "Sending...",
     read: "Read",
     unread: "Unread",
-    realtime: "下一步會接 Supabase Realtime，讓雙方即時收到新訊息。",
-    guarded: "偵測到外部聯絡資料。建議把交易溝通留在 LBID 內，方便保留紀錄。",
+    realtime: "下一步可接 Supabase Realtime，讓訊息即時更新。",
+    guarded: "偵測到外部聯絡資料。Phase 1 建議保持交易溝通在 LBID 內。",
     back: "返回 order workspace",
     placeholder: "例如：請確認 AWB draft、ship date 或文件狀態。",
     defaultDraft: "請確認 AWB draft 和 pickup window。",
+    loadFailed: "暫時未能載入 live messages，先顯示本地 thread。",
   },
   en: {
     badge: "Order messages",
@@ -64,6 +65,7 @@ const copy = {
     back: "Back to order workspace",
     placeholder: "Example: Please confirm AWB draft, ship date or document status.",
     defaultDraft: "Please confirm AWB draft and pickup window.",
+    loadFailed: "Unable to load live messages. Showing local thread for now.",
   },
 }
 
@@ -75,6 +77,30 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
   const contactDetected = /(\+?\d[\d\s-]{7,}|@|whatsapp|wa\.me|email)/i.test(draft)
+
+  useEffect(() => {
+    let mounted = true
+    apiJson(`/api/orders/${params.id}/messages`).then(({ response, body }) => {
+      if (!mounted) return
+      if (!response.ok) {
+        if (response.status !== 401) setError(t.loadFailed)
+        return
+      }
+      const liveMessages = Array.isArray(body.messages) ? body.messages : []
+      if (liveMessages.length > 0) {
+        setMessages(liveMessages.map((message: any) => ({
+          id: message.id,
+          sender: "Agency",
+          content: message.content,
+          time: message.created_at ? new Date(message.created_at).toLocaleTimeString() : "",
+          read: true,
+        })))
+      }
+    })
+    return () => {
+      mounted = false
+    }
+  }, [params.id, t.loadFailed])
 
   async function sendMessage() {
     const content = draft.trim()
@@ -107,12 +133,12 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_340px]">
+    <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 pb-24 pt-6 sm:px-6 lg:grid-cols-[1fr_340px] lg:pb-10">
       <section className="space-y-5">
-        <div>
+        <div className="rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
           <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
+          <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
         <Card>
           <CardHeader>
@@ -122,14 +148,14 @@ export default function OrderMessagesPage({ params }: { params: { locale: string
           </CardHeader>
           <CardContent className="space-y-4">
             {messages.map((message) => (
-              <div key={message.id} className={`rounded-lg border p-4 ${message.system ? "border-lgold/30 bg-lgold/10" : message.sender === "Agency" ? "border-teal-400/20 bg-teal-400/10" : "border-lblue/10 bg-slate-50"}`}>
+              <div key={message.id} className={`rounded-lg border p-4 ${message.system ? "border-lgold/30 bg-lgold/10" : message.sender === "Agency" ? "border-teal-200 bg-teal-50" : "border-lblue/10 bg-slate-50"}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Badge variant={message.system ? "gold" : message.sender === "Agency" ? "teal" : "secondary"}>{message.sender}</Badge>
                     <span className="text-xs text-muted-foreground">{message.time}</span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {message.read ? <CheckCheck className="h-3 w-3 text-teal-300" /> : <Clock className="h-3 w-3 text-lgold" />}
+                    {message.read ? <CheckCheck className="h-3 w-3 text-teal-700" /> : <Clock className="h-3 w-3 text-lgold" />}
                     {message.read ? t.read : t.unread}
                   </div>
                 </div>

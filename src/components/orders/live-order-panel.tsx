@@ -16,7 +16,7 @@ const copy = {
   zh: {
     title: "Live order status",
     loading: "正在載入 order 資料",
-    unauthenticated: "登入後可以查看真實 order、documents 和 messages 資料。",
+    unauthenticated: "請先登入，才能查看 live order、documents 和 messages 資料。",
     documents: "Documents",
     messages: "Messages",
     saveFailed: "狀態更新失敗",
