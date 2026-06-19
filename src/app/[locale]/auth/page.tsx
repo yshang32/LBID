@@ -8,46 +8,47 @@ import { ArrowRight, CheckCircle2, Eye, LockKeyhole, Mail, ShieldCheck } from "l
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
+import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-type Role = "agency" | "forwarder" | "admin"
-type AuthResult = { type: "register" | "login"; role: Role; email: string } | null
+type CapabilityMode = "client" | "forwarder" | "both"
+type AuthResult = { type: "register" | "login"; email: string; href: string } | null
 
 const copy = {
   zh: {
     title: "登入 LBID",
     registerTitle: "建立試用帳戶",
-    subtitle: "一個為東南亞 Agency 與香港 Forwarder 而設的 sealed bidding logistics workspace。",
+    subtitle: "連接東南亞 Agency 與香港 Forwarder 的 sealed bidding logistics workspace。",
     eyebrow: "Matching-first logistics platform",
-    newUser: "第一次使用？",
-    signUp: "建立試用",
+    newUser: "第一次使用 LBID？",
+    signUp: "建立試用帳戶",
     backToLogin: "返回登入",
     email: "Email",
     password: "密碼",
     remember: "記住我",
     forgot: "忘記密碼？",
     signIn: "登入",
-    role: "身份",
     company: "公司名稱",
     fullName: "聯絡人",
-    create: "建立 7 日試用",
+    capability: "公司能力",
+    create: "建立帳戶",
     demo: "Demo mode",
     configured: "Supabase connected",
-    demoText: "連接 Supabase 後會使用真實 Auth。未登入時仍可先預覽 demo workspace。",
+    demoText: "如已設定 Supabase env，登入會使用真實 Auth；否則可用 demo flow 預覽工作台。",
     loginReady: "已登入，可以進入工作台。",
-    verifyTitle: "試用帳戶已建立",
-    verifyBody: "如 Supabase 啟用 email verification，請完成驗證後再進入 onboarding。",
+    verifyTitle: "帳戶已建立",
+    verifyBody: "如 Supabase 啟用了 email verification，請先完成驗證；否則可以直接繼續 onboarding。",
     dashboard: "進入工作台",
+    onboarding: "繼續設定公司能力",
     working: "處理中...",
-    promise: "價格公平、能力透明、流程留痕。",
+    promise: "公平報價。真實能力。可追蹤流程。",
     trust: ["Sealed bid", "Token ledger", "Order workspace"],
-    roles: [
-      { value: "agency", label: "Client / Agency" },
-      { value: "forwarder", label: "Forwarder" },
-      { value: "admin", label: "Admin" },
-    ],
+    modes: {
+      client: "Client：發出 SR",
+      forwarder: "Forwarder：承接 SR",
+      both: "Client + Forwarder：雙重能力",
+    },
   },
   en: {
     title: "Sign in to LBID",
@@ -62,25 +63,26 @@ const copy = {
     remember: "Remember me",
     forgot: "Forgot your password?",
     signIn: "Sign In",
-    role: "Role",
     company: "Company name",
     fullName: "Contact person",
-    create: "Create 7-day trial",
+    capability: "Company capabilities",
+    create: "Create account",
     demo: "Demo mode",
     configured: "Supabase connected",
     demoText: "When Supabase is connected, this form uses real Auth. Demo workspace remains available for preview.",
     loginReady: "Signed in. Ready to enter the workspace.",
-    verifyTitle: "Trial account created",
-    verifyBody: "If email verification is enabled in Supabase, verify your email before onboarding.",
+    verifyTitle: "Account created",
+    verifyBody: "If email verification is enabled in Supabase, verify your email first. Otherwise continue to onboarding.",
     dashboard: "Go to workspace",
+    onboarding: "Continue onboarding",
     working: "Working...",
-    promise: "Fair pricing. Transparent capability. Traceable workflow.",
+    promise: "Fair pricing. Real capability. Traceable workflow.",
     trust: ["Sealed bid", "Token ledger", "Order workspace"],
-    roles: [
-      { value: "agency", label: "Client / Agency" },
-      { value: "forwarder", label: "Forwarder" },
-      { value: "admin", label: "Admin" },
-    ],
+    modes: {
+      client: "Client: create SRs",
+      forwarder: "Forwarder: bid on SRs",
+      both: "Client + Forwarder: dual capability",
+    },
   },
 }
 
@@ -90,7 +92,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   const router = useRouter()
   const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   const [mode, setMode] = useState<"login" | "register">("login")
-  const [role, setRole] = useState<Role>("forwarder")
+  const [capabilityMode, setCapabilityMode] = useState<CapabilityMode>("both")
   const [company, setCompany] = useState("")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -99,7 +101,18 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const dashboardHref = `/${locale}/dashboard?role=${result?.role ?? role}`
+  const canBeClient = capabilityMode === "client" || capabilityMode === "both"
+  const canBeForwarder = capabilityMode === "forwarder" || capabilityMode === "both"
+  const defaultDashboardRole = canBeForwarder ? "forwarder" : "agency"
+
+  async function getProfileDashboardHref() {
+    const { response, body } = await apiJson("/api/company-profile")
+    if (!response.ok || !body.companyProfile) return `/${locale}/onboarding`
+    const profile = body.companyProfile
+    if (profile.can_be_forwarder) return `/${locale}/dashboard?role=forwarder`
+    if (profile.can_be_client) return `/${locale}/dashboard?role=agency`
+    return `/${locale}/onboarding`
+  }
 
   async function submitLogin() {
     if (!email || !password) return
@@ -108,30 +121,24 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
     const supabase = getSupabaseBrowserClient()
 
     if (supabase) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) {
         setError(signInError.message)
         setLoading(false)
         return
       }
 
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", signInData.user.id)
-        .maybeSingle()
-
-      const dbRole = userRow?.role as Role | undefined
-      const nextRole = dbRole ?? role
-      setResult({ type: "login", role: nextRole, email })
+      const href = await getProfileDashboardHref()
+      setResult({ type: "login", email, href })
       setLoading(false)
-      router.push(`/${locale}/dashboard?role=${nextRole}`)
+      router.push(href)
       return
     }
 
+    const href = `/${locale}/dashboard?role=${defaultDashboardRole}`
     setLoading(false)
-    setResult({ type: "login", role, email })
-    router.push(`/${locale}/dashboard?role=${role}`)
+    setResult({ type: "login", email, href })
+    router.push(href)
   }
 
   async function submitRegister() {
@@ -141,10 +148,10 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
     const supabase = getSupabaseBrowserClient()
 
     if (supabase) {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { role, company_name: company, full_name: fullName } },
+        options: { data: { company_name: company, full_name: fullName, can_be_client: canBeClient, can_be_forwarder: canBeForwarder } },
       })
 
       if (signUpError) {
@@ -153,20 +160,27 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
         return
       }
 
-      if (signUpData.user) {
-        await supabase.from("users").upsert({
-          id: signUpData.user.id,
-          role,
-          company_name: company,
-          country: "Hong Kong",
-          email,
-          referral_code: `LBID-${signUpData.user.id.slice(0, 8)}`,
-        })
+      const { response, body } = await apiJson("/api/auth/bootstrap", {
+        method: "POST",
+        body: JSON.stringify({
+          companyName: company,
+          fullName,
+          canBeClient,
+          canBeForwarder,
+        }),
+      })
+
+      if (!response.ok && body.error !== "NO_ACTIVE_SESSION") {
+        setError(body.error || "Unable to prepare account")
+        setLoading(false)
+        return
       }
     }
 
+    const href = hasSupabase ? `/${locale}/onboarding` : `/${locale}/dashboard?role=${defaultDashboardRole}`
     setLoading(false)
-    setResult({ type: "register", role, email })
+    setResult({ type: "register", email, href })
+    router.push(href)
   }
 
   return (
@@ -223,26 +237,36 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
             </div>
 
             <div className="mt-7 space-y-4">
-              <label className="space-y-2 text-sm font-bold text-lblue">
-                {t.role}
-                <Select value={role} onChange={(event) => setRole(event.target.value as Role)}>
-                  {t.roles.map((item) => (
-                    <option key={item.value} value={item.value}>{item.label}</option>
-                  ))}
-                </Select>
-              </label>
-
               {mode === "register" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2 text-sm font-bold text-lblue">
-                    {t.company}
-                    <Input value={company} onChange={(event) => setCompany(event.target.value)} />
-                  </label>
-                  <label className="space-y-2 text-sm font-bold text-lblue">
-                    {t.fullName}
-                    <Input value={fullName} onChange={(event) => setFullName(event.target.value)} />
-                  </label>
-                </div>
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="space-y-2 text-sm font-bold text-lblue">
+                      {t.company}
+                      <Input value={company} onChange={(event) => setCompany(event.target.value)} />
+                    </label>
+                    <label className="space-y-2 text-sm font-bold text-lblue">
+                      {t.fullName}
+                      <Input value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="space-y-2 text-sm font-bold text-lblue">
+                    {t.capability}
+                    <div className="grid gap-2">
+                      {(["both", "client", "forwarder"] as CapabilityMode[]).map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setCapabilityMode(item)}
+                          className={`rounded-md border px-3 py-2 text-left text-sm font-bold transition ${
+                            capabilityMode === item ? "border-lgold/60 bg-lgold/15 text-lblue" : "border-lblue/10 bg-slate-50 text-muted-foreground hover:bg-white"
+                          }`}
+                        >
+                          {t.modes[item]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               ) : null}
 
               <label className="space-y-2 text-sm font-bold text-lblue">
@@ -296,7 +320,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
                 </div>
                 <p className="mt-1 text-teal-700">{result.type === "login" ? result.email : t.verifyBody}</p>
                 <Button asChild className="mt-4 w-full" variant="outline">
-                  <Link href={dashboardHref}>{t.dashboard}</Link>
+                  <Link href={result.href}>{result.type === "login" ? t.dashboard : t.onboarding}</Link>
                 </Button>
               </div>
             ) : null}
