@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { CheckCircle2, FileCheck2, MessageSquare, PackageCheck, Star } from "lucide-react"
+import { CheckCircle2, FileCheck2, MessageSquare, PackageCheck, Star, Truck } from "lucide-react"
 
 import { LiveOrderPanel } from "@/components/orders/live-order-panel"
 import { Badge } from "@/components/ui/badge"
@@ -13,31 +13,33 @@ import { getLocalizedDocumentChecklist } from "@/lib/localized-data"
 const copy = {
   zh: {
     badge: "Order workspace",
-    title: "Order workspace：文件、訊息和狀態保持可追蹤。",
-    intro: "Bid accepted 後，Match Record 會轉成 Order。雙方可以在這裡管理狀態、文件、訊息和完成後 review。",
-    forwarder: "Winning forwarder",
-    agency: "Client / Agency",
-    route: "Route",
-    cargo: "Cargo",
-    total: "Accepted quotation",
+    title: "Order 工作區：狀態、文件、訊息、追蹤全部留痕",
+    intro: "Bid accepted 後會生成 Order。雙方在同一工作區處理狀態、文件、訊息、追蹤及完成後評價。",
+    forwarder: "中標 Forwarder",
+    agency: "Agency / Client",
+    route: "路線",
+    cargo: "貨物",
+    total: "已接受報價",
     status: "Order status",
-    documents: "Document checklist",
+    documents: "文件清單",
     manageDocuments: "管理文件",
-    uploaded: "Uploaded",
-    pending: "Pending",
-    messages: "Order messages",
-    openMessages: "打開 message thread",
-    review: "Completion review",
-    leaveReview: "提交 review",
+    uploaded: "已上傳",
+    pending: "待處理",
+    messages: "Order 訊息",
+    openMessages: "開啟訊息",
+    tracking: "貨件追蹤",
+    openTracking: "查看 tracking timeline",
+    review: "完成後評價",
+    leaveReview: "留下 review",
     role: "Platform role: workflow_platform_not_carrier_of_record",
     statuses: ["confirmed", "shipment_booked", "in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"],
   },
   en: {
     badge: "Order workspace",
-    title: "Order workspace: documents, messages and status stay traceable.",
-    intro: "After bid acceptance, the Match Record becomes an Order. Both parties manage status, documents, messages and completion review here.",
+    title: "Order workspace: status, documents, messages and tracking stay traceable.",
+    intro: "After bid acceptance, the Match Record becomes an Order. Both parties manage status, documents, messages, tracking and completion review here.",
     forwarder: "Winning forwarder",
-    agency: "Agency",
+    agency: "Agency / Client",
     route: "Route",
     cargo: "Cargo",
     total: "Accepted quotation",
@@ -47,7 +49,9 @@ const copy = {
     uploaded: "Uploaded",
     pending: "Pending",
     messages: "Order messages",
-    openMessages: "Open message thread",
+    openMessages: "Open messages",
+    tracking: "Shipment tracking",
+    openTracking: "Open tracking timeline",
     review: "Completion review",
     leaveReview: "Leave review",
     role: "Platform role: workflow_platform_not_carrier_of_record",
@@ -130,6 +134,18 @@ export default function OrderWorkspacePage({ params }: { params: { locale: strin
             <CardContent>
               <Button asChild className="w-full" variant="gold">
                 <Link href={`/${locale}/orders/${params.id}/messages`}>{t.openMessages}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Truck className="h-5 w-5 text-lgold" />
+              <CardTitle>{t.tracking}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full" variant="outline">
+                <Link href={`/${locale}/orders/${params.id}/tracking`}>{t.openTracking}</Link>
               </Button>
             </CardContent>
           </Card>

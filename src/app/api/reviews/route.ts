@@ -67,9 +67,37 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    const service = getApiSupabaseServiceClient()
+    const pointsAwarded = rating >= 5 ? 80 : rating >= 4 ? 50 : 0
+    let pointTransaction = null
+
+    if (service) {
+      if (scoreChange !== 0) {
+        await service.from("reputation_events").insert({
+          user_id: forwarderId,
+          event_type: scoreChange > 0 ? "review_positive" : "review_negative",
+          score_change: scoreChange,
+        })
+      }
+
+      if (pointsAwarded > 0) {
+        const { data: user } = await service.from("users").select("points").eq("id", forwarderId).maybeSingle()
+        await service.from("users").update({ points: Number(user?.points || 0) + pointsAwarded }).eq("id", forwarderId)
+        const { data: pointsRow } = await service.from("point_transactions").insert({
+          user_id: forwarderId,
+          type: "earn",
+          source: rating >= 5 ? "five_star_review" : "positive_review",
+          points: pointsAwarded,
+          metadata: { reviewId: data.id, orderId: body.orderId, rating },
+        }).select("*").single()
+        pointTransaction = pointsRow
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       review: data,
+      pointTransaction,
       reputationEvent: { eventType: rating >= 4 ? "review_positive" : rating <= 2 ? "review_negative" : "review_neutral", scoreChange },
     }, { status: 201 })
   }

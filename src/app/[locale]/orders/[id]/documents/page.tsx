@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { AlertTriangle, BellRing, CheckCircle2, Clock, FileCheck2, UploadCloud } from "lucide-react"
+import { AlertTriangle, BellRing, CheckCircle2, Clock, FileCheck2, Truck, UploadCloud } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,13 +30,14 @@ const baseDocuments: DocumentItem[] = [
 const copy = {
   zh: {
     badge: "Document management",
-    title: "管理 order documents",
-    intro: "每個 order 都有獨立 document checklist。必需文件未齊時，可在出貨前 24 小時觸發 email + in-app reminder。",
+    title: "管理 Order 文件",
+    intro: "每個 order 都有獨立 document checklist。必須文件未齊時，可在 ship date 前 24 小時發出 email + in-app reminder。",
     order: "Order reference",
     storage: "Production storage path",
     checklist: "Document checklist",
     upload: "Upload document",
     awb: "Smart AWB fill",
+    tracking: "貨件追蹤",
     uploaded: "Uploaded",
     missing: "Missing",
     optional: "Optional",
@@ -44,7 +45,7 @@ const copy = {
     confirmed: "Confirmed",
     confirm: "E-confirm",
     reminder: "Reminder status",
-    reminderText: "仍有必需文件未齊，系統應在 ship date 前 24 小時提醒雙方。",
+    reminderText: "必須文件仍未齊，可先向雙方發出補文件提醒。",
     sendReminder: "Send reminder now",
     reminderSent: "Reminder queued in notification center",
     progress: "Document progress",
@@ -52,22 +53,23 @@ const copy = {
     complete: "All required documents ready",
     incomplete: "Required documents still missing",
     back: "返回 order workspace",
-    note: "Production 會寫入 Supabase Storage 和 documents table。",
+    note: "Production 會寫入 Supabase Storage 及 documents table。",
     chooseFile: "請先選擇文件",
     saving: "Saving...",
     openMessages: "Open messages",
     completionReview: "Completion review",
-    liveFailed: "暫時未能載入 live documents，先顯示 checklist。",
+    liveFailed: "未能載入 live documents，暫時顯示 checklist。",
   },
   en: {
     badge: "Document management",
     title: "Manage order documents.",
-    intro: "Each order has its own document checklist. Missing required documents trigger reminders 24 hours before ship date.",
+    intro: "Each order has its own document checklist. Missing required documents can trigger email and in-app reminders 24 hours before ship date.",
     order: "Order reference",
     storage: "Production storage path",
     checklist: "Document checklist",
     upload: "Upload document",
     awb: "Smart AWB fill",
+    tracking: "Shipment tracking",
     uploaded: "Uploaded",
     missing: "Missing",
     optional: "Optional",
@@ -75,7 +77,7 @@ const copy = {
     confirmed: "Confirmed",
     confirm: "E-confirm",
     reminder: "Reminder status",
-    reminderText: "Required documents are still missing and should trigger email + in-app reminders 24 hours before ship date.",
+    reminderText: "Required documents are still missing. Send both parties a document reminder.",
     sendReminder: "Send reminder now",
     reminderSent: "Reminder queued in notification center",
     progress: "Document progress",
@@ -196,6 +198,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
           </CardContent>
         </Card>
       </section>
+
       <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
@@ -230,6 +233,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
             {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
           </CardContent>
         </Card>
+
         <aside className="space-y-5">
           <Card className={requiredComplete ? "border-teal-200 bg-teal-50" : "border-lgold/30 bg-lgold/10"}>
             <CardHeader>
@@ -250,6 +254,12 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
           </Card>
           <Button asChild className="w-full" variant="gold">
             <Link href={`/${locale}/orders/${params.id}/awb`}>{t.awb}</Link>
+          </Button>
+          <Button asChild className="w-full" variant="outline">
+            <Link href={`/${locale}/orders/${params.id}/tracking`}>
+              <Truck className="h-4 w-4" />
+              {t.tracking}
+            </Link>
           </Button>
           <Card>
             <CardHeader>
