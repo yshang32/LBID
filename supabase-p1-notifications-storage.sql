@@ -30,16 +30,28 @@ drop policy if exists "notifications_owner_update" on public.notifications;
 
 create policy "notifications_owner_select"
   on public.notifications for select
-  using (auth.uid() = user_id or public.is_admin(auth.uid()));
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+  );
 
 create policy "notifications_owner_insert"
   on public.notifications for insert
-  with check (auth.uid() = user_id or public.is_admin(auth.uid()));
+  with check (
+    auth.uid() = user_id
+    or exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+  );
 
 create policy "notifications_owner_update"
   on public.notifications for update
-  using (auth.uid() = user_id or public.is_admin(auth.uid()))
-  with check (auth.uid() = user_id or public.is_admin(auth.uid()));
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+  )
+  with check (
+    auth.uid() = user_id
+    or exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+  );
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
