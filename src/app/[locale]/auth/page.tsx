@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ArrowRight, CheckCircle2, Eye, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
+import { ArrowRight, CheckCircle2, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
 
 import { BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
@@ -17,72 +17,22 @@ type AuthResult = { type: "register" | "login"; email: string; href: string } | 
 
 const copy = {
   zh: {
-    title: "登入 LBID",
-    registerTitle: "建立試用帳戶",
-    subtitle: "連接東南亞 Agency 與香港 Forwarder 的 sealed bidding logistics network。",
-    eyebrow: "Matching-first logistics platform",
-    newUser: "第一次使用 LBID？",
-    signUp: "建立試用帳戶",
-    backToLogin: "返回登入",
-    email: "Email",
-    password: "密碼",
-    remember: "記住我",
-    forgot: "忘記密碼？",
-    signIn: "登入",
-    company: "公司名稱",
-    fullName: "聯絡人",
-    capability: "公司能力",
-    create: "建立帳戶",
-    demo: "Demo mode",
-    configured: "Supabase connected",
-    demoText: "如果已設定 Supabase env，登入會使用真實 Auth；否則會以 demo flow 進入工作台。",
-    loginReady: "已登入，可以進入工作台。",
-    verifyTitle: "帳戶已建立",
-    verifyBody: "如果 Supabase 啟用了 email verification，請先完成驗證；否則可繼續 onboarding。",
-    dashboard: "進入工作台",
-    onboarding: "繼續 onboarding",
-    working: "處理中...",
-    promise: "讓價格回到公平，讓實力取代關係。",
-    trust: ["Sealed bid", "Token ledger", "Order workspace"],
-    modes: {
-      client: "Client：建立 SR",
-      forwarder: "Forwarder：回應 SR",
-      both: "Client + Forwarder：雙重能力",
-    },
+    signIn: "登入 LBID", create: "建立公司帳戶", title: "公平的物流協作，從一個清楚的開始。",
+    body: "為海外 Agency 與香港 Forwarder 建立有時限、可比較、可追溯的 sealed bidding workflow。",
+    pointOne: "所有報價在截標前保持保密", pointTwo: "訂單、文件與追蹤留在同一工作區",
+    newUser: "第一次使用？", start: "建立帳戶", back: "返回登入", email: "工作電郵", password: "密碼", company: "公司名稱", name: "聯絡人姓名",
+    capability: "公司能力", client: "Client：建立需求", forwarder: "Forwarder：承接需求", both: "同時啟用兩種能力",
+    submitLogin: "登入工作台", submitCreate: "建立帳戶", working: "處理中...", forgot: "忘記密碼？",
+    trust: "您的資料會以 Supabase Auth 安全管理。", success: "帳戶已準備好", go: "前往工作台", continue: "繼續設定", error: "暫時未能完成，請再試一次。", language: "English",
   },
   en: {
-    title: "Sign in to LBID",
-    registerTitle: "Create trial account",
-    subtitle: "A sealed bidding logistics network for Southeast Asian agencies and Hong Kong forwarders.",
-    eyebrow: "Matching-first logistics platform",
-    newUser: "New here?",
-    signUp: "Start trial",
-    backToLogin: "Back to sign in",
-    email: "Email",
-    password: "Password",
-    remember: "Remember me",
-    forgot: "Forgot your password?",
-    signIn: "Sign In",
-    company: "Company name",
-    fullName: "Contact person",
-    capability: "Company capabilities",
-    create: "Create account",
-    demo: "Demo mode",
-    configured: "Supabase connected",
-    demoText: "When Supabase is connected, this form uses real Auth. Demo workspace remains available for preview.",
-    loginReady: "Signed in. Ready to enter the workspace.",
-    verifyTitle: "Account created",
-    verifyBody: "If email verification is enabled in Supabase, verify your email first. Otherwise continue to onboarding.",
-    dashboard: "Go to workspace",
-    onboarding: "Continue onboarding",
-    working: "Working...",
-    promise: "Fair prices. Real capability. No connections needed.",
-    trust: ["Sealed bid", "Token ledger", "Order workspace"],
-    modes: {
-      client: "Client: create SRs",
-      forwarder: "Forwarder: bid on SRs",
-      both: "Client + Forwarder: dual capability",
-    },
+    signIn: "Sign in to LBID", create: "Create a company account", title: "Fairer logistics collaboration begins with a clear process.",
+    body: "A timed, comparable and traceable sealed-bid workflow for Southeast Asian agencies and Hong Kong forwarders.",
+    pointOne: "Quotes remain private before the window closes", pointTwo: "Orders, documents and tracking stay in one workspace",
+    newUser: "New to LBID?", start: "Create account", back: "Back to sign in", email: "Work email", password: "Password", company: "Company name", name: "Contact person",
+    capability: "Company capabilities", client: "Client: create requests", forwarder: "Forwarder: bid on requests", both: "Enable both capabilities",
+    submitLogin: "Enter workspace", submitCreate: "Create account", working: "Working...", forgot: "Forgot password?",
+    trust: "Your account is securely managed through Supabase Auth.", success: "Your account is ready", go: "Enter workspace", continue: "Continue setup", error: "We could not complete that request. Please try again.", language: "中文",
   },
 }
 
@@ -108,219 +58,56 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   async function getProfileDashboardHref() {
     const { response, body } = await apiJson("/api/company-profile")
     if (!response.ok || !body.companyProfile) return `/${locale}/onboarding`
-    const profile = body.companyProfile
-    if (profile.can_be_forwarder) return `/${locale}/dashboard?role=forwarder`
-    if (profile.can_be_client) return `/${locale}/dashboard?role=agency`
+    if (body.companyProfile.can_be_forwarder) return `/${locale}/dashboard?role=forwarder`
+    if (body.companyProfile.can_be_client) return `/${locale}/dashboard?role=agency`
     return `/${locale}/onboarding`
   }
 
-  async function submitLogin() {
-    if (!email || !password) return
-    setError("")
-    setLoading(true)
+  async function submit() {
+    if (!email || !password || (mode === "register" && (!company || !fullName))) return
+    setLoading(true); setError("")
     const supabase = getSupabaseBrowserClient()
 
-    if (supabase) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInError) {
-        setError(signInError.message)
-        setLoading(false)
-        return
+    if (mode === "login") {
+      if (supabase) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) { setError(signInError.message); setLoading(false); return }
+        const href = await getProfileDashboardHref()
+        setResult({ type: "login", email, href }); setLoading(false); router.push(href); return
       }
-
-      const href = await getProfileDashboardHref()
-      setResult({ type: "login", email, href })
-      setLoading(false)
-      router.push(href)
-      return
+      const href = `/${locale}/dashboard?role=${defaultDashboardRole}`
+      setResult({ type: "login", email, href }); setLoading(false); router.push(href); return
     }
 
-    const href = `/${locale}/dashboard?role=${defaultDashboardRole}`
-    setLoading(false)
-    setResult({ type: "login", email, href })
-    router.push(href)
-  }
-
-  async function submitRegister() {
-    if (!company || !fullName || !email || !password) return
-    setError("")
-    setLoading(true)
-    const supabase = getSupabaseBrowserClient()
-
     if (supabase) {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { company_name: company, full_name: fullName, can_be_client: canBeClient, can_be_forwarder: canBeForwarder } },
-      })
-
-      if (signUpError) {
-        setError(signUpError.message)
-        setLoading(false)
-        return
-      }
-
-      const { response, body } = await apiJson("/api/auth/bootstrap", {
-        method: "POST",
-        body: JSON.stringify({
-          companyName: company,
-          fullName,
-          canBeClient,
-          canBeForwarder,
-        }),
-      })
-
-      if (!response.ok && body.error !== "NO_ACTIVE_SESSION") {
-        setError(body.error || "Unable to prepare account")
-        setLoading(false)
-        return
-      }
+      const { error: signUpError } = await supabase.auth.signUp({ email, password, options: { data: { company_name: company, full_name: fullName, can_be_client: canBeClient, can_be_forwarder: canBeForwarder } } })
+      if (signUpError) { setError(signUpError.message); setLoading(false); return }
+      const { response, body } = await apiJson("/api/auth/bootstrap", { method: "POST", body: JSON.stringify({ companyName: company, fullName, canBeClient, canBeForwarder }) })
+      if (!response.ok && body.error !== "NO_ACTIVE_SESSION") { setError(body.error || t.error); setLoading(false); return }
     }
-
     const href = hasSupabase ? `/${locale}/onboarding` : `/${locale}/dashboard?role=${defaultDashboardRole}`
-    setLoading(false)
-    setResult({ type: "register", email, href })
-    router.push(href)
+    setResult({ type: "register", email, href }); setLoading(false); router.push(href)
   }
 
+  const otherLocale = locale === "zh" ? "en" : "zh"
   return (
-    <main className="min-h-[calc(100vh-4rem)] text-lblue">
-      <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.92fr_440px]">
-        <div className="hidden lg:block">
-          <div className="inline-flex rounded-full border border-lgold/20 bg-lgold/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#8a6d22] shadow-sm">
-            {t.eyebrow}
+    <main className="min-h-screen bg-white text-lblue">
+      <header className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8"><Link href={`/${locale}`} aria-label="LBID home"><BrandMark markClassName="h-12 w-[136px]" /></Link><Link href={`/${otherLocale}/auth`} className="text-sm font-semibold text-slate-500 hover:text-lblue">{t.language}</Link></header>
+      <section className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-[1.05fr_.8fr] lg:items-center lg:pt-16">
+        <div className="max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#957726]">LBID / SEA × HONG KONG</p><h1 className="mt-5 text-4xl font-semibold leading-[1.13] tracking-tight text-lblue sm:text-6xl">{t.title}</h1><p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">{t.body}</p><div className="mt-10 space-y-4 border-l border-lgold/60 pl-5 text-sm text-slate-600"><div className="flex gap-3"><CheckCircle2 className="h-5 w-5 shrink-0 text-[#a17e22]" />{t.pointOne}</div><div className="flex gap-3"><CheckCircle2 className="h-5 w-5 shrink-0 text-[#a17e22]" />{t.pointTwo}</div></div></div>
+        <section className="w-full max-w-md justify-self-end rounded-lg border border-lblue/10 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
+          <div className="flex items-center justify-between"><div><h2 className="text-2xl font-semibold text-lblue">{mode === "login" ? t.signIn : t.create}</h2><p className="mt-2 text-sm text-slate-500">{mode === "login" ? t.newUser : t.back}</p></div><button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError("") }} className="text-sm font-semibold text-lblue underline decoration-lgold underline-offset-4">{mode === "login" ? t.start : t.signIn}</button></div>
+          <div className="mt-8 space-y-5">
+            {mode === "register" ? <><label className="block text-sm font-semibold text-slate-700">{t.company}<Input className="mt-2" value={company} onChange={(event) => setCompany(event.target.value)} /></label><label className="block text-sm font-semibold text-slate-700">{t.name}<Input className="mt-2" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label><fieldset><legend className="text-sm font-semibold text-slate-700">{t.capability}</legend><div className="mt-2 grid grid-cols-3 rounded-md border border-lblue/10 bg-slate-50 p-1">{(["client", "forwarder", "both"] as CapabilityMode[]).map((item) => <button key={item} type="button" onClick={() => setCapabilityMode(item)} className={`min-h-10 rounded px-2 text-xs font-semibold transition ${capabilityMode === item ? "bg-white text-lblue shadow-sm" : "text-slate-500"}`}>{t[item]}</button>)}</div></fieldset></> : null}
+            <label className="block text-sm font-semibold text-slate-700">{t.email}<div className="relative mt-2"><Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /></div></label>
+            <label className="block text-sm font-semibold text-slate-700">{t.password}<div className="relative mt-2"><LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></div></label>
+            {mode === "login" ? <button type="button" className="text-sm font-medium text-slate-500 hover:text-lblue">{t.forgot}</button> : null}
+            <Button className="h-11 w-full" disabled={loading} onClick={submit}>{loading ? t.working : mode === "login" ? t.submitLogin : t.submitCreate}<ArrowRight className="h-4 w-4" /></Button>
+            {error ? <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
+            <div className="flex gap-2 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#a17e22]" />{t.trust}</div>
+            {result ? <Link href={result.href} className="block rounded-md bg-[#edf7f4] p-3 text-sm font-semibold text-[#087765]">{result.type === "login" ? t.go : t.continue}</Link> : null}
           </div>
-          <h1 className="mt-6 max-w-2xl text-5xl font-black leading-[1.04] tracking-tight text-lblue">
-            {t.promise}
-          </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
-          <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
-            {t.trust.map((item) => (
-              <div key={item} className="rounded-lg border border-lblue/10 bg-white/78 p-4 text-sm font-bold text-lblue shadow-[0_18px_48px_rgba(27,43,94,0.07)] backdrop-blur-xl">
-                <CheckCircle2 className="mb-3 h-5 w-5 text-lgold" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mx-auto w-full max-w-[440px]">
-          <div className="mb-8 flex justify-center">
-            <div className="flex h-24 w-56 items-center justify-center rounded-xl border border-lblue/10 bg-white/84 p-4 shadow-[0_22px_65px_rgba(27,43,94,0.10)] backdrop-blur-xl">
-              <BrandMark markClassName="h-16 w-44" />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-lblue/10 bg-white/88 p-7 shadow-[0_28px_80px_rgba(27,43,94,0.12)] backdrop-blur-xl">
-            <div className="text-center">
-              <h2 className="text-2xl font-black tracking-tight text-lblue">{mode === "login" ? t.title : t.registerTitle}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.subtitle}</p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {mode === "login" ? (
-                  <>
-                    {t.newUser}{" "}
-                    <button className="font-bold text-lblue underline decoration-lgold/50 underline-offset-4 hover:text-lgold" onClick={() => setMode("register")}>
-                      {t.signUp}
-                    </button>
-                  </>
-                ) : (
-                  <button className="font-bold text-lblue underline decoration-lgold/50 underline-offset-4 hover:text-lgold" onClick={() => setMode("login")}>
-                    {t.backToLogin}
-                  </button>
-                )}
-              </p>
-            </div>
-
-            <div className="mt-7 space-y-4">
-              {mode === "register" ? (
-                <>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="space-y-2 text-sm font-bold text-lblue">
-                      {t.company}
-                      <Input value={company} onChange={(event) => setCompany(event.target.value)} />
-                    </label>
-                    <label className="space-y-2 text-sm font-bold text-lblue">
-                      {t.fullName}
-                      <Input value={fullName} onChange={(event) => setFullName(event.target.value)} />
-                    </label>
-                  </div>
-                  <div className="space-y-2 text-sm font-bold text-lblue">
-                    {t.capability}
-                    <div className="grid gap-2">
-                      {(["both", "client", "forwarder"] as CapabilityMode[]).map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => setCapabilityMode(item)}
-                          className={`rounded-md border px-3 py-2 text-left text-sm font-bold transition ${
-                            capabilityMode === item ? "border-lgold/60 bg-lgold/15 text-lblue" : "border-lblue/10 bg-slate-50 text-muted-foreground hover:bg-white"
-                          }`}
-                        >
-                          {t.modes[item]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              ) : null}
-
-              <label className="space-y-2 text-sm font-bold text-lblue">
-                {t.email}
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" className="pl-9" />
-                </div>
-              </label>
-
-              <label className="space-y-2 text-sm font-bold text-lblue">
-                {t.password}
-                <div className="relative">
-                  <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="********" className="pl-9 pr-9" />
-                  <Eye className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                </div>
-              </label>
-
-              {mode === "login" ? (
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="h-4 w-4 rounded border-lblue/20" />
-                    {t.remember}
-                  </label>
-                  <button className="font-semibold text-lblue hover:text-lgold">{t.forgot}</button>
-                </div>
-              ) : null}
-
-              <Button className="h-11 w-full" variant="gold" disabled={loading} onClick={mode === "login" ? submitLogin : submitRegister}>
-                {loading ? t.working : mode === "login" ? t.signIn : t.create}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {error ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
-
-            <div className="mt-5 rounded-lg border border-lblue/10 bg-slate-50 p-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2 font-bold text-lblue">
-                <ShieldCheck className="h-4 w-4 text-lgold" />
-                {hasSupabase ? t.configured : t.demo}
-              </div>
-              <p className="mt-1 leading-5">{t.demoText}</p>
-            </div>
-
-            {result ? (
-              <div className="mt-5 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
-                <div className="flex items-center gap-2 font-bold">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {result.type === "login" ? t.loginReady : t.verifyTitle}
-                </div>
-                <p className="mt-1 text-teal-700">{result.type === "login" ? result.email : t.verifyBody}</p>
-                <Button asChild className="mt-4 w-full" variant="outline">
-                  <Link href={result.href}>{result.type === "login" ? t.dashboard : t.onboarding}</Link>
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        </section>
       </section>
     </main>
   )

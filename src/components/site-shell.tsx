@@ -1,133 +1,130 @@
+"use client"
+
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   Bell,
   BriefcaseBusiness,
-  Coins,
-  Gem,
+  ChevronRight,
+  FileText,
   Globe2,
   Home,
-  MessageSquare,
   PackagePlus,
   Search,
-  Settings,
-  ShieldCheck,
-  Star,
   UserCircle,
   Wallet,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
-import { dictionary, type Locale } from "@/lib/i18n"
+import type { Locale } from "@/lib/i18n"
 import { v4Status } from "@/lib/v4"
 
+type NavItem = { href: string; label: string; icon: typeof Home }
+
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
-  const t = dictionary[locale]
+  const pathname = usePathname()
   const prefix = `/${locale}`
 
-  const nav = [
-    { href: `${prefix}/dashboard?role=forwarder`, label: locale === "zh" ? "工作台" : "Dashboard", icon: Home },
-    { href: `${prefix}/marketplace`, label: locale === "zh" ? "接單市場" : "Marketplace", icon: BriefcaseBusiness, badge: 8 },
-    { href: `${prefix}/inquiries/new`, label: locale === "zh" ? "我的需求" : "My Requests", icon: PackagePlus, badge: 3 },
-    { href: `${prefix}/matches/MATCH-1234`, label: locale === "zh" ? "配對記錄" : "Matches", icon: ShieldCheck, badge: 2 },
-    { href: `${prefix}/forwarders`, label: locale === "zh" ? "公司目錄" : "Directory", icon: Globe2 },
-    { href: `${prefix}/community`, label: locale === "zh" ? "社群" : "Community", icon: MessageSquare, badge: 5 },
-    { href: `${prefix}/services`, label: locale === "zh" ? "增值服務" : "Services", icon: Gem },
-    { href: `${prefix}/tokens`, label: locale === "zh" ? "Token 錢包" : "Tokens", icon: Wallet },
-    { href: `${prefix}/profile`, label: locale === "zh" ? "公司檔案" : "Profile", icon: UserCircle },
-    { href: `${prefix}/subscription`, label: locale === "zh" ? "會員方案" : "Membership", icon: Settings },
-  ]
+  if (pathname === `${prefix}/auth`) return <>{children}</>
 
-  const bottomNav = nav.slice(0, 5)
+  const copy = locale === "zh"
+    ? {
+        search: "搜尋需求、公司或訂單編號",
+        workspace: "工作區",
+        network: "網絡",
+        account: "帳戶",
+        tokens: "Token",
+        language: "EN",
+        nav: [
+          { href: `${prefix}/dashboard?role=forwarder`, label: "工作台", icon: Home },
+          { href: `${prefix}/marketplace`, label: "接單市場", icon: BriefcaseBusiness },
+          { href: `${prefix}/inquiries/new`, label: "建立需求", icon: PackagePlus },
+          { href: `${prefix}/matches/MATCH-1234`, label: "訂單記錄", icon: FileText },
+        ],
+        networkNav: [{ href: `${prefix}/forwarders`, label: "公司目錄", icon: Globe2 }],
+        accountNav: [
+          { href: `${prefix}/tokens`, label: "Token 錢包", icon: Wallet },
+          { href: `${prefix}/profile`, label: "公司檔案", icon: UserCircle },
+        ],
+      }
+    : {
+        search: "Search requests, companies or order IDs",
+        workspace: "Workspace",
+        network: "Network",
+        account: "Account",
+        tokens: "Tokens",
+        language: "中文",
+        nav: [
+          { href: `${prefix}/dashboard?role=forwarder`, label: "Dashboard", icon: Home },
+          { href: `${prefix}/marketplace`, label: "Marketplace", icon: BriefcaseBusiness },
+          { href: `${prefix}/inquiries/new`, label: "Create request", icon: PackagePlus },
+          { href: `${prefix}/matches/MATCH-1234`, label: "Orders", icon: FileText },
+        ],
+        networkNav: [{ href: `${prefix}/forwarders`, label: "Directory", icon: Globe2 }],
+        accountNav: [
+          { href: `${prefix}/tokens`, label: "Token wallet", icon: Wallet },
+          { href: `${prefix}/profile`, label: "Company profile", icon: UserCircle },
+        ],
+      }
+
+  const otherLocale = locale === "zh" ? "en" : "zh"
+  const otherHref = pathname.replace(`/${locale}`, `/${otherLocale}`)
+  const mobileNav = copy.nav.slice(0, 4)
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/85 shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_12px_34px_rgba(27,43,94,0.06)] backdrop-blur-2xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/95">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-          <Link href={prefix} className="flex h-12 w-[148px] shrink-0 items-center" aria-label="LBID home">
-            <BrandMark markClassName="h-10 w-[116px]" />
+          <Link href={prefix} className="flex h-11 w-[124px] shrink-0 items-center" aria-label="LBID home">
+            <BrandMark markClassName="h-10 w-[112px]" />
           </Link>
-
-          <div className="hidden h-10 flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-white/80 px-3 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.92)_inset] md:flex">
+          <button type="button" className="hidden h-10 max-w-2xl flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-slate-50 px-3 text-left text-sm text-muted-foreground transition hover:bg-white md:flex">
             <Search className="h-4 w-4" />
-            <span>{locale === "zh" ? "搜尋 SR、Forwarder、Match Record..." : "Search SR, forwarders, match records..."}</span>
-          </div>
-
+            <span>{copy.search}</span>
+          </button>
           <div className="ml-auto flex items-center gap-2">
-            <StatusPill icon={Coins} value={`${v4Status.tokens}`} label="Token" tone="gold" />
-            <StatusPill icon={Star} value={`${v4Status.reputation}`} label={locale === "zh" ? "信譽" : "Score"} tone="blue" />
-            <StatusPill icon={Gem} value={v4Status.membership} label={locale === "zh" ? "會員" : "Plan"} tone="blue" hideOnMobile />
-            <Link href={`${prefix}/notifications`} className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/85 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.05)] transition hover:bg-slate-50 sm:flex" aria-label="Notifications">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
-                {v4Status.notifications}
-              </span>
+            <Link href={`${prefix}/tokens`} className="hidden h-9 items-center gap-2 rounded-md border border-lgold/30 bg-[#fcf8ec] px-3 text-sm font-semibold text-[#725b1d] sm:flex">
+              <Wallet className="h-4 w-4" />
+              {v4Status.tokens} {copy.tokens}
             </Link>
-            <Button asChild variant="outline" size="sm">
-              <Link href={t.otherHref}>{t.otherLang}</Link>
-            </Button>
+            <Link href={`${prefix}/notifications`} className="relative inline-flex h-10 w-10 items-center justify-center rounded-md text-lblue transition hover:bg-slate-100" aria-label="Notifications">
+              <Bell className="h-5 w-5" />
+              {v4Status.notifications ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" /> : null}
+            </Link>
+            <Button asChild variant="outline" size="sm"><Link href={otherHref}>{copy.language}</Link></Button>
           </div>
         </div>
       </header>
 
-      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-64 border-r border-lblue/10 bg-white/82 px-3 py-4 shadow-[1px_0_0_rgba(255,255,255,0.95)_inset,14px_0_42px_rgba(27,43,94,0.045)] backdrop-blur-2xl lg:block">
-        <nav className="space-y-1">
-          {nav.map((item, index) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${
-                index === 0 ? "bg-lblue text-white shadow-[0_12px_24px_rgba(27,43,94,0.16)]" : "text-lblue hover:bg-slate-50"
-              }`}
-            >
-              <item.icon className="h-4 w-4" />
-              <span className="flex-1">{item.label}</span>
-              {item.badge ? (
-                <Badge variant={index === 0 ? "secondary" : "gold"} className="px-1.5 py-0 text-[10px]">
-                  {item.badge}
-                </Badge>
-              ) : null}
-            </Link>
-          ))}
-        </nav>
+      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-60 border-r border-lblue/10 bg-white px-3 py-5 lg:block">
+        <SideGroup label={copy.workspace} items={copy.nav} pathname={pathname} />
+        <SideGroup label={copy.network} items={copy.networkNav} pathname={pathname} className="mt-7" />
+        <SideGroup label={copy.account} items={copy.accountNav} pathname={pathname} className="mt-7" />
       </aside>
 
-      <div className="pt-16 lg:pl-64">{children}</div>
+      <div className="min-h-screen pb-20 pt-16 lg:pl-60 lg:pb-0">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-lblue/10 bg-white/88 px-2 py-2 shadow-[0_-14px_34px_rgba(27,43,94,0.075)] backdrop-blur-2xl lg:hidden">
-        {bottomNav.map((item) => (
-          <Link key={item.href} href={item.href} className="relative flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] font-semibold text-lblue">
-            <item.icon className="h-5 w-5" />
-            <span className="max-w-full truncate">{item.label}</span>
-            {item.badge ? <span className="absolute right-3 top-0 h-4 min-w-4 rounded-full bg-lgold px-1 text-[10px] font-black text-[#171104]">{item.badge}</span> : null}
-          </Link>
-        ))}
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-lblue/10 bg-white px-2 py-2 lg:hidden">
+        {mobileNav.map((item) => {
+          const active = pathname === item.href.split("?")[0]
+          return <Link key={item.href} href={item.href} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-semibold ${active ? "bg-slate-100 text-lblue" : "text-slate-500"}`}><item.icon className="h-5 w-5" /><span>{item.label}</span></Link>
+        })}
       </nav>
     </div>
   )
 }
 
-function StatusPill({
-  icon: Icon,
-  value,
-  label,
-  tone,
-  hideOnMobile,
-}: {
-  icon: typeof Coins
-  value: string
-  label: string
-  tone: "gold" | "blue"
-  hideOnMobile?: boolean
-}) {
+function SideGroup({ label, items, pathname, className = "" }: { label: string; items: NavItem[]; pathname: string; className?: string }) {
   return (
-    <div className={`h-9 items-center gap-2 rounded-md border px-2 text-sm font-bold shadow-[0_8px_18px_rgba(27,43,94,0.045)] ${hideOnMobile ? "hidden md:flex" : "flex"} ${
-      tone === "gold" ? "border-lgold/25 bg-lgold/[0.12] text-[#6f5514]" : "border-lblue/10 bg-white/84 text-lblue"
-    }`}>
-      <Icon className="h-4 w-4" />
-      <span>{value}</span>
-      <span className="hidden text-xs font-semibold text-muted-foreground sm:inline">{label}</span>
-    </div>
+    <section className={className}>
+      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
+      <nav className="space-y-1">
+        {items.map((item) => {
+          const active = pathname === item.href.split("?")[0]
+          return <Link key={item.href} href={item.href} className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${active ? "bg-[#edf1fb] text-lblue" : "text-slate-600 hover:bg-slate-50 hover:text-lblue"}`}><item.icon className="h-4 w-4" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="h-4 w-4" /> : null}</Link>
+        })}
+      </nav>
+    </section>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { AlertCircle, CheckCircle2, Coins, Loader2, PackageCheck, RadioTower, ShieldCheck } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -13,220 +13,38 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 type Role = "agency" | "forwarder" | "admin"
 type Locale = "zh" | "en"
 
-type LiveState = {
-  loading: boolean
-  authenticated: boolean
-  error: string
-  shipmentRequests: any[]
-  matchRecords: any[]
-  companyProfile: any | null
-  paymentIntents: any[]
-}
-
-const initialState: LiveState = {
-  loading: true,
-  authenticated: false,
-  error: "",
-  shipmentRequests: [],
-  matchRecords: [],
-  companyProfile: null,
-  paymentIntents: [],
-}
-
 const copy = {
-  zh: {
-    title: "即時工作台",
-    loading: "正在載入 Supabase 工作台資料",
-    demo: "登入真實帳戶後，這裡會顯示你的 live workspace data。",
-    error: "暫時未能載入即時資料",
-    live: "Live Supabase",
-    agencyPrimary: "我的 SR",
-    forwarderPrimary: "可投標 SR",
-    adminPrimary: "待確認付款",
-    matches: "Match records",
-    tokens: "Token 餘額",
-    reputation: "信譽分",
-    openMarketplace: "打開接單市場",
-    createSr: "建立 SR",
-    adminQueue: "打開 Admin queue",
-    clientEnabled: "Client 能力",
-    forwarderEnabled: "Forwarder 能力",
-    enabled: "已啟用",
-    disabled: "未啟用",
-    manage: "管理能力",
-  },
-  en: {
-    title: "Live workspace",
-    loading: "Loading Supabase workspace data",
-    demo: "Sign in to a real account to replace demo data with live workspace data.",
-    error: "Live data is temporarily unavailable",
-    live: "Live Supabase",
-    agencyPrimary: "My SRs",
-    forwarderPrimary: "Biddable SRs",
-    adminPrimary: "Pending payments",
-    matches: "Match records",
-    tokens: "Token balance",
-    reputation: "Reputation",
-    openMarketplace: "Open Marketplace",
-    createSr: "Create SR",
-    adminQueue: "Open Admin queue",
-    clientEnabled: "Client capability",
-    forwarderEnabled: "Forwarder capability",
-    enabled: "Enabled",
-    disabled: "Disabled",
-    manage: "Manage capabilities",
-  },
+  zh: { title: "即時工作區", loading: "正在載入工作區資料", demo: "登入真實帳戶後，這裡會顯示你的即時工作區資料。", error: "暫時未能載入即時資料", live: "Live Supabase", requests: "可處理需求", matches: "配對記錄", tokens: "Token 餘額", reputation: "信譽分數", create: "建立需求", market: "開啟接單市場", admin: "查看 Admin queue", profile: "管理能力" },
+  en: { title: "Live workspace", loading: "Loading workspace data", demo: "Sign in to a real account to replace demo figures with live workspace data.", error: "Live data is temporarily unavailable", live: "Live Supabase", requests: "Available requests", matches: "Match records", tokens: "Token balance", reputation: "Reputation", create: "Create request", market: "Open marketplace", admin: "Open Admin queue", profile: "Manage capabilities" },
 }
 
 export function LiveDashboardPanel({ locale, role }: { locale: Locale; role: Role }) {
   const t = copy[locale]
-  const [state, setState] = useState<LiveState>(initialState)
+  const [state, setState] = useState({ loading: true, authenticated: false, error: "", requests: [] as any[], matches: [] as any[], profile: null as any, payments: [] as any[] })
 
   useEffect(() => {
     let cancelled = false
-
     async function load() {
       const supabase = getSupabaseBrowserClient()
       const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
-
-      if (!data.session) {
-        if (!cancelled) setState({ ...initialState, loading: false, authenticated: false })
-        return
-      }
-
-      try {
-        const [requests, matches, profile, payments] = await Promise.all([
-          apiJson("/api/shipment-requests"),
-          apiJson("/api/match-records"),
-          apiJson("/api/company-profile"),
-          role === "admin" ? apiJson("/api/admin/pending-payments") : Promise.resolve({ response: { ok: true }, body: { paymentIntents: [] } }),
-        ])
-
-        const failed = [requests, matches, profile, payments].find((item) => !item.response.ok)
-        if (failed) throw new Error(failed.body?.error || "LIVE_DATA_FAILED")
-
-        if (!cancelled) {
-          setState({
-            loading: false,
-            authenticated: true,
-            error: "",
-            shipmentRequests: requests.body.shipmentRequests || [],
-            matchRecords: matches.body.matchRecords || [],
-            companyProfile: profile.body.companyProfile || null,
-            paymentIntents: payments.body.paymentIntents || [],
-          })
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setState({
-            ...initialState,
-            loading: false,
-            authenticated: true,
-            error: error instanceof Error ? error.message : "LIVE_DATA_FAILED",
-          })
-        }
-      }
+      if (!data.session) { if (!cancelled) setState((item) => ({ ...item, loading: false })); return }
+      const results = await Promise.all([apiJson("/api/shipment-requests"), apiJson("/api/match-records"), apiJson("/api/company-profile"), role === "admin" ? apiJson("/api/admin/pending-payments") : Promise.resolve({ response: { ok: true }, body: { paymentIntents: [] } })])
+      if (cancelled) return
+      const failed = results.find((item) => !item.response.ok)
+      if (failed) { setState((item) => ({ ...item, loading: false, authenticated: true, error: failed.body?.error || "LIVE_DATA_FAILED" })); return }
+      setState({ loading: false, authenticated: true, error: "", requests: results[0].body.shipmentRequests || [], matches: results[1].body.matchRecords || [], profile: results[2].body.companyProfile || null, payments: results[3].body.paymentIntents || [] })
     }
-
     load()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [role])
 
-  const primaryMetric = useMemo(() => {
-    if (role === "admin") return { label: t.adminPrimary, value: state.paymentIntents.length }
-    return { label: role === "agency" ? t.agencyPrimary : t.forwarderPrimary, value: state.shipmentRequests.length }
-  }, [role, state.paymentIntents.length, state.shipmentRequests.length, t.adminPrimary, t.agencyPrimary, t.forwarderPrimary])
+  const figures = [
+    { icon: PackageCheck, label: t.requests, value: role === "admin" ? state.payments.length : state.requests.length },
+    { icon: ShieldCheck, label: t.matches, value: state.matches.length },
+    { icon: Coins, label: t.tokens, value: state.authenticated ? Number(state.profile?.token_balance_free || 0) + Number(state.profile?.token_balance_paid || 0) : "--" },
+    { icon: CheckCircle2, label: t.reputation, value: state.authenticated ? state.profile?.reputation_score ?? "--" : "--" },
+  ]
+  const prefix = `/${locale}`
 
-  const tokenBalance = Number(state.companyProfile?.token_balance_free || 0) + Number(state.companyProfile?.token_balance_paid || 0)
-  const canBeClient = state.companyProfile?.can_be_client ?? role === "agency"
-  const canBeForwarder = state.companyProfile?.can_be_forwarder ?? role === "forwarder"
-
-  return (
-    <Card className="mt-5 border-lblue/10 bg-white shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <div>
-          <div className="flex items-center gap-2">
-            <RadioTower className="h-4 w-4 text-lgold" />
-            <CardTitle>{t.title}</CardTitle>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {state.loading ? t.loading : state.authenticated ? t.live : t.demo}
-          </p>
-        </div>
-        <Badge variant={state.authenticated ? "teal" : "secondary"}>{state.authenticated ? t.live : "Demo"}</Badge>
-      </CardHeader>
-      <CardContent>
-        {state.loading ? (
-          <div className="flex items-center gap-2 rounded-md border border-lblue/10 bg-slate-50 p-4 text-sm font-semibold text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-lgold" />
-            {t.loading}
-          </div>
-        ) : state.error ? (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <AlertCircle className="mt-0.5 h-4 w-4" />
-            <div>
-              <div className="font-black">{t.error}</div>
-              <div className="mt-1 font-mono text-xs">{state.error}</div>
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-4">
-            <LiveMetric icon={PackageCheck} label={primaryMetric.label} value={primaryMetric.value} />
-            <LiveMetric icon={ShieldCheck} label={t.matches} value={state.matchRecords.length} />
-            <LiveMetric icon={Coins} label={t.tokens} value={state.authenticated ? tokenBalance : "--"} />
-            <LiveMetric icon={CheckCircle2} label={t.reputation} value={state.companyProfile?.reputation_score ?? "--"} />
-          </div>
-        )}
-
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-          <div className="flex flex-wrap gap-2">
-            <CapabilityPill label={t.clientEnabled} active={Boolean(canBeClient)} enabledText={t.enabled} disabledText={t.disabled} />
-            <CapabilityPill label={t.forwarderEnabled} active={Boolean(canBeForwarder)} enabledText={t.enabled} disabledText={t.disabled} />
-          </div>
-          <div className="flex flex-wrap gap-2 md:justify-end">
-            {canBeClient ? (
-              <Button asChild variant="gold" size="sm">
-                <Link href={`/${locale}/inquiries/new`}>{t.createSr}</Link>
-              </Button>
-            ) : null}
-            {role === "admin" ? (
-              <Button asChild variant="gold" size="sm">
-                <Link href={`/${locale}/admin/pending-payments`}>{t.adminQueue}</Link>
-              </Button>
-            ) : null}
-            {canBeForwarder ? (
-              <Button asChild variant="gold" size="sm">
-                <Link href={`/${locale}/marketplace`}>{t.openMarketplace}</Link>
-              </Button>
-            ) : null}
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${locale}/onboarding`}>{t.manage}</Link>
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function CapabilityPill({ label, active, enabledText, disabledText }: { label: string; active: boolean; enabledText: string; disabledText: string }) {
-  return (
-    <div className={`rounded-md border px-3 py-2 text-sm font-bold ${active ? "border-teal-200 bg-teal-50 text-teal-700" : "border-slate-200 bg-slate-50 text-muted-foreground"}`}>
-      {label}: {active ? enabledText : disabledText}
-    </div>
-  )
-}
-
-function LiveMetric({ icon: Icon, label, value }: { icon: typeof PackageCheck; label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-lblue/10 bg-slate-50 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-        <Icon className="h-4 w-4 text-lgold" />
-        {label}
-      </div>
-      <div className="mt-2 text-3xl font-black text-lblue">{value}</div>
-    </div>
-  )
+  return <Card className="mt-8"><CardHeader className="flex-row items-center justify-between space-y-0 border-b border-slate-100"><div><div className="flex items-center gap-2"><RadioTower className="h-4 w-4 text-[#a17e22]" /><CardTitle>{t.title}</CardTitle></div><p className="mt-1 text-sm text-slate-500">{state.loading ? t.loading : state.authenticated ? t.live : t.demo}</p></div><Badge variant={state.authenticated ? "teal" : "secondary"}>{state.authenticated ? t.live : "Demo"}</Badge></CardHeader><CardContent className="pt-5">{state.loading ? <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{t.loading}</div> : state.error ? <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"><AlertCircle className="h-4 w-4" />{t.error}</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{figures.map((item) => <div key={item.label} className="rounded-md border border-lblue/10 bg-slate-50 p-4"><item.icon className="h-4 w-4 text-lblue" /><p className="mt-3 text-sm text-slate-500">{item.label}</p><p className="mt-1 text-2xl font-semibold text-lblue">{item.value}</p></div>)}</div>}<div className="mt-5 flex flex-wrap gap-3"><Button asChild size="sm"><Link href={`${prefix}/${role === "agency" ? "inquiries/new" : role === "admin" ? "admin/pending-payments" : "marketplace"}`}>{role === "agency" ? t.create : role === "admin" ? t.admin : t.market}</Link></Button><Button asChild size="sm" variant="outline"><Link href={`${prefix}/onboarding`}>{t.profile}</Link></Button></div></CardContent></Card>
 }
