@@ -27,12 +27,17 @@ revoke insert, update, delete on table public.payment_intents from anon, authent
 
 do $$
 begin
-  begin
-    alter publication supabase_realtime add table public.messages;
-  exception when duplicate_object then null; when undefined_object then null;
-  end;
-  begin
-    alter publication supabase_realtime add table public.notifications;
-  exception when duplicate_object then null; when undefined_object then null;
-  end;
+  if to_regclass('public.messages') is not null then
+    begin
+      alter publication supabase_realtime add table public.messages;
+    exception when duplicate_object then null; when undefined_object then null;
+    end;
+  end if;
+
+  if to_regclass('public.notifications') is not null then
+    begin
+      alter publication supabase_realtime add table public.notifications;
+    exception when duplicate_object then null; when undefined_object then null;
+    end;
+  end if;
 end $$;
