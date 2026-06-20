@@ -52,6 +52,7 @@ export default function LocalizedAdminPage({ params }: { params: { locale: strin
   const t = copy[locale]
   const [forwarders, setForwarders] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
+  const [analytics, setAnalytics] = useState({ forwarders: 0, verifiedForwarders: 0, paidMembers: 0, orderCompletionRate: 0 })
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState("")
 
@@ -60,10 +61,12 @@ export default function LocalizedAdminPage({ params }: { params: { locale: strin
     Promise.all([
       apiJson("/api/admin/forwarders"),
       apiJson("/api/admin/pending-payments"),
-    ]).then(([forwarderResult, paymentResult]) => {
+      apiJson("/api/admin/analytics"),
+    ]).then(([forwarderResult, paymentResult, analyticsResult]) => {
       if (!mounted) return
       setForwarders(Array.isArray(forwarderResult.body.forwarders) ? forwarderResult.body.forwarders : [])
       setPayments(Array.isArray(paymentResult.body.paymentIntents) ? paymentResult.body.paymentIntents : [])
+      if (analyticsResult.response.ok) setAnalytics(analyticsResult.body)
       setLoading(false)
     })
     return () => {
@@ -101,10 +104,10 @@ export default function LocalizedAdminPage({ params }: { params: { locale: strin
       <p className="mt-4 max-w-3xl text-muted-foreground">{loading ? t.loading : t.demo}</p>
 
       <section className="mt-8 grid gap-4 md:grid-cols-5">
-        <Metric icon={Users} label={t.forwarders} value={String(forwarders.length)} />
-        <Metric icon={BadgeCheck} label={t.verified} value={String(verifiedCount)} />
-        <Metric icon={Crown} label={t.paid} value="2" />
-        <Metric icon={BarChart3} label={t.winRate} value="38%" />
+        <Metric icon={Users} label={t.forwarders} value={String(analytics.forwarders || forwarders.length)} />
+        <Metric icon={BadgeCheck} label={t.verified} value={String(analytics.verifiedForwarders || verifiedCount)} />
+        <Metric icon={Crown} label={t.paid} value={String(analytics.paidMembers)} />
+        <Metric icon={BarChart3} label={t.winRate} value={`${analytics.orderCompletionRate}%`} />
         <Card className="border-white/10 bg-white/[0.045]">
           <CardContent className="p-5">
             <CreditCard className="h-5 w-5 text-lgold" />

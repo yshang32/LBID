@@ -12,7 +12,9 @@ export async function confirmPaymentIntent(
     .single()
 
   if (intentError) throw intentError
-  if (!intent || intent.status !== "pending") throw new Error("INVALID_INTENT")
+  if (!intent) throw new Error("INVALID_INTENT")
+  if (intent.status === "confirmed") return { ok: true, intentId, alreadyConfirmed: true }
+  if (intent.status !== "pending") throw new Error("INVALID_INTENT")
 
   if (intent.type === "token_purchase") {
     const tokens = Number(intent.related_token_package?.tokens ?? intent.related_plan?.tokens ?? 0)
@@ -41,6 +43,8 @@ export async function confirmPaymentIntent(
         plan,
         status: "active",
         current_period_end: periodEnd.toISOString(),
+        stripe_customer_id: intent.stripe_customer_id ?? null,
+        stripe_subscription_id: intent.stripe_subscription_id ?? null,
       }, { onConflict: "user_id" })
     if (error) throw error
   }
