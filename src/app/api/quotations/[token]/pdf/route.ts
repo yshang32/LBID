@@ -2,7 +2,7 @@ import React from "react"
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer"
 
 import { quotation as demoQuotation } from "@/lib/data"
-import { getApiSupabaseServiceClient } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 type LineItem = {
   label?: string
@@ -35,6 +35,56 @@ const styles = StyleSheet.create({
 })
 
 export async function GET(_request: Request, { params }: { params: { token: string } }) {
+  const { buffer } = await buildQuotationPdf(params.token)
+  return pdfResponse(buffer, params.token)
+}
+
+export async function POST(request: Request, { params }: { params: { token: string } }) {
+  const session = await getApiSupabaseSession(request)
+  const adminSecret = process.env.ADMIN_API_SECRET
+  const requestSecret = request.headers.get("x-lbid-admin-secret")
+
+  if (!session && (!adminSecret || requestSecret !== adminSecret)) {
+    return NextResponseJson({ error: "UNAUTHENTICATED" }, 401)
+  }
+
+  const service = getApiSupabaseServiceClient()
+  if (!service) return NextResponseJson({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, 500)
+
+  const body = await request.json().catch(() => ({}))
+  const { buffer, quotation } = await buildQuotationPdf(params.token)
+  if (!quotation?.id) return NextResponseJson({ error: "QUOTATION_NOT_FOUND" }, 404)
+
+  const path = `quotations/${params.token}.pdf`
+  const { error: uploadError } = await service.storage
+    .from("documents")
+    .upload(path, buffer, { contentType: "application/pdf", upsert: true })
+
+  if (uploadError) return NextResponseJson({ error: uploadError.message, bucket: "documents" }, 500)
+
+  const { data: publicData } = service.storage.from("documents").getPublicUrl(path)
+  const pdfUrl = publicData.publicUrl
+
+  const { error: updateError } = await service
+    .from("quotations")
+    .update({ pdf_url: pdfUrl })
+    .eq("id", quotation.id)
+
+  if (updateError) return NextResponseJson({ error: updateError.message }, 500)
+
+  if (body.orderId) {
+    await service.from("documents").insert({
+      order_id: body.orderId,
+      type: "Quotation PDF",
+      file_url: pdfUrl,
+      uploaded_by: session?.user.id || quotation.forwarder_id,
+    })
+  }
+
+  return NextResponseJson({ ok: true, quotationId: quotation.id, pdfUrl, path }, 201)
+}
+
+async function buildQuotationPdf(token: string) {
   const service = getApiSupabaseServiceClient()
   let quotation: any = null
 
@@ -42,7 +92,7 @@ export async function GET(_request: Request, { params }: { params: { token: stri
     const { data } = await service
       .from("quotations")
       .select("id, shipment_request_id, forwarder_id, line_items, total_amount, public_token, status, created_at")
-      .eq("public_token", params.token)
+      .eq("public_token", token)
       .maybeSingle()
     quotation = data
   }
@@ -50,7 +100,7 @@ export async function GET(_request: Request, { params }: { params: { token: stri
   const lineItems: LineItem[] = quotation?.line_items || demoQuotation.lineItems
   const total = Number(quotation?.total_amount ?? lineItems.reduce((sum, item) => sum + Number(item.amount || 0), 0))
   const currency = lineItems[0]?.currency || demoQuotation.currency || "HKD"
-  const title = quotation?.id ? `Quotation ${quotation.id}` : `Quotation ${params.token}`
+  const title = quotation?.id ? `Quotation ${quotation.id}` : `Quotation ${token}`
 
   const pdf = React.createElement(
     Document,
@@ -68,7 +118,7 @@ export async function GET(_request: Request, { params }: { params: { token: stri
         View,
         { style: styles.metaGrid },
         React.createElement(MetaBox, { label: "Quotation", value: title }),
-        React.createElement(MetaBox, { label: "Public token", value: params.token }),
+        React.createElement(MetaBox, { label: "Public token", value: token }),
         React.createElement(MetaBox, { label: "Status", value: quotation?.status || "generated" }),
       ),
       React.createElement(
@@ -108,12 +158,23 @@ export async function GET(_request: Request, { params }: { params: { token: stri
   )
 
   const buffer = await renderToBuffer(pdf)
+  return { buffer, quotation }
+}
+
+function pdfResponse(buffer: Buffer, token: string) {
   return new Response(buffer, {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `inline; filename="LBID-${params.token}.pdf"`,
+      "content-disposition": `inline; filename="LBID-${token}.pdf"`,
       "cache-control": "no-store",
     },
+  })
+}
+
+function NextResponseJson(body: Record<string, unknown>, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
   })
 }
 

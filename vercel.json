@@ -1,5 +1,11 @@
 {
   "framework": "nextjs",
   "installCommand": "npm ci",
-  "buildCommand": "node scripts/next-build.mjs"
+  "buildCommand": "node scripts/next-build.mjs",
+  "crons": [
+    {
+      "path": "/api/cron/document-reminders",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
