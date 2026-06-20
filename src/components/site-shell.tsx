@@ -76,8 +76,8 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     <div className="min-h-screen bg-background">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/95">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-          <Link href={prefix} className="flex h-11 w-[124px] shrink-0 items-center" aria-label="LBID home">
-            <BrandMark markClassName="h-10 w-[112px]" />
+          <Link href={prefix} className="flex h-11 w-[166px] shrink-0 items-center" aria-label="LBID home">
+            <BrandMark markClassName="h-10 w-[154px]" />
           </Link>
           <button type="button" className="hidden h-10 max-w-2xl flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-slate-50 px-3 text-left text-sm text-muted-foreground transition hover:bg-white md:flex">
             <Search className="h-4 w-4" />
