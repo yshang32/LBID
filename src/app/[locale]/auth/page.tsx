@@ -1,11 +1,11 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ArrowRight, CheckCircle2, Eye, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
 
+import { BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { apiJson } from "@/lib/api-client"
@@ -19,7 +19,7 @@ const copy = {
   zh: {
     title: "登入 LBID",
     registerTitle: "建立試用帳戶",
-    subtitle: "連接東南亞 Agency 與香港 Forwarder 的 sealed bidding logistics workspace。",
+    subtitle: "連接東南亞 Agency 與香港 Forwarder 的 sealed bidding logistics network。",
     eyebrow: "Matching-first logistics platform",
     newUser: "第一次使用 LBID？",
     signUp: "建立試用帳戶",
@@ -35,25 +35,25 @@ const copy = {
     create: "建立帳戶",
     demo: "Demo mode",
     configured: "Supabase connected",
-    demoText: "如已設定 Supabase env，登入會使用真實 Auth；否則可用 demo flow 預覽工作台。",
+    demoText: "如果已設定 Supabase env，登入會使用真實 Auth；否則會以 demo flow 進入工作台。",
     loginReady: "已登入，可以進入工作台。",
     verifyTitle: "帳戶已建立",
-    verifyBody: "如 Supabase 啟用了 email verification，請先完成驗證；否則可以直接繼續 onboarding。",
+    verifyBody: "如果 Supabase 啟用了 email verification，請先完成驗證；否則可繼續 onboarding。",
     dashboard: "進入工作台",
-    onboarding: "繼續設定公司能力",
+    onboarding: "繼續 onboarding",
     working: "處理中...",
-    promise: "公平報價。真實能力。可追蹤流程。",
+    promise: "讓價格回到公平，讓實力取代關係。",
     trust: ["Sealed bid", "Token ledger", "Order workspace"],
     modes: {
-      client: "Client：發出 SR",
-      forwarder: "Forwarder：承接 SR",
+      client: "Client：建立 SR",
+      forwarder: "Forwarder：回應 SR",
       both: "Client + Forwarder：雙重能力",
     },
   },
   en: {
     title: "Sign in to LBID",
     registerTitle: "Create trial account",
-    subtitle: "A sealed bidding logistics workspace for Southeast Asian agencies and Hong Kong forwarders.",
+    subtitle: "A sealed bidding logistics network for Southeast Asian agencies and Hong Kong forwarders.",
     eyebrow: "Matching-first logistics platform",
     newUser: "New here?",
     signUp: "Start trial",
@@ -76,7 +76,7 @@ const copy = {
     dashboard: "Go to workspace",
     onboarding: "Continue onboarding",
     working: "Working...",
-    promise: "Fair pricing. Real capability. Traceable workflow.",
+    promise: "Fair prices. Real capability. No connections needed.",
     trust: ["Sealed bid", "Token ledger", "Order workspace"],
     modes: {
       client: "Client: create SRs",
@@ -184,10 +184,10 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-white text-lblue">
-      <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.95fr_440px]">
+    <main className="min-h-[calc(100vh-4rem)] text-lblue">
+      <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.92fr_440px]">
         <div className="hidden lg:block">
-          <div className="inline-flex rounded-full border border-lblue/10 bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-lgold shadow-sm">
+          <div className="inline-flex rounded-full border border-lgold/20 bg-lgold/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#8a6d22] shadow-sm">
             {t.eyebrow}
           </div>
           <h1 className="mt-6 max-w-2xl text-5xl font-black leading-[1.04] tracking-tight text-lblue">
@@ -196,7 +196,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
           <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
           <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
             {t.trust.map((item) => (
-              <div key={item} className="rounded-lg border border-lblue/10 bg-slate-50 p-4 text-sm font-bold text-lblue">
+              <div key={item} className="rounded-lg border border-lblue/10 bg-white/78 p-4 text-sm font-bold text-lblue shadow-[0_18px_48px_rgba(27,43,94,0.07)] backdrop-blur-xl">
                 <CheckCircle2 className="mb-3 h-5 w-5 text-lgold" />
                 {item}
               </div>
@@ -206,17 +206,12 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
 
         <div className="mx-auto w-full max-w-[440px]">
           <div className="mb-8 flex justify-center">
-            <Image
-              src="/assets/lbid-logo-enterprise-light.png"
-              alt="LBID"
-              width={260}
-              height={78}
-              className="h-[64px] w-auto object-contain"
-              priority
-            />
+            <div className="flex h-24 w-56 items-center justify-center rounded-xl border border-lblue/10 bg-white/84 p-4 shadow-[0_22px_65px_rgba(27,43,94,0.10)] backdrop-blur-xl">
+              <BrandMark markClassName="h-12 w-12" wordClassName="text-3xl" />
+            </div>
           </div>
 
-          <div className="rounded-xl border border-lblue/10 bg-white p-7 shadow-[0_24px_70px_rgba(27,43,94,0.10)]">
+          <div className="rounded-xl border border-lblue/10 bg-white/88 p-7 shadow-[0_28px_80px_rgba(27,43,94,0.12)] backdrop-blur-xl">
             <div className="text-center">
               <h2 className="text-2xl font-black tracking-tight text-lblue">{mode === "login" ? t.title : t.registerTitle}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.subtitle}</p>
@@ -281,7 +276,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
                 {t.password}
                 <div className="relative">
                   <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="pl-9 pr-9" />
+                  <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="********" className="pl-9 pr-9" />
                   <Eye className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                 </div>
               </label>

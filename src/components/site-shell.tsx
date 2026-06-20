@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import {
   Bell,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { dictionary, type Locale } from "@/lib/i18n"
 import { v4Status } from "@/lib/v4"
@@ -43,21 +43,13 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/[0.9] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_10px_28px_rgba(27,43,94,0.055)] backdrop-blur-2xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/85 shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_12px_34px_rgba(27,43,94,0.06)] backdrop-blur-2xl">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-          <Link href={prefix} className="flex h-12 w-[158px] shrink-0 items-center">
-            <Image
-              src="/assets/lbid-logo-enterprise-light.png"
-              alt="LBID"
-              width={960}
-              height={260}
-              className="object-contain"
-              style={{ width: "158px", height: "auto" }}
-              priority
-            />
+          <Link href={prefix} className="flex h-12 w-[148px] shrink-0 items-center" aria-label="LBID home">
+            <BrandMark markClassName="h-9 w-9" wordClassName="text-xl" />
           </Link>
 
-          <div className="hidden h-10 flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-white/80 px-3 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.9)_inset] md:flex">
+          <div className="hidden h-10 flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-white/80 px-3 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.92)_inset] md:flex">
             <Search className="h-4 w-4" />
             <span>{locale === "zh" ? "搜尋 SR、Forwarder、Match Record..." : "Search SR, forwarders, match records..."}</span>
           </div>
@@ -66,7 +58,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
             <StatusPill icon={Coins} value={`${v4Status.tokens}`} label="Token" tone="gold" />
             <StatusPill icon={Star} value={`${v4Status.reputation}`} label={locale === "zh" ? "信譽" : "Score"} tone="blue" />
             <StatusPill icon={Gem} value={v4Status.membership} label={locale === "zh" ? "會員" : "Plan"} tone="blue" hideOnMobile />
-            <div className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/80 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.05)] sm:flex">
+            <div className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/85 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.05)] sm:flex">
               <Bell className="h-4 w-4" />
               <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
                 {v4Status.notifications}
@@ -79,7 +71,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         </div>
       </header>
 
-      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-64 border-r border-lblue/10 bg-white/[0.86] px-3 py-4 shadow-[1px_0_0_rgba(255,255,255,0.9)_inset,14px_0_42px_rgba(27,43,94,0.045)] backdrop-blur-2xl lg:block">
+      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-64 border-r border-lblue/10 bg-white/82 px-3 py-4 shadow-[1px_0_0_rgba(255,255,255,0.95)_inset,14px_0_42px_rgba(27,43,94,0.045)] backdrop-blur-2xl lg:block">
         <nav className="space-y-1">
           {nav.map((item, index) => (
             <Link
@@ -103,7 +95,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
       <div className="pt-16 lg:pl-64">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-lblue/10 bg-white/[0.9] px-2 py-2 shadow-[0_-14px_34px_rgba(27,43,94,0.075)] backdrop-blur-2xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-lblue/10 bg-white/88 px-2 py-2 shadow-[0_-14px_34px_rgba(27,43,94,0.075)] backdrop-blur-2xl lg:hidden">
         {bottomNav.map((item) => (
           <Link key={item.href} href={item.href} className="relative flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] font-semibold text-lblue">
             <item.icon className="h-5 w-5" />
@@ -131,7 +123,7 @@ function StatusPill({
 }) {
   return (
     <div className={`h-9 items-center gap-2 rounded-md border px-2 text-sm font-bold shadow-[0_8px_18px_rgba(27,43,94,0.045)] ${hideOnMobile ? "hidden md:flex" : "flex"} ${
-      tone === "gold" ? "border-lgold/25 bg-lgold/[0.12] text-[#6f5514]" : "border-lblue/10 bg-white/[0.82] text-lblue"
+      tone === "gold" ? "border-lgold/25 bg-lgold/[0.12] text-[#6f5514]" : "border-lblue/10 bg-white/84 text-lblue"
     }`}>
       <Icon className="h-4 w-4" />
       <span>{value}</span>
