@@ -99,6 +99,7 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
   const [reminderSent, setReminderSent] = useState(false)
   const [savingId, setSavingId] = useState("")
   const [error, setError] = useState("")
+  const [reminderLoading, setReminderLoading] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({})
 
   useEffect(() => {
@@ -157,6 +158,21 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
 
   function confirmDocument(id: string) {
     setDocuments((items) => items.map((item) => item.id === id ? { ...item, confirmed: true } : item))
+  }
+
+  async function sendReminder() {
+    setReminderLoading(true)
+    setError("")
+    const { response, body } = await apiJson(`/api/orders/${params.id}/documents/reminder`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    })
+    setReminderLoading(false)
+    if (!response.ok) {
+      setError(body.error || "Unable to queue reminder")
+      return
+    }
+    setReminderSent(true)
   }
 
   return (
@@ -243,9 +259,9 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
             </CardHeader>
             {!requiredComplete ? (
               <CardContent>
-                <Button className="w-full" variant="outline" onClick={() => setReminderSent(true)}>
+                <Button className="w-full" variant="outline" disabled={reminderLoading} onClick={sendReminder}>
                   <BellRing className="h-4 w-4" />
-                  {reminderSent ? t.reminderSent : t.sendReminder}
+                  {reminderLoading ? t.saving : reminderSent ? t.reminderSent : t.sendReminder}
                 </Button>
               </CardContent>
             ) : null}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { apiJson } from "@/lib/api-client"
 import { companyProfile } from "@/lib/data"
 import { isLocale, type Locale } from "@/lib/i18n"
 
@@ -22,14 +23,12 @@ type LineItem = {
 const copy = {
   zh: {
     badge: "Forwarder quotation",
-    title: "提交分項物流報價。",
-    intro: "根據 Agency 詢價建立 line-item quotation。內部成本備註只作 Forwarder 自己參考，不會顯示給 Agency 或其他 Forwarder。",
+    title: "提交標準化物流報價",
+    intro: "根據 Agency 詢價建立 line-item quotation。內部成本備註只給 Forwarder 自己參考，不會顯示給 Agency 或其他 Forwarder。",
     inquiry: "Inquiry summary",
     quotation: "Quotation details",
     lineItems: "Line items",
     ops: "Operational details",
-    remarks: "Remarks",
-    internal: "Internal note",
     validUntil: "Valid until",
     transit: "Estimated transit time",
     carrier: "Proposed carrier",
@@ -49,13 +48,17 @@ const copy = {
     reference: "Quotation reference",
     submitted: "Quotation submitted successfully",
     confirmTitle: "確認提交 sealed quotation",
-    confirmBody: "提交後會扣 1 Token，報價會鎖定。其他 Forwarder 仍然看不到你嘅價格。",
+    confirmBody: "提交後會扣 1 Token，報價會鎖定。其他 Forwarder 仍然看不到你的價格。",
     confirmSubmit: "確認提交 -1 Token",
     edit: "返回修改",
     remaining: "提交後剩餘 Token",
     pdfPreview: "PDF Preview",
     sealed: "其他 Forwarder 看不到你的報價。Agency 只會看到最終報價內容。",
-    hidden: "Internal note 會在真實版本加密儲存，不會出現在 PDF。",
+    hidden: "Internal note 只會作內部成本參考，不會出現在 PDF。",
+    tokenUsage: "Token 使用",
+    tokenDesc: "提交 sealed bid 會使用 1 token。",
+    submitting: "提交中...",
+    error: "未能提交報價",
     summary: {
       ref: "LBID-INQ-2026-0001",
       route: "Mumbai (BOM) → Hong Kong (HKG)",
@@ -72,8 +75,6 @@ const copy = {
     quotation: "Quotation details",
     lineItems: "Line items",
     ops: "Operational details",
-    remarks: "Remarks",
-    internal: "Internal note",
     validUntil: "Valid until",
     transit: "Estimated transit time",
     carrier: "Proposed carrier",
@@ -99,7 +100,11 @@ const copy = {
     remaining: "Remaining tokens",
     pdfPreview: "PDF Preview",
     sealed: "Other forwarders cannot see your quotation. The agency only sees your final quotation content.",
-    hidden: "Internal notes will be encrypted in production and never appear in the PDF.",
+    hidden: "Internal notes stay private and never appear in the PDF.",
+    tokenUsage: "Token usage",
+    tokenDesc: "Submitting a sealed bid spends 1 token.",
+    submitting: "Submitting...",
+    error: "Unable to submit quotation",
     summary: {
       ref: "LBID-INQ-2026-0001",
       route: "Mumbai (BOM) → Hong Kong (HKG)",
@@ -117,38 +122,55 @@ const initialLineItems: LineItem[] = [
   { id: "delivery", description: "Local Delivery (HKG)", unit: "trip", quantity: 1, unitPrice: 200 },
 ]
 
-function formatUsd(amount: number) {
-  return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
 export default function NewQuotationPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems)
   const [submitted, setSubmitted] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+  const [submittedQuotation, setSubmittedQuotation] = useState<any>(null)
   const total = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
   const tokenBalance = companyProfile.tokenBalanceFree + companyProfile.tokenBalancePaid
 
   function updateLineItem(id: string, field: keyof LineItem, value: string) {
-    setLineItems((items) =>
-      items.map((item) => {
-        if (item.id !== id) return item
-        if (field === "quantity" || field === "unitPrice") return { ...item, [field]: Number(value) || 0 }
-        return { ...item, [field]: value }
-      }),
-    )
+    setLineItems((items) => items.map((item) => {
+      if (item.id !== id) return item
+      if (field === "quantity" || field === "unitPrice") return { ...item, [field]: Number(value) || 0 }
+      return { ...item, [field]: value }
+    }))
   }
 
   function addLineItem() {
-    setLineItems((items) => [
-      ...items,
-      { id: `item-${Date.now()}`, description: "Fuel Surcharge", unit: "lot", quantity: 1, unitPrice: 100 },
-    ])
+    setLineItems((items) => [...items, { id: `item-${Date.now()}`, description: "Fuel Surcharge", unit: "lot", quantity: 1, unitPrice: 100 }])
   }
 
   function removeLineItem(id: string) {
     setLineItems((items) => items.filter((item) => item.id !== id))
+  }
+
+  async function submitQuotation() {
+    setSubmitting(true)
+    setSubmitError("")
+    const { response, body } = await apiJson("/api/quotations", {
+      method: "POST",
+      body: JSON.stringify({
+        shipmentRequestId: t.summary.ref,
+        lineItems,
+        totalAmount: total,
+      }),
+    })
+
+    setSubmitting(false)
+    if (!response.ok) {
+      setSubmitError(body.error || t.error)
+      return
+    }
+
+    setSubmittedQuotation(body.quotation)
+    setConfirming(false)
+    setSubmitted(true)
   }
 
   return (
@@ -156,9 +178,10 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
       <section className="space-y-5">
         <div>
           <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{t.title}</h1>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-lblue sm:text-6xl">{t.title}</h1>
           <p className="mt-4 max-w-3xl text-muted-foreground">{t.intro}</p>
         </div>
+
         <Card className="border-white/10 bg-white/[0.055]">
           <CardHeader>
             <LockKeyhole className="h-5 w-5 text-lgold" />
@@ -167,12 +190,11 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {Object.values(t.summary).map((item) => (
-              <div key={item} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-sm">
-                {item}
-              </div>
+              <div key={item} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-sm">{item}</div>
             ))}
           </CardContent>
         </Card>
+
         <Card className="border-white/10 bg-white/[0.055]">
           <CardHeader>
             <FileText className="h-5 w-5 text-lgold" />
@@ -183,6 +205,7 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
             <label className="space-y-2 text-sm font-semibold">{t.transit}<Input defaultValue="3-5 business days" /></label>
           </CardContent>
         </Card>
+
         <Card className="border-white/10 bg-white/[0.055]">
           <CardHeader>
             <Calculator className="h-5 w-5 text-lgold" />
@@ -197,9 +220,7 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
                 <label className="space-y-1 text-xs font-semibold text-muted-foreground">{t.unitPrice}<Input type="number" value={item.unitPrice} onChange={(event) => updateLineItem(item.id, "unitPrice", event.target.value)} /></label>
                 <div className="space-y-1 text-xs font-semibold text-muted-foreground">
                   {t.amount}
-                  <div className="flex h-10 items-center rounded-md border border-white/10 bg-background px-3 font-mono text-sm text-foreground">
-                    USD {formatUsd(item.quantity * item.unitPrice)}
-                  </div>
+                  <div className="flex h-10 items-center rounded-md border border-white/10 bg-background px-3 font-mono text-sm text-foreground">USD {formatUsd(item.quantity * item.unitPrice)}</div>
                 </div>
                 <Button size="icon" variant="outline" onClick={() => removeLineItem(item.id)} aria-label="Remove line item">
                   <Trash2 className="h-4 w-4" />
@@ -212,6 +233,7 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
             </Button>
           </CardContent>
         </Card>
+
         <Card className="border-white/10 bg-white/[0.055]">
           <CardHeader>
             <CardTitle>{t.ops}</CardTitle>
@@ -229,24 +251,20 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
           </CardContent>
         </Card>
       </section>
+
       <aside className="space-y-5">
         <Card className="border-white/10 bg-white/[0.045]">
           <CardHeader>
             <LockKeyhole className="h-5 w-5 text-lgold" />
-            <CardTitle>{locale === "zh" ? "Token 使用" : "Token usage"}</CardTitle>
-            <CardDescription>{locale === "zh" ? "提交 sealed bid 會使用 1 token。" : "Submitting a sealed bid spends 1 token."}</CardDescription>
+            <CardTitle>{t.tokenUsage}</CardTitle>
+            <CardDescription>{t.tokenDesc}</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
-              <div className="text-muted-foreground">Free</div>
-              <div className="text-2xl font-black text-lblue">{companyProfile.tokenBalanceFree}</div>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
-              <div className="text-muted-foreground">Paid</div>
-              <div className="text-2xl font-black text-lblue">{companyProfile.tokenBalancePaid}</div>
-            </div>
+            <Metric label="Free" value={String(companyProfile.tokenBalanceFree)} />
+            <Metric label="Paid" value={String(companyProfile.tokenBalancePaid)} />
           </CardContent>
         </Card>
+
         <Card className="sticky top-24 border-lgold/30 bg-lgold/10">
           <CardHeader>
             <Calculator className="h-5 w-5 text-lgold" />
@@ -263,20 +281,27 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
             </Button>
           </CardContent>
         </Card>
+
         {submitted ? (
           <Card className="border-teal-400/30 bg-teal-400/10">
             <CardHeader>
-              <CheckCircle2 className="h-5 w-5 text-teal-300" />
+              <CheckCircle2 className="h-5 w-5 text-teal-700" />
               <CardTitle>{t.submitted}</CardTitle>
               <CardDescription>{t.pdf}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <div className="text-sm text-muted-foreground">{t.reference}</div>
-              <div className="font-mono text-2xl font-black text-lgold">LBID-Q-2026-0001</div>
+              <div className="break-all font-mono text-2xl font-black text-lgold">{submittedQuotation?.id || "LBID-Q-2026-0001"}</div>
+              {submittedQuotation?.pdfUrl ? (
+                <Button asChild className="w-full" variant="outline">
+                  <a href={submittedQuotation.pdfUrl} target="_blank" rel="noreferrer">{t.pdfPreview}</a>
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
         ) : null}
       </aside>
+
       {confirming ? (
         <div className="fixed inset-0 z-[80] grid place-items-center bg-lblue/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-lg border border-lblue/10 bg-white p-5 shadow-2xl">
@@ -294,17 +319,27 @@ export default function NewQuotationPage({ params }: { params: { locale: string 
               </div>
               <div className="mt-2 text-sm text-muted-foreground">{companyProfile.companyName} · {t.summary.route} · USD {formatUsd(total)}</div>
             </div>
+            {submitError ? <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{submitError}</div> : null}
             <div className="mt-5 flex gap-2">
-              <Button className="flex-1" variant="outline" onClick={() => setConfirming(false)}>{t.edit}</Button>
-              <Button className="flex-1" variant="gold" onClick={() => { setConfirming(false); setSubmitted(true) }}>
+              <Button className="flex-1" variant="outline" disabled={submitting} onClick={() => setConfirming(false)}>{t.edit}</Button>
+              <Button className="flex-1" variant="gold" disabled={submitting} onClick={submitQuotation}>
                 <Coins className="h-4 w-4" />
-                {t.confirmSubmit}
+                {submitting ? t.submitting : t.confirmSubmit}
               </Button>
             </div>
           </div>
         </div>
       ) : null}
     </main>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+      <div className="text-muted-foreground">{label}</div>
+      <div className="text-2xl font-black text-lblue">{value}</div>
+    </div>
   )
 }
 
@@ -315,4 +350,8 @@ function ConfirmLine({ label, value }: { label: string; value: string }) {
       <span className="font-black text-lblue">{value}</span>
     </div>
   )
+}
+
+function formatUsd(amount: number) {
+  return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }

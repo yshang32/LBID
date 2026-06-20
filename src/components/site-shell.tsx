@@ -58,12 +58,12 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
             <StatusPill icon={Coins} value={`${v4Status.tokens}`} label="Token" tone="gold" />
             <StatusPill icon={Star} value={`${v4Status.reputation}`} label={locale === "zh" ? "信譽" : "Score"} tone="blue" />
             <StatusPill icon={Gem} value={v4Status.membership} label={locale === "zh" ? "會員" : "Plan"} tone="blue" hideOnMobile />
-            <div className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/85 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.05)] sm:flex">
+            <Link href={`${prefix}/notifications`} className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-lblue/10 bg-white/85 text-lblue shadow-[0_8px_18px_rgba(27,43,94,0.05)] transition hover:bg-slate-50 sm:flex" aria-label="Notifications">
               <Bell className="h-4 w-4" />
               <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
                 {v4Status.notifications}
               </span>
-            </div>
+            </Link>
             <Button asChild variant="outline" size="sm">
               <Link href={t.otherHref}>{t.otherLang}</Link>
             </Button>
