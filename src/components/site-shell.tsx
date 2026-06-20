@@ -46,7 +46,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
       <header className="fixed inset-x-0 top-0 z-50 border-b border-lblue/10 bg-white/85 shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_12px_34px_rgba(27,43,94,0.06)] backdrop-blur-2xl">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
           <Link href={prefix} className="flex h-12 w-[148px] shrink-0 items-center" aria-label="LBID home">
-            <BrandMark markClassName="h-9 w-9" wordClassName="text-xl" />
+            <BrandMark markClassName="h-10 w-[116px]" />
           </Link>
 
           <div className="hidden h-10 flex-1 items-center gap-2 rounded-md border border-lblue/10 bg-white/80 px-3 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.92)_inset] md:flex">

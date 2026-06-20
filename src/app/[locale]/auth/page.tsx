@@ -207,7 +207,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
         <div className="mx-auto w-full max-w-[440px]">
           <div className="mb-8 flex justify-center">
             <div className="flex h-24 w-56 items-center justify-center rounded-xl border border-lblue/10 bg-white/84 p-4 shadow-[0_22px_65px_rgba(27,43,94,0.10)] backdrop-blur-xl">
-              <BrandMark markClassName="h-12 w-12" wordClassName="text-3xl" />
+              <BrandMark markClassName="h-16 w-44" />
             </div>
           </div>
 
