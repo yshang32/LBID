@@ -1,4 +1,11 @@
 {
+  "experimentalServices": {
+    "frontend": {
+      "entrypoint": ".",
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  },
   "framework": "nextjs",
   "installCommand": "npm ci",
   "buildCommand": "node scripts/next-build.mjs",
