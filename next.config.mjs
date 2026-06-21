@@ -18,6 +18,7 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: "/", destination: "/zh/auth", permanent: false },
       { source: "/auth", destination: "/en/auth", permanent: false },
       { source: "/dashboard", destination: "/en/dashboard", permanent: false },
       { source: "/onboarding/agency", destination: "/en/onboarding/agency", permanent: false },
