@@ -85,7 +85,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   async function getProfileDashboardHref() {
     const { response, body } = await apiJson("/api/company-profile")
     if (!response.ok || !body.companyProfile) return `/${locale}/onboarding`
-    return `/${locale}/dashboard`
+    return body.role === "admin" ? `/${locale}/dashboard?mode=admin` : `/${locale}/dashboard`
   }
 
   async function submit() {

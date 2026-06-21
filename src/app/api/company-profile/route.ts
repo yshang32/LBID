@@ -7,14 +7,17 @@ export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
 
   if (session) {
-    const { data, error } = await session.supabase
+    const [{ data, error }, { data: user }] = await Promise.all([
+      session.supabase
       .from("company_profiles")
       .select("user_id, company_name_zh, company_name_en, region, service_routes, service_types, reputation_score, token_balance_free, token_balance_paid, onboarding_completed, onboarding_step, is_public, can_be_client, can_be_forwarder")
       .eq("user_id", session.user.id)
-      .maybeSingle()
+      .maybeSingle(),
+      session.supabase.from("users").select("role").eq("id", session.user.id).maybeSingle(),
+    ])
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ companyProfile: data })
+    return NextResponse.json({ companyProfile: data, role: user?.role || null })
   }
 
   return NextResponse.json({ companyProfile })
