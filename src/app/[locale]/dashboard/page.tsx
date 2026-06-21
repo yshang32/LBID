@@ -27,6 +27,44 @@ const copy = {
   },
 }
 
+copy.zh = {
+  agency: {
+    badge: "CLIENT WORKSPACE",
+    title: "管理你的物流需求與報價選擇",
+    body: "建立 Shipment Request、比較 Forwarder 報價，並把每次交接留在同一個工作區。",
+    primary: "建立 Shipment Request",
+    secondary: "比較收到的報價",
+    focus: "待處理需求",
+  },
+  forwarder: {
+    badge: "FORWARDER WORKSPACE",
+    title: "專注處理最值得接的物流需求",
+    body: "查看可投標的 Shipment Request，在密封競價中用服務能力爭取訂單。",
+    primary: "開啟接單市場",
+    secondary: "管理 Token 錢包",
+    focus: "即將截標",
+  },
+  admin: {
+    badge: "ADMIN WORKSPACE",
+    title: "維持平台信任與營運節奏",
+    body: "先處理付款、公司審核與風險提示，再推動高質需求和供應成長。",
+    primary: "審核待處理付款",
+    secondary: "審核 Forwarder",
+    focus: "營運優先事項",
+  },
+  metrics: ["可處理需求", "進行中配對", "Token 餘額", "信譽分數"],
+  opportunity: "推薦機會",
+  deadline: "截標倒數",
+  sealed: "截標前報價保持密封",
+  route: "路線",
+  cargo: "貨物",
+  activity: "進行中工作",
+  viewAll: "查看全部",
+  open: "開啟工作區",
+  review: "查看需求",
+  status: "狀態",
+}
+
 const roleLinks = {
   agency: { primary: "inquiries/new", secondary: "quotations/compare", primaryIcon: PackagePlus },
   forwarder: { primary: "marketplace", secondary: "tokens", primaryIcon: BriefcaseBusiness },

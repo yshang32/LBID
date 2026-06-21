@@ -48,19 +48,38 @@ const copy = {
   },
 }
 
+copy.zh = {
+  bid: "提交 sealed bid",
+  priority: "Priority Bid",
+  sealed: "Sealed bid：競爭對手報價會在截標前保持隱藏。",
+  detail: "查看 SR 詳情",
+  deadline: "截標時間",
+  slots: "名額",
+  left: "剩餘",
+  live: "Live",
+  empty: "暫時未有 open SR。",
+  servicePending: "服務詳情待補充",
+}
+
 export function LiveMarketplaceList({ locale }: { locale: Locale }) {
   const t = copy[locale]
   const [liveRequests, setLiveRequests] = useState<LiveRequest[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     let cancelled = false
 
     async function load() {
       const { response, body } = await apiJson("/api/shipment-requests")
+      if (cancelled) return
+      setLoaded(true)
+      if (!response.ok) {
+        setError(body.error || t.empty)
+        return
+      }
       if (!cancelled && response.ok) {
         setLiveRequests(body.shipmentRequests || [])
-        setLoaded(true)
       }
     }
 
@@ -71,12 +90,13 @@ export function LiveMarketplaceList({ locale }: { locale: Locale }) {
   }, [])
 
   const cards = useMemo(() => {
+    if (error) return []
     if (!loaded || liveRequests.length === 0) return v4ShipmentRequests.map((request) => ({ type: "demo" as const, request }))
     return liveRequests.map((request) => ({ type: "live" as const, request }))
-  }, [liveRequests, loaded])
+  }, [error, liveRequests, loaded])
 
-  if (loaded && liveRequests.length === 0 && v4ShipmentRequests.length === 0) {
-    return <div className="rounded-lg border border-lblue/10 bg-white p-6 text-muted-foreground">{t.empty}</div>
+  if (error || (loaded && liveRequests.length === 0 && v4ShipmentRequests.length === 0)) {
+    return <div className="mt-6 rounded-lg border border-lblue/10 bg-white p-6 text-muted-foreground">{error || t.empty}</div>
   }
 
   return (

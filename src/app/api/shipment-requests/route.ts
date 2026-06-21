@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { checkAccess } from "@/lib/backend"
 import { inquiries } from "@/lib/data"
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
@@ -17,6 +17,8 @@ export async function GET(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ shipmentRequests: data })
   }
+
+  if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
   return NextResponse.json({ shipmentRequests: inquiries })
 }
@@ -62,6 +64,8 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true, shipmentRequest: data }, { status: 201 })
   }
+
+  if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
   const access = checkAccess("create_shipment_request")
   if (!access.allowed) return NextResponse.json({ ok: false, error: "SUBSCRIPTION_REQUIRED", redirect: access.redirect }, { status: 403 })

@@ -36,6 +36,36 @@ const copy = {
   },
 }
 
+copy.zh = {
+  signIn: "登入 LBID",
+  create: "建立公司帳戶",
+  title: "用清晰流程，建立更公平的物流合作。",
+  body: "為東南亞 Agency 與香港 Forwarder 提供限時、可比較、可追蹤的 sealed bid 工作流。",
+  pointOne: "截標前報價保持私密，避免惡性壓價",
+  pointTwo: "訂單、文件、追蹤都留在同一個工作區",
+  newUser: "第一次使用 LBID？",
+  start: "建立帳戶",
+  back: "返回登入",
+  email: "工作電郵",
+  password: "密碼",
+  company: "公司名稱",
+  name: "聯絡人",
+  capability: "公司能力",
+  client: "Client：建立需求",
+  forwarder: "Forwarder：接單投標",
+  both: "同時啟用兩種能力",
+  submitLogin: "進入工作區",
+  submitCreate: "建立帳戶",
+  working: "處理中...",
+  forgot: "忘記密碼？",
+  trust: "你的帳戶由 Supabase Auth 安全管理。",
+  success: "帳戶已建立",
+  go: "進入工作區",
+  continue: "繼續設定",
+  error: "暫時未能完成操作，請稍後再試。",
+  language: "English",
+}
+
 export default function LocalizedAuthPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]

@@ -5,6 +5,10 @@ export type ApiSupabaseSession = {
   user: User
 }
 
+export function isSupabaseConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+}
+
 export async function getApiSupabaseSession(request: Request): Promise<ApiSupabaseSession | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
 
 import { checkAccess, spendToken } from "@/lib/backend"
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
-  if (!session) return NextResponse.json({ bids: [] })
+  if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
+    return NextResponse.json({ bids: [] })
+  }
 
   const { searchParams } = new URL(request.url)
   const srId = searchParams.get("sr_id")
@@ -74,6 +77,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, ...data })
   }
+
+  if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
   const access = checkAccess("submit_bid")
   if (!access.allowed) return NextResponse.json({ ok: false, error: "SUBSCRIPTION_REQUIRED", redirect: access.redirect }, { status: 403 })

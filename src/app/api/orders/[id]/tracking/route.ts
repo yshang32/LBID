@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { createNotification } from "@/lib/notifications"
 import { getOrderParties } from "@/lib/order-parties"
-import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 const demoEvents = [
   { status: "shipment_booked", location: "Mumbai", description: "Shipment booked with carrier", occurred_at: "2026-06-18T10:00:00Z" },
@@ -12,7 +12,10 @@ const demoEvents = [
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getApiSupabaseSession(request)
-  if (!session) return NextResponse.json({ tracking: demoEvents, mode: "demo_fallback" })
+  if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
+    return NextResponse.json({ tracking: demoEvents, mode: "demo_fallback" })
+  }
 
   const { data, error } = await session.supabase
     .from("tracking_events")
@@ -31,6 +34,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!body.status || !body.description) return NextResponse.json({ error: "TRACKING_FIELDS_REQUIRED" }, { status: 400 })
 
   if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
     return NextResponse.json({ ok: true, mode: "demo_fallback", event: { id: `trk-${Date.now()}`, ...body } }, { status: 201 })
   }
 

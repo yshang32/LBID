@@ -117,6 +117,44 @@ const copy = {
   },
 }
 
+copy.zh = {
+  badge: "Quotation comparison",
+  title: "比較 Forwarder 報價，選擇最合適方案。",
+  intro: "LBID 會標示最低有效報價，但 Agency 仍可因服務能力、時效或信譽選擇其他 Forwarder。",
+  route: "Mumbai (BOM) 到 Hong Kong (HKG)",
+  cargo: "Electronic components, 500kg / 3CBM",
+  ref: "LBID-INQ-2026-0001",
+  lowest: "最低報價",
+  verified: "已驗證",
+  total: "總額",
+  transit: "時效",
+  rating: "評分",
+  pdf: "查看 PDF",
+  accept: "接受報價",
+  accepting: "接受中...",
+  accepted: "已接受",
+  sort: "排序",
+  byPrice: "最低價",
+  byTransit: "最快時效",
+  byRating: "最高評分",
+  shortlist: "加入 shortlist",
+  shortlisted: "已加入 shortlist",
+  confirmTitle: "Order 已建立",
+  confirmBody: "中標 Forwarder 已收到通知；其他 Forwarder 會收到未中標更新。",
+  orderRef: "Order reference",
+  next: "查看訂單工作區",
+  note: "Forwarder 不能查看彼此報價。Agency 只會在自己的 shipment request 內看到比較。",
+  liveLoaded: "已載入 live sealed bids",
+  demoMode: "Demo comparison",
+  nonLowestTitle: "確認選擇非最低報價",
+  nonLowestBody: "你選擇的報價不是最低價。如服務能力、時效或信譽更符合貨件要求，請確認繼續。",
+  selected: "已選報價",
+  difference: "高於最低價",
+  cancel: "返回比較",
+  confirmNonLowest: "接受此報價",
+  unableToLoad: "暫時未能載入 live quotations。",
+}
+
 export default function QuotationComparePage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
   const t = copy[locale]
@@ -162,7 +200,8 @@ export default function QuotationComparePage({ params }: { params: { locale: str
     }
   }, [t.unableToLoad])
 
-  const comparisonQuotes = liveQuotes.length > 0 ? liveQuotes : demoQuotes
+  const shouldUseDemoQuotes = !srId && liveQuotes.length === 0
+  const comparisonQuotes = liveQuotes.length > 0 ? liveQuotes : shouldUseDemoQuotes ? demoQuotes : []
   const lowestTotal = useMemo(() => Math.min(...comparisonQuotes.map((quote) => quote.total)), [comparisonQuotes])
 
   const sortedQuotes = useMemo(() => {
@@ -219,7 +258,7 @@ export default function QuotationComparePage({ params }: { params: { locale: str
             <h1 className="mt-4 max-w-4xl text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
             <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge variant={liveQuotes.length > 0 ? "teal" : "secondary"}>{liveQuotes.length > 0 ? t.liveLoaded : t.demoMode}</Badge>
+              <Badge variant={liveQuotes.length > 0 ? "teal" : "secondary"}>{liveQuotes.length > 0 ? t.liveLoaded : shouldUseDemoQuotes ? t.demoMode : t.unableToLoad}</Badge>
               {srId ? <Badge variant="outline">SR {srId}</Badge> : null}
             </div>
           </div>
@@ -241,6 +280,11 @@ export default function QuotationComparePage({ params }: { params: { locale: str
       </section>
 
       <section className="mt-5 grid gap-4">
+        {comparisonQuotes.length === 0 ? (
+          <Card>
+            <CardContent className="p-4 text-sm font-semibold text-muted-foreground">{error || t.unableToLoad}</CardContent>
+          </Card>
+        ) : null}
         {sortedQuotes.map((quote) => {
           const isAccepted = acceptedQuote?.id === quote.id
           const isLowest = quote.total === lowestTotal

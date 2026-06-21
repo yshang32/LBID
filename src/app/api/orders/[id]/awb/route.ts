@@ -2,7 +2,7 @@ import React from "react"
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer"
 import { NextResponse } from "next/server"
 
-import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 const styles = StyleSheet.create({
   page: { padding: 34, fontSize: 10, color: "#1B2B5E", fontFamily: "Helvetica" },
@@ -23,6 +23,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const buffer = await buildAwbPdf(awb)
 
   if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
     return pdfResponse(buffer, params.id)
   }
 

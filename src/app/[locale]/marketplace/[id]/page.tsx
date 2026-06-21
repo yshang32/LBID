@@ -104,6 +104,37 @@ const copy = {
   },
 }
 
+copy.zh = {
+  back: "返回 Marketplace",
+  verified: "Verified Client",
+  deadline: "截標時間",
+  slots: "名額",
+  left: "剩餘",
+  cargo: "貨物資料",
+  location: "地點與披露",
+  budget: "預算",
+  mode: "運輸模式",
+  masked: "完整地址會在 award 後解鎖",
+  sealedTitle: "現有 sealed bids",
+  sealedExplain: "其他 Forwarder 的價格和條款會保持隱藏，避免惡性壓價。",
+  yourBid: "你的 Bid",
+  price: "Bid 金額",
+  transit: "Transit Time",
+  remarks: "條款與備註",
+  submit: "Submit Bid -1 Token",
+  priority: "Priority Bid -2 Tokens",
+  confirmTitle: "確認提交 Bid",
+  tokenCost: "成本",
+  remaining: "提交後 Token 餘額",
+  confirm: "確認提交",
+  edit: "返回修改",
+  success: "Bid 已密封提交。Client 會在 quotation flow 收到通知。",
+  liveLoaded: "Live SR",
+  targetDate: "目標日期",
+  fullAddress: "完整地址",
+  reviewBid: "查看 quotation compare",
+}
+
 export default function MarketplaceDetailPage({ params }: { params: { locale: string; id: string } }) {
   if (!isLocale(params.locale)) notFound()
   const locale = params.locale as Locale
