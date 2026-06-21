@@ -70,6 +70,23 @@ if (createdSr.status !== 201 || !createdSr.body.shipmentRequest?.id) {
 }
 srId = createdSr.body.shipmentRequest.id
 
+if (createdSr.body.shipmentRequest.status !== "PENDING_REVIEW") {
+  console.error(`Expected PENDING_REVIEW after creation, got ${createdSr.body.shipmentRequest.status}`)
+  process.exit(1)
+}
+
+const publishResult = await createServiceSupabase()
+  .from("shipment_requests")
+  .update({ status: "OPEN", bid_deadline: new Date(Date.now() + 3 * 3600000).toISOString() })
+  .eq("id", srId)
+  .select("id, status, bid_deadline")
+  .single()
+console.log("PUBLISH_SR", JSON.stringify(publishResult.data, null, 2))
+if (publishResult.error || publishResult.data?.status !== "OPEN") {
+  console.error(publishResult.error?.message || "Unable to publish smoke-test shipment request")
+  process.exit(1)
+}
+
 const bid = await jsonFetch("/api/bids", {
   method: "POST",
   body: JSON.stringify({
@@ -299,4 +316,14 @@ function createAuthedSupabase(accessToken) {
       },
     },
   })
+}
+
+function createServiceSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) {
+    console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for smoke-test publication")
+    process.exit(1)
+  }
+  return createClient(url, serviceKey)
 }
