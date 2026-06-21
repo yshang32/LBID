@@ -2,219 +2,65 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, CheckCircle2, ClipboardList, Loader2, PackagePlus } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, ShieldCheck } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
-const copy = {
-  zh: {
-    badge: "Unified onboarding",
-    title: "設定公司能力：Client、Forwarder，或兩者。",
-    intro: "LBID 不再把公司固定分成 Agency 或 Forwarder。一間公司可以發 SR，也可以接 SR。完成後 dashboard 會按已啟用能力顯示工作區。",
-    capabilities: "公司能力",
-    clientTitle: "Client 能力",
-    clientText: "建立 Shipment Request，邀請 Forwarder 以 sealed bid 回應。",
-    forwarderTitle: "Forwarder 能力",
-    forwarderText: "瀏覽 marketplace、提交 bid、建立 profile 和接單。",
-    company: "公司資料",
-    companyName: "公司名稱",
-    region: "地區",
-    description: "公司簡介",
-    services: "服務能力",
-    routes: "主要航線 / 覆蓋範圍",
-    serviceTypes: "服務類型",
-    visibility: "Directory visibility",
-    publicProfile: "公開公司 profile",
-    privateProfile: "暫時不公開",
-    complete: "完成 onboarding",
-    saving: "儲存中...",
-    saved: "Onboarding 已完成",
-    dashboard: "進入工作台",
-    createSr: "建立第一張 SR",
-    marketplace: "查看 Marketplace",
-    needOne: "請至少啟用一種能力。",
-    error: "未能儲存 onboarding。",
-  },
-  en: {
-    badge: "Unified onboarding",
-    title: "Set company capabilities: Client, Forwarder, or both.",
-    intro: "LBID no longer locks a company into Agency or Forwarder. One company can create SRs and also bid on SRs. The dashboard adapts to enabled capabilities.",
-    capabilities: "Company capabilities",
-    clientTitle: "Client capability",
-    clientText: "Create Shipment Requests and invite forwarders to respond with sealed bids.",
-    forwarderTitle: "Forwarder capability",
-    forwarderText: "Browse marketplace, submit bids, build a profile and win orders.",
-    company: "Company profile",
-    companyName: "Company name",
-    region: "Region",
-    description: "Company description",
-    services: "Service capability",
-    routes: "Main routes / coverage",
-    serviceTypes: "Service types",
-    visibility: "Directory visibility",
-    publicProfile: "Public company profile",
-    privateProfile: "Keep private for now",
-    complete: "Complete onboarding",
-    saving: "Saving...",
-    saved: "Onboarding complete",
-    dashboard: "Enter workspace",
-    createSr: "Create first SR",
-    marketplace: "Open Marketplace",
-    needOne: "Enable at least one capability.",
-    error: "Unable to save onboarding.",
-  },
-}
+const regions = ["Hong Kong", "Singapore", "Malaysia", "Vietnam", "Thailand", "Indonesia", "Philippines", "India", "Other"]
+const services = ["Air Freight", "Sea Freight", "Road Freight", "Customs Clearance", "Warehousing", "Last-mile Delivery"]
+const routes = ["Southeast Asia → Hong Kong", "Vietnam → Hong Kong", "Malaysia → Hong Kong", "Thailand → Hong Kong", "Indonesia → Hong Kong", "India → Hong Kong", "Hong Kong local delivery"]
 
-export default function UnifiedOnboardingPage({ params }: { params: { locale: string } }) {
+export default function OnboardingPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
-  const t = copy[locale]
-  const [canBeClient, setCanBeClient] = useState(true)
-  const [canBeForwarder, setCanBeForwarder] = useState(true)
-  const [companyName, setCompanyName] = useState("HarbourLink Cargo")
+  const [step, setStep] = useState(0)
+  const [companyName, setCompanyName] = useState("")
+  const [description, setDescription] = useState("")
   const [region, setRegion] = useState("Hong Kong")
-  const [description, setDescription] = useState("Hong Kong logistics company handling air, sea and local delivery workflows.")
-  const [routes, setRoutes] = useState("Vietnam -> Hong Kong, Malaysia -> Hong Kong, India -> Hong Kong")
-  const [services, setServices] = useState("Air Freight, Sea Freight, Customs Clearance, Local Delivery")
-  const [isPublic, setIsPublic] = useState(true)
+  const [service, setService] = useState("Air Freight")
+  const [route, setRoute] = useState("Southeast Asia → Hong Kong")
+  const [visibility, setVisibility] = useState("private")
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [completed, setCompleted] = useState(false)
   const [error, setError] = useState("")
+  const t = locale === "zh"
+    ? { badge: "公司設定", title: ["先認識你的公司", "告訴我們你的服務", "選擇公開程度"], intro: ["只需兩項基本資料，之後可隨時在公司檔案修改。", "選擇最接近的主要服務和覆蓋範圍，讓系統把合適需求放到你面前。", "你可先保持私人；準備好後再公開公司名錄。"], steps: ["公司資料", "服務範圍", "完成設定"], company: "公司名稱", companyHint: "例如：HarbourLink Cargo", description: "公司簡介", descriptionHint: "用一句話說明你最擅長的物流服務。", region: "公司主要地區", service: "主要服務", route: "主要覆蓋航線", visibility: "公司名錄公開設定", private: "暫時不公開", public: "公開公司檔案", back: "上一步", next: "下一步", finish: "完成公司設定", saving: "正在儲存", required: "請先填寫公司名稱。", ready: "公司設定完成", readyBody: "你的公司已啟用發出需求及承接需求兩項能力。現在可以開始使用 LBID。", workspace: "進入工作台", both: "雙能力公司帳戶", bothText: "你的帳戶預設可建立 Shipment Request，也可在市場提交密封報價。" }
+    : { badge: "Company setup", title: ["Tell us about your company", "Tell us how you help", "Choose your visibility"], intro: ["Just two basic details. You can refine your company profile later.", "Select the closest service and coverage so LBID can surface relevant opportunities.", "You can keep your profile private for now and publish it when ready."], steps: ["Company", "Service coverage", "Finish"], company: "Company name", companyHint: "For example: HarbourLink Cargo", description: "Company description", descriptionHint: "In one sentence, describe the logistics work you do best.", region: "Primary region", service: "Primary service", route: "Primary coverage route", visibility: "Directory visibility", private: "Keep private for now", public: "Publish company profile", back: "Back", next: "Continue", finish: "Complete company setup", saving: "Saving", required: "Please enter your company name.", ready: "Your company is ready", readyBody: "Your account can create shipment requests and submit sealed bids. You are ready to start using LBID.", workspace: "Enter workspace", both: "Dual-capability company account", bothText: "Your company can create shipment requests and submit sealed bids from the same account." }
 
-  async function completeOnboarding() {
-    if (!canBeClient && !canBeForwarder) {
-      setError(t.needOne)
-      return
-    }
-
-    setSaving(true)
+  function next() {
+    if (step === 0 && !companyName.trim()) { setError(t.required); return }
     setError("")
-    const { response, body } = await apiJson("/api/company-profile", {
-      method: "PATCH",
-      body: JSON.stringify({
-        companyNameEn: companyName,
-        region,
-        description,
-        serviceRoutes: splitList(routes),
-        serviceTypes: splitList(services),
-        isPublic,
-        canBeClient,
-        canBeForwarder,
-        onboardingCompleted: true,
-        onboardingStep: 5,
-      }),
-    })
-
-    setSaving(false)
-    if (!response.ok) {
-      setError(body.error || t.error)
-      return
-    }
-
-    setSaved(true)
+    setStep((current) => Math.min(2, current + 1))
   }
 
-  return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div>
-          <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-lblue sm:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-2xl text-muted-foreground">{t.intro}</p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <CapabilityCard icon={PackagePlus} active={canBeClient} title={t.clientTitle} text={t.clientText} onClick={() => setCanBeClient((value) => !value)} />
-            <CapabilityCard icon={BriefcaseBusiness} active={canBeForwarder} title={t.forwarderTitle} text={t.forwarderText} onClick={() => setCanBeForwarder((value) => !value)} />
-          </div>
-        </div>
+  async function finish() {
+    setSaving(true); setError("")
+    const { response, body } = await apiJson("/api/company-profile", { method: "PATCH", body: JSON.stringify({
+      companyNameEn: companyName.trim(),
+      region,
+      description: description.trim(),
+      serviceRoutes: [route],
+      serviceTypes: [service],
+      isPublic: visibility === "public",
+      canBeClient: true,
+      canBeForwarder: true,
+      onboardingCompleted: true,
+      onboardingStep: 3,
+    }) })
+    setSaving(false)
+    if (!response.ok) { setError(body.error || "Unable to save company setup."); return }
+    setCompleted(true)
+  }
 
-        <Card>
-          <CardHeader>
-            <ClipboardList className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.company}</CardTitle>
-            <CardDescription>{t.capabilities}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-2 text-sm font-semibold">
-                {t.companyName}
-                <Input value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
-              </label>
-              <label className="space-y-2 text-sm font-semibold">
-                {t.region}
-                <Input value={region} onChange={(event) => setRegion(event.target.value)} />
-              </label>
-            </div>
-            <label className="space-y-2 text-sm font-semibold">
-              {t.description}
-              <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
-            </label>
-            <label className="space-y-2 text-sm font-semibold">
-              {t.routes}
-              <Input value={routes} onChange={(event) => setRoutes(event.target.value)} />
-            </label>
-            <label className="space-y-2 text-sm font-semibold">
-              {t.serviceTypes}
-              <Input value={services} onChange={(event) => setServices(event.target.value)} />
-            </label>
-            <label className="space-y-2 text-sm font-semibold">
-              {t.visibility}
-              <Select value={isPublic ? "public" : "private"} onChange={(event) => setIsPublic(event.target.value === "public")}>
-                <option value="public">{t.publicProfile}</option>
-                <option value="private">{t.privateProfile}</option>
-              </Select>
-            </label>
-            {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
-            <Button variant="gold" disabled={saving} onClick={completeOnboarding}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              {saving ? t.saving : t.complete}
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
+  if (completed) return <main className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-3xl place-items-center px-4 py-10 sm:px-6"><section className="text-center"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#eaf7f2] text-emerald-700"><CheckCircle2 className="h-8 w-8" /></div><Badge className="mt-6" variant="teal">LBID READY</Badge><h1 className="mt-4 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.ready}</h1><p className="mx-auto mt-3 max-w-xl leading-7 text-slate-600">{t.readyBody}</p><Button asChild className="mt-8"><Link href={`/${locale}/dashboard`}>{t.workspace}<ArrowRight className="h-4 w-4" /></Link></Button></section></main>
 
-      {saved ? (
-        <Card className="mt-6 border-teal-200 bg-teal-50">
-          <CardHeader>
-            <BadgeCheck className="h-5 w-5 text-teal-700" />
-            <CardTitle>{t.saved}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            <Button asChild variant="gold">
-              <Link href={`/${locale}/dashboard`}>
-                {t.dashboard} <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            {canBeClient ? <Button asChild variant="outline"><Link href={`/${locale}/inquiries/new`}>{t.createSr}</Link></Button> : null}
-            {canBeForwarder ? <Button asChild variant="outline"><Link href={`/${locale}/marketplace`}>{t.marketplace}</Link></Button> : null}
-          </CardContent>
-        </Card>
-      ) : null}
-    </main>
-  )
+  return <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-10 sm:px-6 lg:pb-10"><section className="mx-auto max-w-2xl"><Badge variant="gold">{t.badge}</Badge><div className="mt-5 grid grid-cols-3 gap-2">{t.steps.map((label, index) => <div key={label} className={`border-b-2 pb-3 text-sm font-semibold ${index === step ? "border-[#c9a84c] text-lblue" : index < step ? "border-emerald-500 text-emerald-700" : "border-slate-200 text-slate-400"}`}><span className="mr-2 font-mono text-xs">0{index + 1}</span>{label}</div>)}</div><h1 className="mt-8 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title[step]}</h1><p className="mt-3 leading-7 text-slate-600">{t.intro[step]}</p></section><Card className="mx-auto mt-8 max-w-2xl"><CardContent className="p-6 sm:p-8">{step === 0 ? <div className="space-y-5"><Field label={t.company}><Input autoFocus value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder={t.companyHint} /></Field><Field label={t.description}><Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={t.descriptionHint} /></Field><Field label={t.region}><Select value={region} onChange={(event) => setRegion(event.target.value)}>{regions.map((item) => <option key={item}>{item}</option>)}</Select></Field></div> : null}{step === 1 ? <div className="space-y-5"><Field label={t.service}><Select value={service} onChange={(event) => setService(event.target.value)}>{services.map((item) => <option key={item}>{item}</option>)}</Select></Field><Field label={t.route}><Select value={route} onChange={(event) => setRoute(event.target.value)}>{routes.map((item) => <option key={item}>{item}</option>)}</Select></Field><div className="rounded-md border border-lblue/10 bg-slate-50 p-4 text-sm leading-6 text-slate-600">You can add more services and routes later from your company profile.</div></div> : null}{step === 2 ? <div className="space-y-5"><Field label={t.visibility}><Select value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="private">{t.private}</option><option value="public">{t.public}</option></Select></Field><div className="rounded-md border border-[#ead59b] bg-[#fcf8ec] p-5"><div className="flex gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[#e5c66e] text-[#463407]"><ShieldCheck className="h-5 w-5" /></span><div><h2 className="font-semibold text-lblue">{t.both}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{t.bothText}</p></div></div></div></div> : null}{error ? <p className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}<div className="mt-8 flex items-center justify-between gap-3">{step > 0 ? <Button variant="ghost" onClick={() => { setError(""); setStep((current) => current - 1) }}><ArrowLeft className="h-4 w-4" />{t.back}</Button> : <span />}{step < 2 ? <Button onClick={next}>{t.next}<ArrowRight className="h-4 w-4" /></Button> : <Button variant="gold" disabled={saving} onClick={finish}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}{saving ? t.saving : t.finish}</Button>}</div></CardContent></Card></main>
 }
 
-function CapabilityCard({ icon: Icon, active, title, text, onClick }: { icon: typeof PackagePlus; active: boolean; title: string; text: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className={`rounded-lg border p-4 text-left transition ${active ? "border-lgold/45 bg-lgold/10 shadow-[0_16px_38px_rgba(201,168,76,0.12)]" : "border-lblue/10 bg-white"}`}>
-      <div className="flex items-center gap-3">
-        <div className={`grid h-10 w-10 place-items-center rounded-md ${active ? "bg-lgold text-[#171104]" : "bg-slate-100 text-lblue"}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="font-black text-lblue">{title}</div>
-          <div className="mt-1 text-sm text-muted-foreground">{text}</div>
-        </div>
-      </div>
-    </button>
-  )
-}
-
-function splitList(value: string) {
-  return value.split(",").map((item) => item.trim()).filter(Boolean)
-}
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block space-y-2 text-sm font-semibold text-slate-700"><span>{label}</span>{children}</label> }
