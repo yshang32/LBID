@@ -2,6 +2,8 @@ import React from "react"
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer"
 import { NextResponse } from "next/server"
 
+import { DOCUMENTS_BUCKET, documentStorageReference, resolveDocumentUrl } from "@/lib/document-storage"
+import { canAccessOrder } from "@/lib/order-parties"
 import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 const styles = StyleSheet.create({
@@ -29,25 +31,28 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const service = getApiSupabaseServiceClient()
   if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+  if (!(await canAccessOrder(service, params.id, session.user.id))) {
+    return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
+  }
 
   const path = `${params.id}/awb-${crypto.randomUUID()}.pdf`
-  const { error: uploadError } = await service.storage.from("documents").upload(path, buffer, {
+  const { error: uploadError } = await service.storage.from(DOCUMENTS_BUCKET).upload(path, buffer, {
     contentType: "application/pdf",
     upsert: false,
   })
 
-  if (uploadError) return NextResponse.json({ error: uploadError.message, bucket: "documents" }, { status: 500 })
+  if (uploadError) return NextResponse.json({ error: uploadError.message, bucket: DOCUMENTS_BUCKET }, { status: 500 })
 
-  const { data: publicData } = service.storage.from("documents").getPublicUrl(path)
-  const { data, error } = await session.supabase.from("documents").insert({
+  const { data, error } = await service.from("documents").insert({
     order_id: params.id,
     type: "AWB",
-    file_url: publicData.publicUrl,
+    file_url: documentStorageReference(path),
     uploaded_by: session.user.id,
   }).select("id, order_id, type, file_url, uploaded_by, created_at").single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, awb, document: data, pdfUrl: publicData.publicUrl }, { status: 201 })
+  const pdfUrl = await resolveDocumentUrl(service, data.file_url)
+  return NextResponse.json({ ok: true, awb, document: { ...data, file_url: pdfUrl }, pdfUrl }, { status: 201 })
 }
 
 async function buildAwbPdf(awb: ReturnType<typeof normalizeAwb>) {

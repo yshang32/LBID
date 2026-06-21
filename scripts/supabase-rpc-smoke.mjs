@@ -35,6 +35,20 @@ async function jsonFetch(path, options = {}) {
   return { status: response.status, body }
 }
 
+async function multipartFetch(path, options = {}) {
+  const form = new FormData()
+  form.append("type", options.type)
+  form.append("file", new Blob(["%PDF-1.4\nLBID smoke document\n"], { type: "application/pdf" }), "invoice.pdf")
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${options.accessToken || accessToken}` },
+    body: form,
+  })
+  const body = await response.json()
+  return { status: response.status, body }
+}
+
 const before = await jsonFetch("/api/tokens")
 console.log("BEFORE", JSON.stringify(before.body.wallet, null, 2))
 
@@ -167,15 +181,16 @@ if (matchGet.status !== 200 || matchGet.body.matchRecord?.id !== accepted.body.m
   process.exit(1)
 }
 
-const documentCreate = await jsonFetch(`/api/orders/${accepted.body.order.id}/documents`, {
-  method: "POST",
-  body: JSON.stringify({
-    type: "Commercial Invoice",
-    fileUrl: `https://example.com/lbid-smoke/${accepted.body.order.id}/invoice.pdf`,
-  }),
+const documentCreate = await multipartFetch(`/api/orders/${accepted.body.order.id}/documents`, {
+  type: "Commercial Invoice",
 })
 console.log("DOCUMENT_CREATE", documentCreate.status, JSON.stringify(documentCreate.body, null, 2))
-if (documentCreate.status !== 201 || !documentCreate.body.document?.id) {
+if (
+  documentCreate.status !== 201 ||
+  !documentCreate.body.document?.id ||
+  !documentCreate.body.document?.file_url ||
+  documentCreate.body.document.file_url.includes("/object/public/")
+) {
   process.exit(1)
 }
 

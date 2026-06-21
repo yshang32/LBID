@@ -2,6 +2,7 @@ import React from "react"
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer"
 
 import { quotation as demoQuotation } from "@/lib/data"
+import { DOCUMENTS_BUCKET, documentStorageReference, resolveDocumentUrl } from "@/lib/document-storage"
 import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 type LineItem = {
@@ -57,17 +58,18 @@ export async function POST(request: Request, { params }: { params: { token: stri
 
   const path = `quotations/${params.token}.pdf`
   const { error: uploadError } = await service.storage
-    .from("documents")
+    .from(DOCUMENTS_BUCKET)
     .upload(path, buffer, { contentType: "application/pdf", upsert: true })
 
-  if (uploadError) return NextResponseJson({ error: uploadError.message, bucket: "documents" }, 500)
+  if (uploadError) return NextResponseJson({ error: uploadError.message, bucket: DOCUMENTS_BUCKET }, 500)
 
-  const { data: publicData } = service.storage.from("documents").getPublicUrl(path)
-  const pdfUrl = publicData.publicUrl
+  const storageReference = documentStorageReference(path)
+  const pdfUrl = await resolveDocumentUrl(service, storageReference)
+  if (!pdfUrl) return NextResponseJson({ error: "DOCUMENT_SIGNING_FAILED" }, 500)
 
   const { error: updateError } = await service
     .from("quotations")
-    .update({ pdf_url: pdfUrl })
+    .update({ pdf_url: storageReference })
     .eq("id", quotation.id)
 
   if (updateError) return NextResponseJson({ error: updateError.message }, 500)
@@ -76,7 +78,7 @@ export async function POST(request: Request, { params }: { params: { token: stri
     await service.from("documents").insert({
       order_id: body.orderId,
       type: "Quotation PDF",
-      file_url: pdfUrl,
+      file_url: storageReference,
       uploaded_by: session?.user.id || quotation.forwarder_id,
     })
   }

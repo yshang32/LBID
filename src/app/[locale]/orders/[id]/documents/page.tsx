@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { AlertTriangle, BellRing, CheckCircle2, Clock, FileCheck2, Truck, UploadCloud } from "lucide-react"
+import { AlertTriangle, BellRing, CheckCircle2, Clock, ExternalLink, FileCheck2, Truck, UploadCloud } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,7 @@ const copy = {
     storage: "Production storage path",
     checklist: "Document checklist",
     upload: "Upload document",
+    view: "View file",
     awb: "Smart AWB fill",
     tracking: "貨件追蹤",
     uploaded: "Uploaded",
@@ -68,6 +69,7 @@ const copy = {
     storage: "Production storage path",
     checklist: "Document checklist",
     upload: "Upload document",
+    view: "View file",
     awb: "Smart AWB fill",
     tracking: "Shipment tracking",
     uploaded: "Uploaded",
@@ -222,6 +224,14 @@ export default function OrderDocumentsPage({ params }: { params: { locale: strin
                       <UploadCloud className="h-4 w-4" />
                       {savingId === document.id ? t.saving : t.upload}
                     </Button>
+                    {document.fileUrl ? (
+                      <Button asChild variant="ghost">
+                        <a href={document.fileUrl} target="_blank" rel="noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                          {t.view}
+                        </a>
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
                 <Button variant={document.confirmed ? "secondary" : "gold"} disabled={!document.uploaded} onClick={() => confirmDocument(document.id)}>
