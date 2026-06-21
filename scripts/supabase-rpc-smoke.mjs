@@ -126,6 +126,7 @@ const accepted = await jsonFetch(`/api/bids/${bid.body.bid_id}/accept`, {
 console.log("ACCEPT", accepted.status, JSON.stringify(accepted.body, null, 2))
 if (
   accepted.status !== 201 ||
+  accepted.body.mode === "service_role_fallback" ||
   !accepted.body.quotation?.id ||
   !accepted.body.order?.id ||
   !accepted.body.matchRecord?.id
