@@ -1,7 +1,7 @@
 # LBID Production Smoke Test
 
 Last run: 2026-06-21
-Environment: local Next.js server against configured Supabase project
+Environment: production `https://lbid.vercel.app` against configured Supabase project
 
 ## P0 Result
 
@@ -17,6 +17,8 @@ Environment: local Next.js server against configured Supabase project
 | Order message | Pass | `POST /api/orders/[id]/messages` created message and in-app notification. |
 | Review | Pass | `POST /api/reviews` created review, point transaction, and reputation event. |
 | Unauthenticated writes | Pass | Production-configured API now returns `401` instead of demo write fallback. |
+
+The full authenticated smoke was rerun against production after deployment and passed.
 
 ## Verified Smoke IDs
 
