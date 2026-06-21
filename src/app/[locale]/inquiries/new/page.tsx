@@ -48,7 +48,7 @@ const copy = {
     submitting: "提交中...",
     submitted: "SR 已建立",
     reference: "SR reference",
-    viewMarket: "查看 SR / Marketplace",
+    viewMarket: "查看需求審核進度",
     dashboard: "Client dashboard",
     notice: "發布後，Forwarder 只會先看到路線、貨物類型、範圍和 bid window。聯絡資料會在 award 後解鎖。",
     matched: "預計配對 5 間合資格 Forwarder",
@@ -90,7 +90,7 @@ const copy = {
     submitting: "Submitting...",
     submitted: "SR created",
     reference: "SR reference",
-    viewMarket: "View SR / Marketplace",
+    viewMarket: "View request status",
     dashboard: "Client dashboard",
     notice: "After review or publish, forwarders first see route, cargo category, ranges and bid window only. Full contacts unlock after award.",
     matched: "Estimated 5 qualified forwarders matched",
@@ -134,7 +134,7 @@ copy.zh = {
   submitting: "提交中...",
   submitted: "SR 已建立",
   reference: "SR reference",
-  viewMarket: "查看 SR / Marketplace",
+  viewMarket: "查看需求審核進度",
   dashboard: "Client dashboard",
   notice: "發布後，Forwarder 只會先看到路線、貨物類別、範圍與 bid window。完整聯絡資料只會在 award 後解鎖。",
   matched: "預計配對 5 間合資格 Forwarder",
@@ -345,7 +345,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
               <div className="break-all font-mono text-2xl font-black text-lblue">{srReference}</div>
               <div className="mt-4 flex flex-col gap-2">
                 <Button asChild variant="gold">
-                  <Link href={`/${locale}/marketplace/${srReference}`}>{t.viewMarket}</Link>
+                  <Link href={`/${locale}/requests/${srReference}`}>{t.viewMarket}</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link href={`/${locale}/dashboard`}>{t.dashboard}</Link>

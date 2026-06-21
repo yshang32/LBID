@@ -29,7 +29,8 @@ export async function POST(request: Request) {
 
   if (session) {
     const deadline = body.deadline ?? body.shipDate ?? new Date(Date.now() + 48 * 3600000).toISOString()
-    const bidDeadline = body.bidDeadline ?? body.bid_deadline ?? new Date(Date.now() + 3 * 3600000).toISOString()
+    // The bid window starts only after an Admin publishes this request.
+    const bidDeadline = new Date(Date.now() + 3 * 3600000).toISOString()
     const cargoDetails = body.cargo_details ?? body.cargoDetails ?? {
       cargo: body.cargo ?? body.commodity ?? "General cargo",
       cargo_type: body.cargoType ?? body.cargo_type ?? "general",
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
         deadline,
         bid_deadline: bidDeadline,
         is_anonymous: body.isAnonymous ?? body.is_anonymous ?? true,
-        status: body.status ?? "OPEN",
+        status: "PENDING_REVIEW",
       })
       .select("id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at")
       .single()
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     ok: true,
     shipmentRequest: {
       id: `SR-${Date.now()}`,
-      status: "OPEN",
+      status: "PENDING_REVIEW",
       bidDeadline: body.bidDeadline ?? "3h",
       isAnonymous: body.isAnonymous ?? true,
       ...body,
