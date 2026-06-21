@@ -2,58 +2,60 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { AlertCircle, BriefcaseBusiness, CheckCircle2, Coins, Loader2, PackagePlus, RadioTower, Settings2, ShieldCheck } from "lucide-react"
+import { ArrowRight, BriefcaseBusiness, CheckCircle2, Coins, Loader2, PackagePlus, Settings2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { apiJson } from "@/lib/api-client"
+import { statusLabel } from "@/lib/shipment-workflow"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type Locale = "zh" | "en"
 type Mode = "company" | "admin"
+type Request = { id: string; agent_id: string; route?: { origin?: string; destination?: string }; cargo_details?: { cargo?: string; cargo_type?: string }; status?: string }
+type Match = { id: string; shipment_request_id: string; stage?: string; rate_card_snapshot?: { order_id?: string } }
 
 const copy = {
   zh: {
-    companyBadge: "COMPANY WORKSPACE", adminBadge: "ADMIN WORKSPACE", title: "一個公司帳戶，管理兩種物流機會。", adminTitle: "平台營運工作台", intro: "同時發出 Shipment Request、比較報價，以及瀏覽合適的投標機會。", adminIntro: "管理付款、審核公司與維持平台運作質素。", loading: "正在載入工作台資料", signIn: "請登入以查看即時公司資料。", error: "暫時未能載入工作台資料。", live: "Live Supabase", myRequests: "我的需求", opportunities: "可投標機會", matches: "配對記錄", tokens: "Token 餘額", reputation: "信譽分數", create: "建立需求", market: "瀏覽市場", settings: "公司設定", admin: "付款審核", payments: "待處理付款", capability: "雙能力帳戶", client: "Client 能力", forwarder: "Forwarder 能力",
+    label: "公司工作台", title: "從需求到交付，一個地方完成。", intro: "你的公司可同時發出需求和承接報價；系統會按每個項目的下一步，把工作排在前面。", create: "建立 Shipment Request", market: "查看接單市場", settings: "公司設定", loading: "正在載入工作台", signIn: "請登入以查看公司工作流程。", myRequests: "我的需求", opportunities: "可投標需求", orders: "進行中訂單", open: "開啟", noRequests: "暫未建立需求", noOpportunities: "目前沒有可投標需求", noOrders: "目前沒有已確認訂單", wallet: "Token 餘額", client: "Client 能力", forwarder: "Forwarder 能力", admin: "平台管理", adminIntro: "管理付款審核、公司驗證及平台營運。", reviewPayments: "審核付款",
   },
   en: {
-    companyBadge: "COMPANY WORKSPACE", adminBadge: "ADMIN WORKSPACE", title: "One company account, two logistics capabilities.", adminTitle: "Platform operations workspace", intro: "Create shipment requests, compare quotations and explore suitable bid opportunities from the same account.", adminIntro: "Manage payments, company verification and platform quality.", loading: "Loading workspace data", signIn: "Sign in to view live company data.", error: "Live workspace data is temporarily unavailable.", live: "Live Supabase", myRequests: "My requests", opportunities: "Bid opportunities", matches: "Match records", tokens: "Token balance", reputation: "Reputation", create: "Create request", market: "Open marketplace", settings: "Company settings", admin: "Review payments", payments: "Pending payments", capability: "Dual-capability account", client: "Client capability", forwarder: "Forwarder capability",
+    label: "Company workspace", title: "From request to delivery, in one place.", intro: "Your company can create shipment requests and submit bids. The workspace puts the next action for each workflow first.", create: "Create shipment request", market: "Browse marketplace", settings: "Company settings", loading: "Loading workspace", signIn: "Sign in to view your company workflow.", myRequests: "My requests", opportunities: "Bid opportunities", orders: "Active orders", open: "Open", noRequests: "No requests created yet", noOpportunities: "No bid opportunities right now", noOrders: "No confirmed orders yet", wallet: "Token balance", client: "Client capability", forwarder: "Forwarder capability", admin: "Platform operations", adminIntro: "Manage payment reviews, company verification and platform operations.", reviewPayments: "Review payments",
   },
 }
 
 export function LiveDashboardPanel({ locale, mode }: { locale: Locale; mode: Mode }) {
   const t = copy[locale]
-  const [state, setState] = useState({ loading: true, authenticated: false, error: "", userId: "", requests: [] as any[], matches: [] as any[], profile: null as any, payments: [] as any[] })
+  const prefix = `/${locale}`
+  const [state, setState] = useState({ loading: true, signedIn: false, userId: "", requests: [] as Request[], matches: [] as Match[], profile: null as any, error: "" })
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const supabase = getSupabaseBrowserClient()
-      const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
+      const client = getSupabaseBrowserClient()
+      const { data } = client ? await client.auth.getSession() : { data: { session: null } }
       if (!data.session) { if (!cancelled) setState((current) => ({ ...current, loading: false })); return }
-      const results = await Promise.all([
-        apiJson("/api/shipment-requests"), apiJson("/api/match-records"), apiJson("/api/company-profile"),
-        mode === "admin" ? apiJson("/api/admin/pending-payments") : Promise.resolve({ response: { ok: true }, body: { paymentIntents: [] } }),
-      ])
+      const [requests, matches, profile] = await Promise.all([apiJson("/api/shipment-requests"), apiJson("/api/match-records"), apiJson("/api/company-profile")])
       if (cancelled) return
-      const failed = results.find((item) => !item.response.ok)
-      if (failed) { setState((current) => ({ ...current, loading: false, authenticated: true, error: failed.body?.error || "LIVE_DATA_FAILED" })); return }
-      setState({ loading: false, authenticated: true, error: "", userId: data.session.user.id, requests: results[0].body.shipmentRequests || [], matches: results[1].body.matchRecords || [], profile: results[2].body.companyProfile || null, payments: results[3].body.paymentIntents || [] })
+      const failed = [requests, matches, profile].find((result) => !result.response.ok)
+      if (failed) { setState({ loading: false, signedIn: true, userId: data.session.user.id, requests: [], matches: [], profile: null, error: failed.body?.error || "WORKSPACE_UNAVAILABLE" }); return }
+      setState({ loading: false, signedIn: true, userId: data.session.user.id, requests: requests.body.shipmentRequests || [], matches: matches.body.matchRecords || [], profile: profile.body.companyProfile || null, error: "" })
     }
     load()
     return () => { cancelled = true }
-  }, [mode])
+  }, [])
 
-  const ownRequests = state.requests.filter((request) => request.agent_id === state.userId)
-  const bidOpportunities = state.requests.filter((request) => request.agent_id !== state.userId && request.status === "OPEN")
-  const figures = mode === "admin"
-    ? [{ label: t.payments, value: state.payments.length }, { label: t.matches, value: state.matches.length }, { label: t.tokens, value: "--" }, { label: t.reputation, value: "--" }]
-    : [{ label: t.myRequests, value: ownRequests.length }, { label: t.opportunities, value: bidOpportunities.length }, { label: t.matches, value: state.matches.length }, { label: t.tokens, value: state.authenticated ? Number(state.profile?.token_balance_free || 0) + Number(state.profile?.token_balance_paid || 0) : "--" }]
-  const prefix = `/${locale}`
+  const ownRequests = state.requests.filter((request) => request.agent_id === state.userId).slice(0, 3)
+  const opportunities = state.requests.filter((request) => request.agent_id !== state.userId && request.status === "OPEN").slice(0, 3)
+  const orders = state.matches.slice(0, 3)
+  const tokens = Number(state.profile?.token_balance_free || 0) + Number(state.profile?.token_balance_paid || 0)
 
-  return <>
-    <section className="border-b border-lblue/10 pb-8"><Badge variant="gold">{mode === "admin" ? t.adminBadge : t.companyBadge}</Badge><div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><h1 className="text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{mode === "admin" ? t.adminTitle : t.title}</h1><p className="mt-3 text-base leading-7 text-slate-600">{mode === "admin" ? t.adminIntro : t.intro}</p></div><div className="flex flex-wrap gap-3">{mode === "admin" ? <Button asChild><Link href={`${prefix}/admin/pending-payments`}><ShieldCheck className="h-4 w-4" />{t.admin}</Link></Button> : <><Button asChild><Link href={`${prefix}/inquiries/new`}><PackagePlus className="h-4 w-4" />{t.create}</Link></Button><Button asChild variant="outline"><Link href={`${prefix}/marketplace`}><BriefcaseBusiness className="h-4 w-4" />{t.market}</Link></Button></>}<Button asChild variant="ghost"><Link href={`${prefix}/onboarding`}><Settings2 className="h-4 w-4" />{t.settings}</Link></Button></div></div></section>
-    <Card className="mt-8"><CardHeader className="flex-row items-center justify-between space-y-0 border-b border-slate-100"><div><div className="flex items-center gap-2"><RadioTower className="h-4 w-4 text-[#a17e22]" /><CardTitle>{state.loading ? t.loading : state.authenticated ? t.live : t.signIn}</CardTitle></div></div><Badge variant={state.authenticated ? "teal" : "secondary"}>{state.authenticated ? t.capability : "LBID"}</Badge></CardHeader><CardContent className="pt-5">{state.loading ? <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{t.loading}</div> : state.error ? <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"><AlertCircle className="h-4 w-4" />{t.error}</div> : <><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{figures.map((item, index) => <div key={item.label} className="rounded-md border border-lblue/10 bg-slate-50 p-4">{index === 0 ? <PackagePlus className="h-4 w-4 text-lblue" /> : index === 1 ? <BriefcaseBusiness className="h-4 w-4 text-lblue" /> : index === 2 ? <CheckCircle2 className="h-4 w-4 text-lblue" /> : <Coins className="h-4 w-4 text-lblue" />}<p className="mt-3 text-sm text-slate-500">{item.label}</p><p className="mt-1 text-2xl font-semibold text-lblue">{item.value}</p></div>)}</div>{mode === "company" && state.authenticated ? <div className="mt-5 flex flex-wrap gap-2"><Badge variant={state.profile?.can_be_client ? "teal" : "secondary"}>{t.client}</Badge><Badge variant={state.profile?.can_be_forwarder ? "teal" : "secondary"}>{t.forwarder}</Badge></div> : null}</>}</CardContent></Card>
-  </>
+  if (mode === "admin") return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:pb-10"><section className="flex flex-col gap-4 border-b border-lblue/10 pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#a17e22]">LBID admin</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.admin}</h1><p className="mt-2 text-slate-600">{t.adminIntro}</p></div><Button asChild><Link href={`${prefix}/admin/pending-payments`}>{t.reviewPayments}<ArrowRight className="h-4 w-4" /></Link></Button></section></main>
+
+  return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:pb-10"><section className="flex flex-col gap-5 border-b border-lblue/10 pb-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#a17e22]">{t.label}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title}</h1><p className="mt-3 leading-7 text-slate-600">{t.intro}</p></div><div className="flex flex-wrap gap-2"><Button asChild><Link href={`${prefix}/inquiries/new`}><PackagePlus className="h-4 w-4" />{t.create}</Link></Button><Button asChild variant="outline"><Link href={`${prefix}/marketplace`}><BriefcaseBusiness className="h-4 w-4" />{t.market}</Link></Button><Button asChild variant="ghost"><Link href={`${prefix}/profile`}><Settings2 className="h-4 w-4" />{t.settings}</Link></Button></div></section>{state.loading ? <div className="flex items-center gap-2 py-12 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{t.loading}</div> : !state.signedIn || state.error ? <div className="border border-dashed border-lblue/15 bg-white px-5 py-12 text-center text-sm text-slate-500">{state.error || t.signIn}</div> : <><section className="mt-6 grid gap-3 sm:grid-cols-3"><Metric icon={<PackagePlus className="h-4 w-4" />} label={t.myRequests} value={ownRequests.length} /><Metric icon={<BriefcaseBusiness className="h-4 w-4" />} label={t.opportunities} value={opportunities.length} /><Metric icon={<Coins className="h-4 w-4" />} label={t.wallet} value={tokens} /></section><section className="mt-7 grid gap-5 lg:grid-cols-3"><WorkflowList title={t.myRequests} empty={t.noRequests} href={`${prefix}/requests`} rows={ownRequests.map((request) => ({ id: request.id, title: route(request), detail: statusLabel(request.status, locale), href: `${prefix}/requests/${request.id}`, badge: request.status }))} locale={locale} /><WorkflowList title={t.opportunities} empty={t.noOpportunities} href={`${prefix}/marketplace`} rows={opportunities.map((request) => ({ id: request.id, title: route(request), detail: request.cargo_details?.cargo || request.cargo_details?.cargo_type || "General cargo", href: `${prefix}/marketplace/${request.id}`, badge: statusLabel(request.status, locale) }))} locale={locale} /><WorkflowList title={t.orders} empty={t.noOrders} href={`${prefix}/orders`} rows={orders.map((match) => ({ id: match.id, title: match.rate_card_snapshot?.order_id || match.id, detail: `SR ${match.shipment_request_id}`, href: match.rate_card_snapshot?.order_id ? `${prefix}/orders/${match.rate_card_snapshot.order_id}` : `${prefix}/orders`, badge: match.stage || "confirmed" }))} locale={locale} /></section><div className="mt-6 flex flex-wrap gap-2"><Badge variant={state.profile?.can_be_client ? "teal" : "secondary"}>{t.client}</Badge><Badge variant={state.profile?.can_be_forwarder ? "teal" : "secondary"}>{t.forwarder}</Badge></div></>}</main>
 }
+
+function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) { return <Card><CardContent className="p-4"><div className="text-lblue">{icon}</div><p className="mt-3 text-sm text-slate-500">{label}</p><p className="mt-1 text-2xl font-semibold text-lblue">{value}</p></CardContent></Card> }
+function WorkflowList({ title, empty, href, rows, locale }: { title: string; empty: string; href: string; rows: { id: string; title: string; detail: string; href: string; badge: string }[]; locale: Locale }) { const open = locale === "zh" ? "查看全部" : "View all"; return <Card><CardContent className="p-5"><div className="flex items-center justify-between"><h2 className="font-semibold text-lblue">{title}</h2><Link className="text-xs font-semibold text-[#8b6d1d] hover:text-lblue" href={href}>{open}</Link></div>{rows.length ? <div className="mt-4 divide-y divide-slate-100">{rows.map((row) => <Link key={row.id} href={row.href} className="block py-3 first:pt-0 last:pb-0"><div className="flex items-start gap-2"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-lblue">{row.title}</p><p className="mt-1 truncate text-xs text-slate-500">{row.detail}</p></div><Badge variant="secondary">{row.badge}</Badge></div></Link>)}</div> : <p className="mt-5 min-h-14 text-sm leading-6 text-slate-500">{empty}</p>}</CardContent></Card> }
+function route(request: Request) { return `${request.route?.origin || "Origin"} → ${request.route?.destination || "Hong Kong"}` }
