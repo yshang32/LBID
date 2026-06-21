@@ -348,7 +348,7 @@ export default function NewInquiryPage({ params }: { params: { locale: string } 
                   <Link href={`/${locale}/marketplace/${srReference}`}>{t.viewMarket}</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href={`/${locale}/dashboard?role=agency`}>{t.dashboard}</Link>
+                  <Link href={`/${locale}/dashboard`}>{t.dashboard}</Link>
                 </Button>
               </div>
             </CardContent>

@@ -186,7 +186,7 @@ export default function UnifiedOnboardingPage({ params }: { params: { locale: st
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button asChild variant="gold">
-              <Link href={`/${locale}/dashboard?role=${canBeForwarder ? "forwarder" : "agency"}`}>
+              <Link href={`/${locale}/dashboard`}>
                 {t.dashboard} <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

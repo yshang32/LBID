@@ -1,5 +1,8 @@
-create or replace function public.accept_bid_to_order(
+drop function if exists public.accept_bid_to_order(uuid, numeric, jsonb);
+
+create function public.accept_bid_to_order(
   p_bid_id uuid,
+  p_requester_id uuid,
   p_total_amount numeric default null,
   p_line_items jsonb default null
 )
@@ -17,7 +20,7 @@ declare
   v_public_token text;
   v_line_items jsonb;
 begin
-  if auth.uid() is null then
+  if auth.role() <> 'service_role' or p_requester_id is null then
     raise exception 'UNAUTHENTICATED';
   end if;
 
@@ -41,7 +44,7 @@ begin
     raise exception 'SR_NOT_FOUND';
   end if;
 
-  if v_sr.agent_id <> auth.uid() then
+  if v_sr.agent_id <> p_requester_id then
     raise exception 'ONLY_AGENCY_OWNER_CAN_ACCEPT_BID';
   end if;
 
@@ -150,5 +153,5 @@ begin
 end;
 $$;
 
-revoke execute on function public.accept_bid_to_order(uuid, numeric, jsonb) from public, anon;
-grant execute on function public.accept_bid_to_order(uuid, numeric, jsonb) to authenticated, service_role;
+revoke execute on function public.accept_bid_to_order(uuid, uuid, numeric, jsonb) from public, anon, authenticated;
+grant execute on function public.accept_bid_to_order(uuid, uuid, numeric, jsonb) to service_role;

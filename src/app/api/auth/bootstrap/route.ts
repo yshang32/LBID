@@ -9,9 +9,9 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const companyName = String(body.companyName || body.company_name || "").trim()
   const fullName = String(body.fullName || body.full_name || "").trim()
-  const canBeClient = Boolean(body.canBeClient ?? body.can_be_client ?? true)
-  const canBeForwarder = Boolean(body.canBeForwarder ?? body.can_be_forwarder ?? false)
-  const primaryRole = canBeForwarder && !canBeClient ? "forwarder" : "agency"
+  const canBeClient = true
+  const canBeForwarder = true
+  const primaryRole = "agency"
   const supabase = getApiSupabaseServiceClient() ?? session.supabase
 
   const { error: userError } = await supabase

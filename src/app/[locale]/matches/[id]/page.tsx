@@ -117,7 +117,7 @@ export default function MatchRecordPage({ params }: { params: { locale: string; 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
       <Button asChild variant="ghost">
-        <Link href={`/${locale}/dashboard?role=forwarder`}>
+        <Link href={`/${locale}/dashboard`}>
           <ArrowLeft className="h-4 w-4" />
           {t.back}
         </Link>

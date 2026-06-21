@@ -1,23 +1,18 @@
 import { NextResponse } from "next/server"
 
 import { createNotification } from "@/lib/notifications"
-import { getOrderParties } from "@/lib/order-parties"
-import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
-
-const demoEvents = [
-  { status: "shipment_booked", location: "Mumbai", description: "Shipment booked with carrier", occurred_at: "2026-06-18T10:00:00Z" },
-  { status: "in_transit", location: "BOM", description: "Departed origin airport", occurred_at: "2026-06-19T02:00:00Z" },
-  { status: "arrived_hk", location: "HKG", description: "Arrived Hong Kong", occurred_at: "2026-06-19T18:30:00Z" },
-]
+import { canAccessOrder, getOrderParties } from "@/lib/order-parties"
+import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getApiSupabaseSession(request)
-  if (!session) {
-    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
-    return NextResponse.json({ tracking: demoEvents, mode: "demo_fallback" })
-  }
+  if (!session) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
-  const { data, error } = await session.supabase
+  const service = getApiSupabaseServiceClient()
+  if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+  if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
+
+  const { data, error } = await service
     .from("tracking_events")
     .select("*")
     .eq("order_id", params.id)
@@ -29,16 +24,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await getApiSupabaseSession(request)
-  const body = await request.json().catch(() => ({}))
+  if (!session) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
+  const body = await request.json().catch(() => ({}))
   if (!body.status || !body.description) return NextResponse.json({ error: "TRACKING_FIELDS_REQUIRED" }, { status: 400 })
 
-  if (!session) {
-    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
-    return NextResponse.json({ ok: true, mode: "demo_fallback", event: { id: `trk-${Date.now()}`, ...body } }, { status: 201 })
-  }
+  const service = getApiSupabaseServiceClient()
+  if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+  if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
 
-  const { data, error } = await session.supabase.from("tracking_events").insert({
+  const { data, error } = await service.from("tracking_events").insert({
     order_id: params.id,
     status: body.status,
     location: body.location || null,
@@ -49,9 +44,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const service = getApiSupabaseServiceClient()
-  const parties = await getOrderParties(service || session.supabase, params.id)
-  await Promise.all([parties?.agencyId, parties?.forwarderId].filter(Boolean).map((userId) => createNotification(service || session.supabase, {
+  const parties = await getOrderParties(service, params.id)
+  await Promise.all([parties?.agencyId, parties?.forwarderId].filter(Boolean).map((userId) => createNotification(service, {
     userId: userId as string,
     type: "tracking_update",
     title: "Tracking updated",

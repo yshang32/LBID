@@ -12,7 +12,6 @@ import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-type CapabilityMode = "client" | "forwarder" | "both"
 type AuthResult = { type: "register" | "login"; email: string; href: string } | null
 
 const copy = {
@@ -72,7 +71,6 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   const router = useRouter()
   const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   const [mode, setMode] = useState<"login" | "register">("login")
-  const [capabilityMode, setCapabilityMode] = useState<CapabilityMode>("both")
   const [company, setCompany] = useState("")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -81,16 +79,13 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const canBeClient = capabilityMode === "client" || capabilityMode === "both"
-  const canBeForwarder = capabilityMode === "forwarder" || capabilityMode === "both"
-  const defaultDashboardRole = canBeForwarder ? "forwarder" : "agency"
+  const canBeClient = true
+  const canBeForwarder = true
 
   async function getProfileDashboardHref() {
     const { response, body } = await apiJson("/api/company-profile")
     if (!response.ok || !body.companyProfile) return `/${locale}/onboarding`
-    if (body.companyProfile.can_be_forwarder) return `/${locale}/dashboard?role=forwarder`
-    if (body.companyProfile.can_be_client) return `/${locale}/dashboard?role=agency`
-    return `/${locale}/onboarding`
+    return `/${locale}/dashboard`
   }
 
   async function submit() {
@@ -105,7 +100,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
         const href = await getProfileDashboardHref()
         setResult({ type: "login", email, href }); setLoading(false); router.push(href); return
       }
-      const href = `/${locale}/dashboard?role=${defaultDashboardRole}`
+      const href = `/${locale}/dashboard`
       setResult({ type: "login", email, href }); setLoading(false); router.push(href); return
     }
 
@@ -115,7 +110,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
       const { response, body } = await apiJson("/api/auth/bootstrap", { method: "POST", body: JSON.stringify({ companyName: company, fullName, canBeClient, canBeForwarder }) })
       if (!response.ok && body.error !== "NO_ACTIVE_SESSION") { setError(body.error || t.error); setLoading(false); return }
     }
-    const href = hasSupabase ? `/${locale}/onboarding` : `/${locale}/dashboard?role=${defaultDashboardRole}`
+    const href = hasSupabase ? `/${locale}/onboarding` : `/${locale}/dashboard`
     setResult({ type: "register", email, href }); setLoading(false); router.push(href)
   }
 
@@ -128,7 +123,7 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
         <section className="w-full max-w-md justify-self-end rounded-lg border border-lblue/10 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
           <div className="flex items-center justify-between"><div><h2 className="text-2xl font-semibold text-lblue">{mode === "login" ? t.signIn : t.create}</h2><p className="mt-2 text-sm text-slate-500">{mode === "login" ? t.newUser : t.back}</p></div><button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError("") }} className="text-sm font-semibold text-lblue underline decoration-lgold underline-offset-4">{mode === "login" ? t.start : t.signIn}</button></div>
           <div className="mt-8 space-y-5">
-            {mode === "register" ? <><label className="block text-sm font-semibold text-slate-700">{t.company}<Input className="mt-2" value={company} onChange={(event) => setCompany(event.target.value)} /></label><label className="block text-sm font-semibold text-slate-700">{t.name}<Input className="mt-2" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label><fieldset><legend className="text-sm font-semibold text-slate-700">{t.capability}</legend><div className="mt-2 grid grid-cols-3 rounded-md border border-lblue/10 bg-slate-50 p-1">{(["client", "forwarder", "both"] as CapabilityMode[]).map((item) => <button key={item} type="button" onClick={() => setCapabilityMode(item)} className={`min-h-10 rounded px-2 text-xs font-semibold transition ${capabilityMode === item ? "bg-white text-lblue shadow-sm" : "text-slate-500"}`}>{t[item]}</button>)}</div></fieldset></> : null}
+            {mode === "register" ? <><label className="block text-sm font-semibold text-slate-700">{t.company}<Input className="mt-2" value={company} onChange={(event) => setCompany(event.target.value)} /></label><label className="block text-sm font-semibold text-slate-700">{t.name}<Input className="mt-2" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label><div className="rounded-md border border-lblue/10 bg-slate-50 p-3 text-sm leading-6 text-slate-600">Your company account can create shipment requests and submit bids. You can adjust these capabilities later in company settings.</div></> : null}
             <label className="block text-sm font-semibold text-slate-700">{t.email}<div className="relative mt-2"><Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /></div></label>
             <label className="block text-sm font-semibold text-slate-700">{t.password}<div className="relative mt-2"><LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></div></label>
             {mode === "login" ? <button type="button" className="text-sm font-medium text-slate-500 hover:text-lblue">{t.forgot}</button> : null}

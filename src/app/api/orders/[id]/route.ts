@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server"
 
 import { orderPipeline } from "@/lib/data"
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { canAccessOrder } from "@/lib/order-parties"
+import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getApiSupabaseSession(request)
   if (!session) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
+  const service = getApiSupabaseServiceClient()
+  if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+  if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
 
-  const { data, error } = await session.supabase
+  const { data, error } = await service
     .from("orders")
     .select("id, quotation_id, status, created_at, quotations(id, shipment_request_id, forwarder_id, total_amount, line_items, status, created_at)")
     .eq("id", params.id)
@@ -22,6 +26,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const session = await getApiSupabaseSession(request)
   if (!session) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
+  const service = getApiSupabaseServiceClient()
+  if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+  if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
 
   const body = await request.json().catch(() => ({}))
   const status = body.status
@@ -30,7 +37,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "INVALID_ORDER_STATUS", allowed: orderPipeline }, { status: 400 })
   }
 
-  const { data, error } = await session.supabase
+  const { data, error } = await service
     .from("orders")
     .update({ status })
     .eq("id", params.id)

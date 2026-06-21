@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { renderSimpleEmail, sendLbidEmail } from "@/lib/email"
 import { createNotification } from "@/lib/notifications"
-import { getOrderParties, getUserEmails } from "@/lib/order-parties"
+import { canAccessOrder, getOrderParties, getUserEmails } from "@/lib/order-parties"
 import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -10,17 +10,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!session) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
   const service = getApiSupabaseServiceClient()
-  const parties = await getOrderParties(service || session.supabase, params.id)
-  if (parties?.agencyId && parties?.forwarderId && ![parties.agencyId, parties.forwarderId].includes(session.user.id)) {
-    return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
-  }
+  if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+  if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
+  const parties = await getOrderParties(service, params.id)
 
   const recipients = [parties?.agencyId, parties?.forwarderId].filter(Boolean) as string[]
   const targetRecipients = recipients.length > 0 ? recipients : [session.user.id]
-  const emails = await getUserEmails(service || session.supabase, targetRecipients)
+  const emails = await getUserEmails(service, targetRecipients)
   const href = `/orders/${params.id}/documents`
 
-  const notificationResults = await Promise.all(targetRecipients.map((userId) => createNotification(service || session.supabase, {
+  const notificationResults = await Promise.all(targetRecipients.map((userId) => createNotification(service, {
     userId,
     type: "document_reminder",
     title: "Documents required",

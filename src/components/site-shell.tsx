@@ -37,7 +37,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         tokens: "Token",
         language: "EN",
         nav: [
-          { href: `${prefix}/dashboard?role=forwarder`, label: "工作台", icon: Home },
+          { href: `${prefix}/dashboard`, label: "工作台", icon: Home },
           { href: `${prefix}/marketplace`, label: "接單市場", icon: BriefcaseBusiness },
           { href: `${prefix}/inquiries/new`, label: "建立需求", icon: PackagePlus },
           { href: `${prefix}/matches/MATCH-1234`, label: "訂單記錄", icon: FileText },
@@ -56,7 +56,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         tokens: "Tokens",
         language: "中文",
         nav: [
-          { href: `${prefix}/dashboard?role=forwarder`, label: "Dashboard", icon: Home },
+          { href: `${prefix}/dashboard`, label: "Dashboard", icon: Home },
           { href: `${prefix}/marketplace`, label: "Marketplace", icon: BriefcaseBusiness },
           { href: `${prefix}/inquiries/new`, label: "Create request", icon: PackagePlus },
           { href: `${prefix}/matches/MATCH-1234`, label: "Orders", icon: FileText },
