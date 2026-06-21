@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { CheckCircle2, Crown, Gem, ShieldCheck } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
+import { ArrowRight, CheckCircle2, Crown, Gem, PartyPopper, ShieldCheck } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,37 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
-const copy = {
-  zh: {
-    badge: "會員方案", title: "選擇適合你公司的會員方案", intro: "付款由 Stripe 安全處理。成功後，會員權限會由 LBID webhook 自動更新。",
-    current: "目前狀態", trial: "7 日體驗", token: "10 paid + 8 free tokens", choose: "前往安全付款", managing: "正在建立付款...", manage: "管理訂閱",
-    observer: "觀察者", monthly: "月費會員", annual: "全年會員", recommended: "推薦", error: "未能建立付款，請先登入並確認 Stripe 已設定。",
-    observerPrice: "免費", monthlyPrice: "HKD 388 / 月", annualPrice: "HKD 3,880 / 年",
-    observerPerks: ["瀏覽公司目錄", "查看公開需求", "查看社群"],
-    monthlyPerks: ["每月 5 個免費 Token", "提交 sealed bid", "報價單與訂單工作區"],
-    annualPerks: ["全年會員資格", "VIP 徽章與優先展示", "較高完成訂單獎勵"],
-  },
-  en: {
-    badge: "Membership", title: "Choose the membership that fits your company", intro: "Payments are handled securely by Stripe. LBID updates access automatically after the webhook is confirmed.",
-    current: "Current status", trial: "7-day trial", token: "10 paid + 8 free tokens", choose: "Secure checkout", managing: "Creating checkout...", manage: "Manage subscription",
-    observer: "Observer", monthly: "Monthly Member", annual: "Annual Member", recommended: "Recommended", error: "Checkout could not be created. Sign in and confirm Stripe is configured.",
-    observerPrice: "Free", monthlyPrice: "HKD 388 / month", annualPrice: "HKD 3,880 / year",
-    observerPerks: ["Browse the directory", "View public requests", "Join the community"],
-    monthlyPerks: ["5 free tokens each month", "Submit sealed bids", "Quotation and order workspace"],
-    annualPerks: ["Annual member status", "VIP badge and priority display", "Higher completion rewards"],
-  },
-}
-
 export default function SubscriptionPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
-  const t = copy[locale]
+  const prefix = `/${locale}`
   const [busy, setBusy] = useState<"monthly" | "annual" | "portal" | null>(null)
   const [error, setError] = useState("")
-  const plans = [
-    { id: "observer", name: t.observer, price: t.observerPrice, icon: ShieldCheck, perks: t.observerPerks },
-    { id: "monthly", name: t.monthly, price: t.monthlyPrice, icon: Crown, perks: t.monthlyPerks, recommended: true },
-    { id: "annual", name: t.annual, price: t.annualPrice, icon: Gem, perks: t.annualPerks },
-  ] as const
+  const [success, setSuccess] = useState(false)
+  const t = locale === "zh"
+    ? { badge: "會員方案", title: "為公司選擇合適的會員方案", intro: "付款由 Stripe 安全處理；確認後，LBID 會自動更新你的會員權限。", trial: "7 天試用", tokens: "5 個免費 Token", monthly: "月費會員", annual: "年費會員", monthlyPrice: "HKD 388 / 月", annualPrice: "HKD 3,880 / 年", checkout: "安全付款", managing: "正在建立付款...", portal: "管理訂閱", successTitle: "升級成功，歡迎加入 LBID。", successBody: "你的付款已收到，會員權限正由安全付款系統確認。完成後，你的公司帳戶會立即享有相應功能。", continue: "返回工作台", openProfile: "查看公司檔案", error: "未能建立付款。請確認你已登入，並完成 Stripe 設定。" }
+    : { badge: "Membership", title: "Choose a membership for your company", intro: "Payments are handled securely by Stripe. LBID updates access automatically after confirmation.", trial: "7-day trial", tokens: "5 free tokens", monthly: "Monthly member", annual: "Annual member", monthlyPrice: "HKD 388 / month", annualPrice: "HKD 3,880 / year", checkout: "Secure checkout", managing: "Creating checkout...", portal: "Manage subscription", successTitle: "Welcome to your upgraded LBID membership.", successBody: "We have received your payment. Your membership is being confirmed securely and the corresponding access will activate automatically.", continue: "Return to workspace", openProfile: "View company profile", error: "Checkout could not be created. Confirm you are signed in and Stripe is configured." }
+
+  useEffect(() => setSuccess(window.location.search.includes("checkout=success")), [])
 
   async function checkout(planId: "monthly" | "annual") {
     setBusy(planId); setError("")
@@ -47,7 +28,6 @@ export default function SubscriptionPage({ params }: { params: { locale: string 
     if (response.ok && body.checkout_url) window.location.assign(body.checkout_url)
     else { setBusy(null); setError(body.error || t.error) }
   }
-
   async function openPortal() {
     setBusy("portal"); setError("")
     const { response, body } = await apiJson("/api/subscriptions/portal", { method: "POST" })
@@ -55,16 +35,7 @@ export default function SubscriptionPage({ params }: { params: { locale: string 
     else { setBusy(null); setError(body.error || t.error) }
   }
 
-  return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
-      <section className="max-w-3xl"><Badge variant="gold">{t.badge}</Badge><h1 className="mt-3 text-4xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1><p className="mt-3 text-muted-foreground">{t.intro}</p></section>
-      <section className="mt-6 grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
-        <Card className="border-lgold/30 bg-lgold/10"><CardHeader><ShieldCheck className="h-5 w-5 text-lgold" /><CardTitle>{t.current}</CardTitle></CardHeader><CardContent className="space-y-3"><Metric label="Status" value={t.trial} /><Metric label="Tokens" value={t.token} /><Button className="w-full" variant="outline" disabled={busy !== null} onClick={openPortal}>{busy === "portal" ? t.managing : t.manage}</Button></CardContent></Card>
-        <div className="grid gap-4 md:grid-cols-3">{plans.map((plan) => <Card key={plan.id} className={plan.recommended ? "border-lgold/50" : ""}><CardHeader><div className="flex items-start justify-between gap-2"><plan.icon className="h-6 w-6 text-lgold" />{plan.recommended ? <Badge variant="gold">{t.recommended}</Badge> : null}</div><CardTitle>{plan.name}</CardTitle></CardHeader><CardContent className="space-y-4"><div className="text-2xl font-black text-lblue">{plan.price}</div>{plan.perks.map((perk) => <div key={perk} className="flex gap-2 text-sm"><CheckCircle2 className="h-4 w-4 shrink-0 text-teal-700" />{perk}</div>)}{plan.id !== "observer" ? <Button className="mt-3 w-full" variant={plan.recommended ? "gold" : "outline"} disabled={busy !== null} onClick={() => checkout(plan.id)}>{busy === plan.id ? t.managing : t.choose}</Button> : null}</CardContent></Card>)}</div>
-      </section>
-      {error ? <p className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
-    </main>
-  )
+  return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:pb-10">{success ? <section className="mx-auto max-w-2xl py-12 text-center"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#fcf2ce] text-[#9a7517]"><PartyPopper className="h-8 w-8" /></div><Badge className="mt-6" variant="gold">LBID MEMBER</Badge><h1 className="mt-4 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.successTitle}</h1><p className="mx-auto mt-4 max-w-xl leading-7 text-slate-600">{t.successBody}</p><div className="mt-8 flex justify-center gap-3"><Button asChild><Link href={`${prefix}/dashboard`}>{t.continue}<ArrowRight className="h-4 w-4" /></Link></Button><Button asChild variant="outline"><Link href={`${prefix}/profile`}>{t.openProfile}</Link></Button></div></section> : <><section className="max-w-3xl border-b border-lblue/10 pb-7"><Badge variant="gold">{t.badge}</Badge><h1 className="mt-3 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title}</h1><p className="mt-3 text-slate-600">{t.intro}</p></section><section className="mt-7 grid gap-5 lg:grid-cols-[.72fr_1fr_1fr]"><Card className="bg-slate-50"><CardHeader><ShieldCheck className="h-6 w-6 text-lblue" /><CardTitle>{t.trial}</CardTitle></CardHeader><CardContent className="text-sm leading-6 text-slate-600">{t.tokens}</CardContent></Card><PlanCard icon={Crown} name={t.monthly} price={t.monthlyPrice} busy={busy === "monthly"} onClick={() => checkout("monthly")} button={t.checkout} managing={t.managing} featured /><PlanCard icon={Gem} name={t.annual} price={t.annualPrice} busy={busy === "annual"} onClick={() => checkout("annual")} button={t.checkout} managing={t.managing} /></section><div className="mt-6"><Button variant="outline" disabled={busy !== null} onClick={openPortal}>{busy === "portal" ? t.managing : t.portal}</Button></div>{error ? <p className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}</>}</main>
 }
 
-function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-md border border-lblue/10 bg-white/70 p-4"><div className="text-sm text-muted-foreground">{label}</div><div className="mt-1 text-xl font-black text-lblue">{value}</div></div> }
+function PlanCard({ icon: Icon, name, price, busy, onClick, button, managing, featured = false }: { icon: typeof Crown; name: string; price: string; busy: boolean; onClick: () => void; button: string; managing: string; featured?: boolean }) { return <Card className={featured ? "border-[#c9a84c]" : ""}><CardHeader><Icon className="h-6 w-6 text-[#a17e22]" /><CardTitle>{name}</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold text-lblue">{price}</p><div className="mt-5 space-y-2 text-sm text-slate-600"><p className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Sealed bid access</p><p className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Company workflow tools</p></div><Button className="mt-6 w-full" variant={featured ? "gold" : "outline"} disabled={busy} onClick={onClick}>{busy ? managing : button}</Button></CardContent></Card> }

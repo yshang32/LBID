@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { SiteShell } from "@/components/site-shell"
+import { SessionGate } from "@/components/auth/session-gate"
 import { isLocale, type Locale } from "@/lib/i18n"
 
 export function generateStaticParams() {
@@ -16,5 +17,6 @@ export default function LocaleLayout({
 }) {
   if (!isLocale(params.locale)) notFound()
 
-  return <SiteShell locale={params.locale as Locale}>{children}</SiteShell>
+  const locale = params.locale as Locale
+  return <SessionGate locale={locale}><SiteShell locale={locale}>{children}</SiteShell></SessionGate>
 }
