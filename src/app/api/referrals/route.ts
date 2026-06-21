@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 
 import { createNotification } from "@/lib/notifications"
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
   if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
     return NextResponse.json({
       referralCode: "LBID-DEMO",
       referrals: [
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   if (!body.email) return NextResponse.json({ error: "EMAIL_REQUIRED" }, { status: 400 })
 
   if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
     return NextResponse.json({ ok: true, mode: "demo_fallback", referral: { id: `ref-${Date.now()}`, referred_email: body.email, status: "invited" } }, { status: 201 })
   }
 

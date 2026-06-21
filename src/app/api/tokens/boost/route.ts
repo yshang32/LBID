@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { spendToken } from "@/lib/backend"
-import { getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
@@ -58,6 +58,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, boost, ...adjustment }, { status: 201 })
   }
+
+  if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
   const tokenResult = spendToken("directory_boost", amount)
 

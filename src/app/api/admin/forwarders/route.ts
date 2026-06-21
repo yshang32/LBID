@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 
 import { getDirectory } from "@/lib/backend"
-import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
   const service = getApiSupabaseServiceClient()
 
   if (!session || !service) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "ADMIN_REQUIRED" }, { status: 403 })
     return NextResponse.json({ forwarders: getDirectory().slice(0, 3).map((item) => ({
       id: item.slug,
       companyName: item.name,

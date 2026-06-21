@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiJson } from "@/lib/api-client"
-import { v4ShipmentRequests } from "@/lib/v4"
 
 type Locale = "zh" | "en"
 
@@ -91,11 +90,11 @@ export function LiveMarketplaceList({ locale }: { locale: Locale }) {
 
   const cards = useMemo(() => {
     if (error) return []
-    if (!loaded || liveRequests.length === 0) return v4ShipmentRequests.map((request) => ({ type: "demo" as const, request }))
+    if (!loaded || liveRequests.length === 0) return []
     return liveRequests.map((request) => ({ type: "live" as const, request }))
   }, [error, liveRequests, loaded])
 
-  if (error || (loaded && liveRequests.length === 0 && v4ShipmentRequests.length === 0)) {
+  if (error || (loaded && liveRequests.length === 0)) {
     return <div className="mt-6 rounded-lg border border-lblue/10 bg-white p-6 text-muted-foreground">{error || t.empty}</div>
   }
 
@@ -105,7 +104,6 @@ export function LiveMarketplaceList({ locale }: { locale: Locale }) {
         if (card.type === "live") {
           return <LiveCard key={card.request.id} request={card.request} locale={locale} />
         }
-        return <DemoCard key={card.request.id} request={card.request} locale={locale} />
       })}
     </section>
   )
@@ -139,47 +137,6 @@ function LiveCard({ request, locale }: { request: LiveRequest; locale: Locale })
         <div className="grid grid-cols-2 gap-2 text-sm">
           <Mini icon={Star} label="Budget" value={request.cargo_details?.budget || "Sealed"} />
           <Mini icon={Users} label="Status" value={request.status || "OPEN"} />
-        </div>
-        <SealedNote text={t.sealed} />
-        <Actions locale={locale} id={request.id} />
-      </CardContent>
-    </Card>
-  )
-}
-
-function DemoCard({ request, locale }: { request: typeof v4ShipmentRequests[number]; locale: Locale }) {
-  const t = copy[locale]
-  const remaining = request.totalSlots - request.usedSlots
-  const filled = Math.round((request.usedSlots / request.totalSlots) * 100)
-
-  return (
-    <Card className={request.hot ? "border-red-200" : ""}>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <Badge variant={request.hot ? "gold" : "secondary"}>{request.id}</Badge>
-            <CardTitle className="mt-3">{locale === "zh" ? request.lane : request.laneEn}</CardTitle>
-          </div>
-          <Deadline label={t.deadline} value={request.deadline} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <div className="font-semibold text-lblue">{request.cargo}</div>
-          <div className="text-sm text-muted-foreground">{request.routeMask}</div>
-        </div>
-        <div>
-          <div className="mb-1 flex items-center justify-between text-sm font-semibold">
-            <span>{request.usedSlots}/{request.totalSlots} {t.slots}</span>
-            <span className={remaining <= 2 ? "text-red-600" : "text-lblue"}>{remaining} {t.left}</span>
-          </div>
-          <div className="h-2 rounded-full bg-slate-100">
-            <div className={`h-full rounded-full ${remaining <= 2 ? "bg-red-600" : "bg-lgold"}`} style={{ width: `${filled}%` }} />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <Mini icon={Star} label="Score" value={`>= ${request.reputationRequired}`} />
-          <Mini icon={Users} label="Budget" value={request.budgetLevel} />
         </div>
         <SealedNote text={t.sealed} />
         <Actions locale={locale} id={request.id} />

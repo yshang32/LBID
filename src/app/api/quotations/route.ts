@@ -4,7 +4,7 @@ import { checkAccess } from "@/lib/backend"
 import { renderSimpleEmail, sendLbidEmail } from "@/lib/email"
 import { createNotification } from "@/lib/notifications"
 import { getUserEmails } from "@/lib/order-parties"
-import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 type QuotationLine = {
   description?: string
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "QUOTATION_LINE_ITEMS_REQUIRED" }, { status: 400 })
   }
 
-  if (!session || !isUuid(shipmentRequestId)) {
+  if (!session) {
+    if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
     const access = checkAccess("create_quotation")
     if (!access.allowed) return NextResponse.json({ ok: false, error: "SUBSCRIPTION_REQUIRED", redirect: access.redirect }, { status: 403 })
 
@@ -46,6 +47,10 @@ export async function POST(request: Request) {
         totalAmount,
       },
     }, { status: 201 })
+  }
+
+  if (!isUuid(shipmentRequestId)) {
+    return NextResponse.json({ error: "SHIPMENT_REQUEST_ID_REQUIRED" }, { status: 400 })
   }
 
   const publicToken = `qt_${crypto.randomUUID().replace(/-/g, "")}`

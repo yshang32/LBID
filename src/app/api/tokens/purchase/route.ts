@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { createPaymentIntent } from "@/lib/backend"
 import { tokenPackages } from "@/lib/data"
 import { getStripe } from "@/lib/stripe"
-import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
@@ -73,6 +73,8 @@ export async function POST(request: Request) {
       upload_url: `/api/payment-intents/${intent.id}/upload-proof`,
     }, { status: 201 })
   }
+
+  if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
 
   const result = createPaymentIntent({
     type: "token_purchase",
