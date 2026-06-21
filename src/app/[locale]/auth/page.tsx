@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ArrowRight, CheckCircle2, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
 
 import { BrandMark } from "@/components/brand-mark"
@@ -81,6 +81,10 @@ export default function LocalizedAuthPage({ params }: { params: { locale: string
 
   const canBeClient = true
   const canBeForwarder = true
+
+  useEffect(() => {
+    if (window.location.search.includes("mode=register")) setMode("register")
+  }, [])
 
   async function getProfileDashboardHref() {
     const { response, body } = await apiJson("/api/company-profile")

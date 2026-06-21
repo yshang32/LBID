@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import {
   Bell,
   BriefcaseBusiness,
@@ -9,31 +10,53 @@ import {
   FileText,
   Globe2,
   Home,
+  LogIn,
   PackagePlus,
   Search,
   UserCircle,
+  UserPlus,
   Wallet,
 } from "lucide-react"
 
 import { BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import type { Locale } from "@/lib/i18n"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type NavItem = { href: string; label: string; icon: typeof Home }
 
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
   const pathname = usePathname()
   const prefix = `/${locale}`
+  const [authenticated, setAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const client = getSupabaseBrowserClient()
+    if (!client) return
+
+    let active = true
+    client.auth.getSession().then(({ data }) => {
+      if (active) setAuthenticated(Boolean(data.session))
+    })
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => setAuthenticated(Boolean(session)))
+
+    return () => {
+      active = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
   if (pathname === `${prefix}/auth`) return <>{children}</>
 
   const copy = locale === "zh"
     ? {
         search: "搜尋需求、公司或訂單編號",
-        workspace: "工作流程",
+        workflow: "工作流程",
         network: "網絡",
         account: "帳戶",
         language: "EN",
+        login: "登入",
+        register: "建立帳戶",
         nav: [
           { href: `${prefix}/dashboard`, label: "工作台", icon: Home },
           { href: `${prefix}/requests`, label: "我的需求", icon: PackagePlus },
@@ -48,10 +71,12 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
       }
     : {
         search: "Search requests, companies or order IDs",
-        workspace: "Workflow",
+        workflow: "Workflow",
         network: "Network",
         account: "Account",
         language: "繁中",
+        login: "Sign in",
+        register: "Create account",
         nav: [
           { href: `${prefix}/dashboard`, label: "Workspace", icon: Home },
           { href: `${prefix}/requests`, label: "My requests", icon: PackagePlus },
@@ -80,20 +105,25 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
             <span>{copy.search}</span>
           </button>
           <div className="ml-auto flex items-center gap-2">
-            <Link href={`${prefix}/tokens`} className="hidden h-9 items-center gap-2 rounded-md border border-lgold/30 bg-[#fcf8ec] px-3 text-sm font-semibold text-[#725b1d] sm:flex">
-              <Wallet className="h-4 w-4" />
-              Token
-            </Link>
-            <Link href={`${prefix}/notifications`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-lblue transition hover:bg-slate-100" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-            </Link>
+            {authenticated ? <>
+              <Link href={`${prefix}/tokens`} className="hidden h-9 items-center gap-2 rounded-md border border-lgold/30 bg-[#fcf8ec] px-3 text-sm font-semibold text-[#725b1d] sm:flex">
+                <Wallet className="h-4 w-4" />
+                Token
+              </Link>
+              <Link href={`${prefix}/notifications`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-lblue transition hover:bg-slate-100" aria-label="Notifications">
+                <Bell className="h-5 w-5" />
+              </Link>
+            </> : <>
+              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link href={`${prefix}/auth`}><LogIn className="h-4 w-4" />{copy.login}</Link></Button>
+              <Button asChild size="sm"><Link href={`${prefix}/auth?mode=register`}><UserPlus className="h-4 w-4" />{copy.register}</Link></Button>
+            </>}
             <Button asChild variant="outline" size="sm"><Link href={otherHref}>{copy.language}</Link></Button>
           </div>
         </div>
       </header>
 
       <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-60 border-r border-lblue/10 bg-white px-3 py-5 lg:block">
-        <SideGroup label={copy.workspace} items={copy.nav} pathname={pathname} />
+        <SideGroup label={copy.workflow} items={copy.nav} pathname={pathname} />
         <SideGroup label={copy.network} items={copy.networkNav} pathname={pathname} className="mt-7" />
         <SideGroup label={copy.account} items={copy.accountNav} pathname={pathname} className="mt-7" />
       </aside>
@@ -111,15 +141,5 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 }
 
 function SideGroup({ label, items, pathname, className = "" }: { label: string; items: NavItem[]; pathname: string; className?: string }) {
-  return (
-    <section className={className}>
-      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-      <nav className="space-y-1">
-        {items.map((item) => {
-          const active = pathname === item.href
-          return <Link key={item.href} href={item.href} className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${active ? "bg-[#edf1fb] text-lblue" : "text-slate-600 hover:bg-slate-50 hover:text-lblue"}`}><item.icon className="h-4 w-4" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="h-4 w-4" /> : null}</Link>
-        })}
-      </nav>
-    </section>
-  )
+  return <section className={className}><p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p><nav className="space-y-1">{items.map((item) => { const active = pathname === item.href; return <Link key={item.href} href={item.href} className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${active ? "bg-[#edf1fb] text-lblue" : "text-slate-600 hover:bg-slate-50 hover:text-lblue"}`}><item.icon className="h-4 w-4" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="h-4 w-4" /> : null}</Link> })}</nav></section>
 }
