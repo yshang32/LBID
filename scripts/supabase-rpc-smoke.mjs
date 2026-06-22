@@ -237,13 +237,15 @@ if (messageCreate.status !== 201 || !messageCreate.body.message?.id) {
   process.exit(1)
 }
 
-const orderComplete = await jsonFetch(`/api/orders/${accepted.body.order.id}`, {
-  method: "PATCH",
-  body: JSON.stringify({ status: "completed" }),
-})
-console.log("ORDER_COMPLETE", orderComplete.status, JSON.stringify(orderComplete.body, null, 2))
-if (orderComplete.status !== 200 || orderComplete.body.order?.status !== "completed") {
-  process.exit(1)
+for (const status of ["in_transit", "arrived_hk", "customs_cleared", "delivered", "completed"]) {
+  const orderUpdate = await jsonFetch(`/api/orders/${accepted.body.order.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  })
+  console.log("ORDER_PROGRESS", status, orderUpdate.status, JSON.stringify(orderUpdate.body, null, 2))
+  if (orderUpdate.status !== 200 || orderUpdate.body.order?.status !== status) {
+    process.exit(1)
+  }
 }
 
 const reviewCreate = await jsonFetch("/api/reviews", {
