@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { checkAccess, spendToken } from "@/lib/backend"
-import { getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
@@ -12,6 +12,18 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const srId = searchParams.get("sr_id")
+
+  if (srId) {
+    const service = getApiSupabaseServiceClient()
+    if (service) {
+      await service
+        .from("shipment_requests")
+        .update({ status: "CLOSED" })
+        .eq("id", srId)
+        .eq("status", "OPEN")
+        .lt("bid_deadline", new Date().toISOString())
+    }
+  }
 
   let query = session.supabase
     .from("bids")

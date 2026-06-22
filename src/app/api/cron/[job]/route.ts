@@ -22,15 +22,61 @@ export async function GET(request: Request, { params }: { params: { job: string 
 
 async function handleCron(request: Request, job: string) {
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && request.headers.get("x-lbid-cron-secret") !== cronSecret) {
+  const authorization = request.headers.get("authorization")
+  const suppliedSecret = request.headers.get("x-lbid-cron-secret") || authorization?.replace(/^Bearer\s+/i, "")
+  if (cronSecret && suppliedSecret !== cronSecret) {
     return NextResponse.json({ error: "CRON_UNAUTHORIZED" }, { status: 401 })
   }
 
   if (job === "document-reminders") return runDocumentReminderCron()
+  if (job === "bid-window-close") return runBidWindowCloseCron()
 
   const result = runCronJob(job)
   const status = "error" in result ? 400 : 200
   return NextResponse.json(result, { status })
+}
+
+async function runBidWindowCloseCron() {
+  const supabase = getApiSupabaseServiceClient()
+  if (!supabase) return NextResponse.json({ job: "bid-window-close", mode: "demo_fallback", closedRequests: 0 })
+
+  const { data: closedRequests, error } = await supabase
+    .from("shipment_requests")
+    .update({ status: "CLOSED" })
+    .eq("status", "OPEN")
+    .lt("bid_deadline", new Date().toISOString())
+    .select("id, agent_id")
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const requestIds = (closedRequests || []).map((request) => request.id)
+  if (requestIds.length === 0) return NextResponse.json({ job: "bid-window-close", closedRequests: 0, notificationsCreated: 0 })
+
+  const { data: bids } = await supabase
+    .from("bids")
+    .select("sr_id, forwarder_id")
+    .in("sr_id", requestIds)
+
+  const recipients = new Map<string, Set<string>>()
+  for (const request of closedRequests || []) recipients.set(request.id, new Set([request.agent_id]))
+  for (const bid of bids || []) recipients.get(bid.sr_id)?.add(bid.forwarder_id)
+
+  let notificationsCreated = 0
+  for (const [requestId, userIds] of recipients) {
+    for (const userId of userIds) {
+      await createNotification(supabase, {
+        userId,
+        type: "bid_window_closed",
+        title: "Bid window closed",
+        body: "The sealed bid window has ended. The agency can now compare valid quotations.",
+        href: `/zh/requests/${requestId}`,
+        metadata: { shipmentRequestId: requestId },
+      })
+      notificationsCreated += 1
+    }
+  }
+
+  return NextResponse.json({ job: "bid-window-close", closedRequests: requestIds.length, notificationsCreated })
 }
 
 async function runDocumentReminderCron() {

@@ -124,6 +124,19 @@ if (bidError || !bidRow) {
   process.exit(1)
 }
 
+const closeResult = await createServiceSupabase()
+  .from("shipment_requests")
+  .update({ status: "CLOSED", bid_deadline: new Date(Date.now() - 1000).toISOString() })
+  .eq("id", srId)
+  .eq("status", "OPEN")
+  .select("id, status, bid_deadline")
+  .single()
+console.log("CLOSE_SR", JSON.stringify(closeResult.data, null, 2))
+if (closeResult.error || closeResult.data?.status !== "CLOSED") {
+  console.error(closeResult.error?.message || "Unable to close smoke-test shipment request")
+  process.exit(1)
+}
+
 const { data: txnRow, error: txnError } = await supabase
   .from("token_transactions")
   .select("id, type, source, amount, related_bid_id, balance_after")

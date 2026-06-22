@@ -2,12 +2,21 @@ import { NextResponse } from "next/server"
 
 import { checkAccess } from "@/lib/backend"
 import { inquiries } from "@/lib/data"
-import { getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
+import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
 
   if (session) {
+    const service = getApiSupabaseServiceClient()
+    if (service) {
+      await service
+        .from("shipment_requests")
+        .update({ status: "CLOSED" })
+        .eq("status", "OPEN")
+        .lt("bid_deadline", new Date().toISOString())
+    }
+
     const { data, error } = await session.supabase
       .from("shipment_requests")
       .select("id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at")

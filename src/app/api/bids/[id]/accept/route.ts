@@ -10,6 +10,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const body = await request.json().catch(() => ({}))
 
+  const { data: bid, error: bidLookupError } = await service
+    .from("bids")
+    .select("sr_id")
+    .eq("id", params.id)
+    .maybeSingle()
+  if (bidLookupError) return NextResponse.json({ error: bidLookupError.message }, { status: 500 })
+  if (!bid) return NextResponse.json({ error: "BID_NOT_FOUND" }, { status: 404 })
+
+  await service
+    .from("shipment_requests")
+    .update({ status: "CLOSED" })
+    .eq("id", bid.sr_id)
+    .eq("status", "OPEN")
+    .lt("bid_deadline", new Date().toISOString())
+
   const { data, error } = await service.rpc("accept_bid_to_order", {
     p_bid_id: params.id,
     p_requester_id: session.user.id,
@@ -23,6 +38,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (error.message.includes("SR_NOT_FOUND")) return NextResponse.json({ error: "SR_NOT_FOUND" }, { status: 404 })
     if (error.message.includes("ONLY_AGENCY_OWNER_CAN_ACCEPT_BID")) return NextResponse.json({ error: "ONLY_AGENCY_OWNER_CAN_ACCEPT_BID" }, { status: 403 })
     if (error.message.includes("SR_ALREADY_AWARDED")) return NextResponse.json({ error: "SR_ALREADY_AWARDED" }, { status: 409 })
+    if (error.message.includes("BID_WINDOW_NOT_CLOSED")) return NextResponse.json({ error: "BID_WINDOW_NOT_CLOSED" }, { status: 409 })
     if (error.message.includes("UNAUTHENTICATED")) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
