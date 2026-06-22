@@ -34,6 +34,20 @@ export async function canAccessOrder(supabase: SupabaseClient | null, orderId: s
   return data?.role === "admin"
 }
 
+export async function canManageOrderFulfillment(supabase: SupabaseClient | null, orderId: string, userId: string) {
+  const parties = await getOrderParties(supabase, orderId)
+  if (!parties || !supabase) return false
+  if (parties.forwarderId === userId) return true
+
+  const { data } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle()
+
+  return data?.role === "admin"
+}
+
 export async function getUserEmails(supabase: SupabaseClient | null, userIds: string[]) {
   if (!supabase || userIds.length === 0) return {}
 

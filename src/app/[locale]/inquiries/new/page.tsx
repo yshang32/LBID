@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useMemo, useState } from "react"
-import { Bell, Calculator, CheckCircle2, ClipboardList, Coins, PackageSearch, Plane, Send, ShieldCheck, Sparkles } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, PackageSearch, Send } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,367 +12,201 @@ import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
-import { v4Status } from "@/lib/v4"
 
-const copy = {
+type FormState = {
+  mode: string
+  origin: string
+  destination: string
+  shipDate: string
+  cargoType: string
+  commodity: string
+  grossWeight: string
+  volume: string
+  pieces: string
+  incoterm: string
+  budget: string
+  services: string[]
+  notes: string
+}
+
+const services = ["customs_clearance", "warehousing", "local_delivery", "door_to_door", "cold_chain", "dangerous_goods"]
+
+const text = {
   zh: {
-    badge: "Create Shipment Request",
-    title: "以 Client 身份建立一張 SR",
-    intro: "每間公司都可以同時是 Client 和 Forwarder。提交後，LBID 會為合資格 forwarder 開啟 sealed bidding 流程。",
-    basics: "SR 基本資料",
-    cargo: "貨物資料",
-    commercial: "商業條件",
-    matching: "配對預覽",
-    mode: "運輸模式",
+    badge: "建立 Shipment Request",
+    title: "用三步建立一個清楚的物流需求。",
+    intro: "提交後會先由平台審核；確認資料後，系統才會開啟固定 3 小時的密封競價。",
+    steps: ["運輸與路線", "貨物與服務", "確認並提交"],
+    next: "下一步",
+    back: "上一步",
+    transport: "運輸與路線",
+    cargo: "貨物與服務",
+    confirm: "確認資料",
+    mode: "運輸方式",
     origin: "出發地",
     destination: "目的地",
     shipDate: "預計出貨日期",
-    deadline: "Bid 截止時間",
     cargoType: "貨物類型",
     commodity: "貨物描述",
-    grossWeight: "總毛重 kg",
-    volume: "總體積 CBM",
-    pieces: "件數 / 箱數",
-    incoterms: "Incoterms",
+    weight: "總毛重（kg）",
+    volume: "總體積（CBM）",
+    pieces: "件數／箱數",
+    incoterm: "貿易條款",
     budget: "預算範圍",
-    services: "需要服務",
-    notes: "額外要求",
-    chargeable: "計費重量",
-    formula: "空運體積重 = CBM x 167。LBID 會使用毛重與體積重之中較高者作參考。",
-    quota: "本月 SR quota",
-    quotaText: "Standard member 每月有 5 張 SR。超出 quota 後每張 SR 扣 1 Token。",
-    quotaUsed: "已用 4 / 5",
-    costFree: "今次不用扣 Token",
-    costOver: "額外建立 -1 Token",
-    submit: "提交 SR",
-    submitting: "提交中...",
-    submitted: "SR 已建立",
-    reference: "SR reference",
-    viewMarket: "查看需求審核進度",
-    dashboard: "Client dashboard",
-    notice: "發布後，Forwarder 只會先看到路線、貨物類型、範圍和 bid window。聯絡資料會在 award 後解鎖。",
-    matched: "預計配對 5 間合資格 Forwarder",
-    window: "固定 3 小時 sealed bid window",
-    hidden: "Client 名稱、聯絡人和完整地址會先隱藏",
-    tokenAfter: "提交後 Token 餘額",
-    serviceOptions: ["清關", "倉儲", "香港本地派送", "Door-to-Door", "冷鏈", "危險品"],
+    services: "需要的服務",
+    notes: "補充要求",
+    platformReview: "平台會先核對需求，確認後才開標。你不需要在這裡設定競價截止時間。",
+    sealed: "開標後，Forwarder 只會看見運輸需求摘要；聯絡資料及完整地址會在中標後才解鎖。",
+    submit: "提交供平台審核",
+    submitting: "正在提交",
+    submitted: "Shipment Request 已提交",
+    submittedBody: "你的需求現正等待平台審核。通過後會自動開啟 3 小時密封競價。",
+    openRequest: "查看需求狀態",
+    dashboard: "返回工作台",
+    required: "請先完成此步的必填資料。",
+    serviceNames: ["清關", "倉儲", "香港本地派送", "門到門", "冷鏈", "危險品"],
   },
   en: {
     badge: "Create Shipment Request",
-    title: "Create an SR as the Client side.",
-    intro: "Every company can be both Client and Forwarder. After submission, LBID opens a sealed bidding workflow for qualified forwarders.",
-    basics: "SR basics",
-    cargo: "Cargo details",
-    commercial: "Commercial conditions",
-    matching: "Matching preview",
+    title: "Create a clear logistics request in three steps.",
+    intro: "LBID reviews each request first. Once confirmed, a fixed three-hour sealed bid window opens automatically.",
+    steps: ["Route", "Cargo & services", "Review & submit"],
+    next: "Continue",
+    back: "Back",
+    transport: "Transport and route",
+    cargo: "Cargo and services",
+    confirm: "Review your request",
     mode: "Shipment mode",
     origin: "Origin",
     destination: "Destination",
     shipDate: "Estimated ship date",
-    deadline: "Bid deadline",
     cargoType: "Cargo type",
     commodity: "Commodity description",
-    grossWeight: "Total gross weight kg",
-    volume: "Total volume CBM",
+    weight: "Total gross weight (kg)",
+    volume: "Total volume (CBM)",
     pieces: "Pieces / cartons",
-    incoterms: "Incoterms",
+    incoterm: "Incoterm",
     budget: "Budget range",
     services: "Services needed",
     notes: "Additional requirements",
-    chargeable: "Chargeable weight",
-    formula: "Air volumetric = CBM x 167. LBID uses the higher of gross and volumetric weight.",
-    quota: "Monthly SR quota",
-    quotaText: "Standard members get 5 SRs per month. Extra SRs cost 1 token.",
-    quotaUsed: "Used 4 / 5",
-    costFree: "No token cost this time",
-    costOver: "Extra SR -1 Token",
-    submit: "Submit SR",
-    submitting: "Submitting...",
-    submitted: "SR created",
-    reference: "SR reference",
-    viewMarket: "View request status",
-    dashboard: "Client dashboard",
-    notice: "After review or publish, forwarders first see route, cargo category, ranges and bid window only. Full contacts unlock after award.",
-    matched: "Estimated 5 qualified forwarders matched",
-    window: "Fixed 3-hour sealed bid window",
-    hidden: "Client name, contact and full address are hidden first",
-    tokenAfter: "Token balance after submit",
-    serviceOptions: ["Customs clearance", "Warehousing", "HK local delivery", "Door-to-Door", "Cold chain", "Dangerous goods"],
+    platformReview: "The platform verifies the request before opening bidding. You do not set the bid deadline here.",
+    sealed: "Before award, forwarders see only the requirement summary. Contacts and the full address unlock after award.",
+    submit: "Submit for platform review",
+    submitting: "Submitting",
+    submitted: "Shipment request submitted",
+    submittedBody: "Your request is waiting for platform review. A three-hour sealed bid window opens automatically after approval.",
+    openRequest: "View request status",
+    dashboard: "Return to workspace",
+    required: "Complete the required fields before continuing.",
+    serviceNames: ["Customs clearance", "Warehousing", "Hong Kong delivery", "Door-to-door", "Cold chain", "Dangerous goods"],
   },
-}
-
-copy.zh = {
-  badge: "Create Shipment Request",
-  title: "以 Client 身份建立一張 SR",
-  intro: "每間公司都可以同時具備 Client 與 Forwarder 能力。提交後，LBID 會為合資格 Forwarder 開啟密封競價流程。",
-  basics: "SR 基本資料",
-  cargo: "貨物資料",
-  commercial: "商業條件",
-  matching: "配對預覽",
-  mode: "運輸模式",
-  origin: "出發地",
-  destination: "目的地",
-  shipDate: "預計出貨日期",
-  deadline: "Bid 截止時間",
-  cargoType: "貨物類型",
-  commodity: "貨物描述",
-  grossWeight: "總毛重 kg",
-  volume: "總體積 CBM",
-  pieces: "件數 / 箱數",
-  incoterms: "Incoterms",
-  budget: "預算範圍",
-  services: "需要服務",
-  notes: "額外要求",
-  chargeable: "計費重量",
-  formula: "空運體積重 = CBM x 167。LBID 會採用毛重與體積重之中較高者。",
-  quota: "每月 SR quota",
-  quotaText: "Standard member 每月包含 5 張 SR。額外 SR 會扣 1 Token。",
-  quotaUsed: "已使用 4 / 5",
-  costFree: "今次不扣 Token",
-  costOver: "額外建立 -1 Token",
-  submit: "提交 SR",
-  submitting: "提交中...",
-  submitted: "SR 已建立",
-  reference: "SR reference",
-  viewMarket: "查看需求審核進度",
-  dashboard: "Client dashboard",
-  notice: "發布後，Forwarder 只會先看到路線、貨物類別、範圍與 bid window。完整聯絡資料只會在 award 後解鎖。",
-  matched: "預計配對 5 間合資格 Forwarder",
-  window: "固定 3 小時 sealed bid window",
-  hidden: "Client 名稱、聯絡方式與完整地址會先隱藏",
-  tokenAfter: "提交後 Token 餘額",
-  serviceOptions: ["清關", "倉儲", "香港本地派送", "Door-to-Door", "冷鏈", "危險品"],
 }
 
 export default function NewInquiryPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
-  const t = copy[locale]
-  const [mode, setMode] = useState("air")
-  const [grossWeight, setGrossWeight] = useState(420)
-  const [volume, setVolume] = useState(3)
-  const [selectedServices, setSelectedServices] = useState<string[]>([t.serviceOptions[0], t.serviceOptions[2]])
-  const [overQuota, setOverQuota] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [origin, setOrigin] = useState("Ho Chi Minh City, Vietnam")
-  const [destination, setDestination] = useState("Hong Kong, Kwai Chung / Airport area")
-  const [shipDate, setShipDate] = useState("2026-07-08")
-  const [bidDeadline, setBidDeadline] = useState("2026-07-07T18:00")
-  const [commodity, setCommodity] = useState("Chilled food samples, non-DG")
-  const [pieces, setPieces] = useState("18")
-  const [notes, setNotes] = useState("Temperature controlled handling preferred. Client contact unlocks after award only.")
-  const [srReference, setSrReference] = useState("SR-2026-00126")
-  const [submitting, setSubmitting] = useState(false)
+  const t = text[locale]
+  const [step, setStep] = useState(0)
   const [error, setError] = useState("")
-  const volumetricWeight = Math.round(volume * 167)
-  const chargeableWeight = mode === "air" ? Math.max(grossWeight, volumetricWeight) : grossWeight
-  const tokenAfterSubmit = useMemo(() => Math.max(0, v4Status.tokens - (overQuota ? 1 : 0)), [overQuota])
+  const [submitting, setSubmitting] = useState(false)
+  const [requestId, setRequestId] = useState("")
+  const [form, setForm] = useState<FormState>({
+    mode: "air",
+    origin: "",
+    destination: "Hong Kong",
+    shipDate: dateForInput(7),
+    cargoType: "general",
+    commodity: "",
+    grossWeight: "",
+    volume: "",
+    pieces: "",
+    incoterm: "FOB",
+    budget: "not_disclosed",
+    services: ["customs_clearance"],
+    notes: "",
+  })
 
-  function toggleService(service: string) {
-    setSelectedServices((items) => items.includes(service) ? items.filter((item) => item !== service) : [...items, service])
+  const chargeableWeight = useMemo(() => {
+    const gross = Number(form.grossWeight) || 0
+    const volumetric = Math.round((Number(form.volume) || 0) * 167)
+    return form.mode === "air" ? Math.max(gross, volumetric) : gross
+  }, [form.grossWeight, form.mode, form.volume])
+
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }))
+  const canContinue = step === 0
+    ? Boolean(form.origin.trim() && form.destination.trim() && form.shipDate)
+    : step === 1
+      ? Boolean(form.commodity.trim() && Number(form.grossWeight) > 0 && form.services.length > 0)
+      : true
+
+  function move(next: number) {
+    if (next > step && !canContinue) {
+      setError(t.required)
+      return
+    }
+    setError("")
+    setStep(next)
   }
 
-  async function submitShipmentRequest() {
+  function toggleService(service: string) {
+    set("services", form.services.includes(service) ? form.services.filter((item) => item !== service) : [...form.services, service])
+  }
+
+  async function submit() {
+    if (!canContinue) {
+      setError(t.required)
+      return
+    }
     setSubmitting(true)
     setError("")
-
     const { response, body } = await apiJson("/api/shipment-requests", {
       method: "POST",
       body: JSON.stringify({
-        mode,
-        origin,
-        destination,
-        shipDate: new Date(`${shipDate}T00:00:00`).toISOString(),
-        bidDeadline: new Date(bidDeadline).toISOString(),
-        commodity,
-        grossWeight,
-        volume,
-        pieces: Number(pieces) || 0,
-        servicesNeeded: selectedServices,
-        notes,
-        status: "OPEN",
+        origin: form.origin.trim(),
+        destination: form.destination.trim(),
+        shipDate: new Date(`${form.shipDate}T00:00:00`).toISOString(),
+        cargoType: form.cargoType,
+        commodity: form.commodity.trim(),
+        grossWeight: Number(form.grossWeight),
+        volume: Number(form.volume) || 0,
+        pieces: Number(form.pieces) || 0,
+        mode: form.mode,
+        incoterm: form.incoterm,
+        budget: form.budget,
+        servicesNeeded: form.services,
+        notes: form.notes.trim() || null,
       }),
     })
-
     setSubmitting(false)
     if (!response.ok) {
-      setError(body.error || "Unable to submit shipment request")
+      setError(body.error || "REQUEST_CREATE_FAILED")
       return
     }
-
-    setSrReference(body.shipmentRequest?.id || "SR-2026-00126")
-    setSubmitted(true)
+    setRequestId(body.shipmentRequest?.id || "")
   }
 
-  return (
-    <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 pb-24 pt-6 sm:px-6 lg:grid-cols-[1fr_360px] lg:pb-10">
-      <section className="space-y-5">
-        <div className="rounded-lg border border-lblue/10 bg-white p-5 shadow-[0_18px_50px_rgba(27,43,94,0.07)]">
-          <Badge variant="gold">{t.badge}</Badge>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-lblue sm:text-5xl">{t.title}</h1>
-          <p className="mt-3 max-w-3xl text-muted-foreground">{t.intro}</p>
-        </div>
+  if (requestId) {
+    return <main className="mx-auto grid min-h-[70vh] w-full max-w-2xl place-items-center px-4 py-10"><Card className="w-full border-emerald-200"><CardHeader><CheckCircle2 className="h-7 w-7 text-emerald-600" /><CardTitle>{t.submitted}</CardTitle><CardDescription>{t.submittedBody}</CardDescription></CardHeader><CardContent className="space-y-4"><div className="rounded-md bg-slate-50 p-4 font-mono text-sm text-lblue">{requestId}</div><Button asChild className="w-full" variant="gold"><Link href={`/${locale}/requests/${requestId}`}>{t.openRequest}<ArrowRight className="h-4 w-4" /></Link></Button><Button asChild className="w-full" variant="outline"><Link href={`/${locale}/dashboard`}>{t.dashboard}</Link></Button></CardContent></Card></main>
+  }
 
-        <Card>
-          <CardHeader>
-            <Plane className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.basics}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-semibold">
-              {t.mode}
-              <Select value={mode} onChange={(event) => setMode(event.target.value)}>
-                <option value="air">Air Freight</option>
-                <option value="sea-fcl">Sea Freight FCL</option>
-                <option value="sea-lcl">Sea Freight LCL</option>
-                <option value="truck">Cross-border Truck</option>
-              </Select>
-            </label>
-            <label className="space-y-2 text-sm font-semibold">{t.origin}<Input value={origin} onChange={(event) => setOrigin(event.target.value)} /></label>
-            <label className="space-y-2 text-sm font-semibold">{t.destination}<Input value={destination} onChange={(event) => setDestination(event.target.value)} /></label>
-            <label className="space-y-2 text-sm font-semibold">{t.shipDate}<Input type="date" value={shipDate} onChange={(event) => setShipDate(event.target.value)} /></label>
-            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.deadline}<Input type="datetime-local" value={bidDeadline} onChange={(event) => setBidDeadline(event.target.value)} /></label>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <PackageSearch className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.cargo}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-semibold">{t.cargoType}<Select defaultValue="general"><option value="general">General Cargo</option><option>Dangerous Goods</option><option>Cold Chain</option><option>Oversized</option></Select></label>
-            <label className="space-y-2 text-sm font-semibold">{t.commodity}<Input value={commodity} onChange={(event) => setCommodity(event.target.value)} /></label>
-            <label className="space-y-2 text-sm font-semibold">{t.pieces}<Input type="number" value={pieces} onChange={(event) => setPieces(event.target.value)} /></label>
-            <label className="space-y-2 text-sm font-semibold">{t.grossWeight}<Input type="number" value={grossWeight} onChange={(event) => setGrossWeight(Number(event.target.value) || 0)} /></label>
-            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.volume}<Input type="number" value={volume} onChange={(event) => setVolume(Number(event.target.value) || 0)} /></label>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <ClipboardList className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.commercial}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-semibold">{t.incoterms}<Select defaultValue="FOB"><option>EXW</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></Select></label>
-            <label className="space-y-2 text-sm font-semibold">{t.budget}<Select defaultValue="medium"><option>HKD 3,000 - 6,000</option><option value="medium">HKD 6,000 - 12,000</option><option>HKD 12,000+</option><option>Prefer not to show</option></Select></label>
-            <label className="space-y-2 text-sm font-semibold md:col-span-2">{t.notes}<Textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.services}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            {t.serviceOptions.map((service) => (
-              <label key={service} className="flex cursor-pointer items-center gap-3 rounded-md border border-lblue/10 bg-slate-50 p-3">
-                <input type="checkbox" checked={selectedServices.includes(service)} onChange={() => toggleService(service)} />
-                <span className="text-sm font-semibold text-lblue">{service}</span>
-              </label>
-            ))}
-          </CardContent>
-        </Card>
-      </section>
-
-      <aside className="space-y-5">
-        <Card className="sticky top-24 border-lgold/30 bg-white">
-          <CardHeader>
-            <Calculator className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.chargeable}</CardTitle>
-            <CardDescription>{t.formula}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Metric label="Gross" value={`${grossWeight.toLocaleString()} kg`} />
-            <Metric label="Volumetric" value={`${volumetricWeight.toLocaleString()} kg`} />
-            <div className="rounded-md border border-lgold/30 bg-lgold/10 p-4">
-              <div className="text-sm text-muted-foreground">{t.chargeable}</div>
-              <div className="mt-1 text-3xl font-black text-lblue">{chargeableWeight.toLocaleString()} kg</div>
-            </div>
-            <Button className="w-full" variant="gold" disabled={submitting} onClick={submitShipmentRequest}>
-              <Send className="h-4 w-4" />
-              {submitting ? t.submitting : t.submit}
-            </Button>
-            {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <Coins className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.quota}</CardTitle>
-            <CardDescription>{t.quotaText}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-md border border-lblue/10 bg-slate-50 p-3">
-              <div className="text-sm text-muted-foreground">{t.quotaUsed}</div>
-              <div className="mt-2 h-2 rounded-full bg-white">
-                <div className="h-full w-4/5 rounded-full bg-lgold" />
-              </div>
-            </div>
-            <label className="flex items-center gap-3 rounded-md border border-lblue/10 bg-white p-3 text-sm font-semibold text-lblue">
-              <input type="checkbox" checked={overQuota} onChange={(event) => setOverQuota(event.target.checked)} />
-              {overQuota ? t.costOver : t.costFree}
-            </label>
-            <Metric label={t.tokenAfter} value={`${tokenAfterSubmit}`} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <Bell className="h-5 w-5 text-lgold" />
-            <CardTitle>{t.matching}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <Line text={t.matched} />
-            <Line text={t.window} />
-            <Line text={t.hidden} />
-            <div className="rounded-md border border-lblue/10 bg-slate-50 p-3">
-              <ShieldCheck className="mr-1 inline h-4 w-4 text-lgold" />
-              {t.notice}
-            </div>
-          </CardContent>
-        </Card>
-
-        {submitted ? (
-          <Card className="border-green-200 bg-green-50">
-            <CardHeader>
-              <Sparkles className="h-5 w-5 text-green-700" />
-              <CardTitle>{t.submitted}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">{t.reference}</div>
-              <div className="break-all font-mono text-2xl font-black text-lblue">{srReference}</div>
-              <div className="mt-4 flex flex-col gap-2">
-                <Button asChild variant="gold">
-                  <Link href={`/${locale}/requests/${srReference}`}>{t.viewMarket}</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href={`/${locale}/dashboard`}>{t.dashboard}</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-      </aside>
-    </main>
-  )
+  return <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-7 sm:px-6 lg:pb-10">
+    <section className="border-b border-lblue/10 pb-7"><Badge variant="gold">{t.badge}</Badge><h1 className="mt-3 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title}</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">{t.intro}</p></section>
+    <ol className="mt-7 grid gap-3 sm:grid-cols-3">{t.steps.map((label, index) => <li key={label} className={`flex items-center gap-3 border p-3 ${index === step ? "border-[#c9a84c] bg-[#fcf8ec]" : index < step ? "border-emerald-200 bg-emerald-50" : "border-lblue/10 bg-white"}`}><span className={`grid h-7 w-7 place-items-center rounded-full text-sm font-semibold ${index <= step ? "bg-lblue text-white" : "bg-slate-100 text-slate-500"}`}>{index < step ? <CheckCircle2 className="h-4 w-4" /> : index + 1}</span><span className="text-sm font-semibold text-lblue">{label}</span></li>)}</ol>
+    <Card className="mt-5"><CardHeader>{step === 0 ? <><ClipboardList className="h-5 w-5 text-lgold" /><CardTitle>{t.transport}</CardTitle></> : step === 1 ? <><PackageSearch className="h-5 w-5 text-lgold" /><CardTitle>{t.cargo}</CardTitle></> : <CardTitle>{t.confirm}</CardTitle>}</CardHeader><CardContent>
+      {step === 0 ? <div className="grid gap-4 md:grid-cols-2"><Field label={t.mode}><Select value={form.mode} onChange={(event) => set("mode", event.target.value)}><option value="air">Air freight</option><option value="sea_fcl">Sea freight FCL</option><option value="sea_lcl">Sea freight LCL</option><option value="truck">Cross-border truck</option></Select></Field><Field label={t.shipDate}><Input type="date" value={form.shipDate} min={dateForInput(1)} onChange={(event) => set("shipDate", event.target.value)} /></Field><Field label={t.origin}><Input value={form.origin} autoComplete="address-level1" onChange={(event) => set("origin", event.target.value)} /></Field><Field label={t.destination}><Input value={form.destination} autoComplete="address-level1" onChange={(event) => set("destination", event.target.value)} /></Field><p className="md:col-span-2 rounded-md border border-[#e7cf8a] bg-[#fcf8ec] p-3 text-sm leading-6 text-[#6f5514]">{t.platformReview}</p></div> : null}
+      {step === 1 ? <div className="grid gap-4 md:grid-cols-2"><Field label={t.cargoType}><Select value={form.cargoType} onChange={(event) => set("cargoType", event.target.value)}><option value="general">General cargo</option><option value="dangerous_goods">Dangerous goods</option><option value="cold_chain">Cold chain</option><option value="oversized">Oversized cargo</option></Select></Field><Field label={t.incoterm}><Select value={form.incoterm} onChange={(event) => set("incoterm", event.target.value)}><option>EXW</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></Select></Field><Field label={t.commodity}><Input value={form.commodity} onChange={(event) => set("commodity", event.target.value)} /></Field><Field label={t.pieces}><Input type="number" min="1" value={form.pieces} onChange={(event) => set("pieces", event.target.value)} /></Field><Field label={t.weight}><Input type="number" min="0" value={form.grossWeight} onChange={(event) => set("grossWeight", event.target.value)} /></Field><Field label={t.volume}><Input type="number" min="0" step="0.01" value={form.volume} onChange={(event) => set("volume", event.target.value)} /></Field><Field label={t.budget}><Select value={form.budget} onChange={(event) => set("budget", event.target.value)}><option value="not_disclosed">Prefer not to disclose</option><option value="under_5000">Under HKD 5,000</option><option value="5000_10000">HKD 5,000 - 10,000</option><option value="over_10000">Over HKD 10,000</option></Select></Field><div className="rounded-md border border-lgold/30 bg-lgold/10 p-3"><div className="text-sm text-slate-600">Chargeable weight</div><div className="mt-1 text-xl font-semibold text-lblue">{chargeableWeight.toLocaleString()} kg</div></div><fieldset className="md:col-span-2"><legend className="mb-2 text-sm font-semibold text-slate-700">{t.services}</legend><div className="grid gap-2 sm:grid-cols-2">{services.map((service, index) => <label key={service} className="flex items-center gap-3 border border-lblue/10 bg-slate-50 p-3 text-sm font-medium text-lblue"><input type="checkbox" checked={form.services.includes(service)} onChange={() => toggleService(service)} />{t.serviceNames[index]}</label>)}</div></fieldset><Field label={t.notes} className="md:col-span-2"><Textarea value={form.notes} onChange={(event) => set("notes", event.target.value)} /></Field></div> : null}
+      {step === 2 ? <div className="space-y-4"><p className="rounded-md border border-lblue/10 bg-slate-50 p-4 text-sm leading-6 text-slate-600">{t.sealed}</p><dl className="grid gap-3 sm:grid-cols-2">{[[t.origin, form.origin], [t.destination, form.destination], [t.shipDate, form.shipDate], [t.commodity, form.commodity], [t.weight, `${form.grossWeight || 0} kg`], [t.services, form.services.map((service) => t.serviceNames[services.indexOf(service)]).join(", ")]].map(([label, value]) => <div key={label} className="border border-lblue/10 p-3"><dt className="text-xs font-medium text-slate-500">{label}</dt><dd className="mt-1 text-sm font-semibold text-lblue">{value}</dd></div>)}</dl></div> : null}
+      {error ? <p className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">{step > 0 ? <Button variant="outline" onClick={() => move(step - 1)}><ArrowLeft className="h-4 w-4" />{t.back}</Button> : <span />}{step < 2 ? <Button onClick={() => move(step + 1)}>{t.next}<ArrowRight className="h-4 w-4" /></Button> : <Button variant="gold" disabled={submitting} onClick={submit}>{submitting ? t.submitting : t.submit}<Send className="h-4 w-4" /></Button>}</div>
+    </CardContent></Card>
+  </main>
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-lblue/10 bg-slate-50 p-4">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-black text-lblue">{value}</div>
-    </div>
-  )
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return <label className={`block text-sm font-semibold text-slate-700 ${className}`}><span className="mb-2 block">{label}</span>{children}</label>
 }
 
-function Line({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-      {text}
-    </div>
-  )
+function dateForInput(daysFromToday: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + daysFromToday)
+  return date.toISOString().slice(0, 10)
 }

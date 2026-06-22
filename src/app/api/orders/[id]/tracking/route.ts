@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { createNotification } from "@/lib/notifications"
-import { canAccessOrder, getOrderParties } from "@/lib/order-parties"
+import { canAccessOrder, canManageOrderFulfillment, getOrderParties } from "@/lib/order-parties"
 import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -11,6 +11,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const service = getApiSupabaseServiceClient()
   if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
   if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
+  if (!(await canManageOrderFulfillment(service, params.id, session.user.id))) return NextResponse.json({ error: "TRACKING_UPDATE_DENIED" }, { status: 403 })
 
   const { data, error } = await service
     .from("tracking_events")
