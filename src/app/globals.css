@@ -34,6 +34,8 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+
   ::selection {
     background: rgba(201, 168, 76, 0.28);
     color: #1b2b5e;
@@ -65,12 +67,22 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-@layer base {
-  html {
-    font-family: var(--font-inter), "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-  }
+@layer base { html { font-family: var(--font-inter), "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; } }
 
-  button, a, input, select, textarea {
-    -webkit-tap-highlight-color: transparent;
-  }
-}
+.shell-icon-button { @apply inline-flex h-10 w-10 items-center justify-center rounded-md text-lblue transition; }
+.shell-icon-button:hover { background: #f1f4f9; }
+.shell-icon-button:focus-visible { outline: 2px solid rgba(27, 43, 94, .3); outline-offset: 2px; }
+
+.auth-scene { position: relative; background: radial-gradient(circle at 12% 28%, rgba(204, 219, 245, .62), transparent 27%), radial-gradient(circle at 84% 82%, rgba(248, 237, 196, .62), transparent 25%), #f8fafc; }
+.auth-scene::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .65; background-image: linear-gradient(rgba(27,43,94,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(27,43,94,.035) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(to bottom, black, transparent 75%); }
+.auth-route { position: absolute; border: 1px solid rgba(27,43,94,.14); border-radius: 999px; pointer-events: none; transform: rotate(-22deg); }
+.auth-route::after { content: ""; position: absolute; height: 9px; width: 9px; border-radius: 999px; background: #c9a84c; box-shadow: 0 0 0 5px rgba(201,168,76,.13), 0 0 18px rgba(201,168,76,.5); animation: lbid-route 9s ease-in-out infinite; }
+.auth-route-one { left: -9rem; top: 16rem; height: 24rem; width: 56rem; }
+.auth-route-two { right: -14rem; bottom: 3rem; height: 28rem; width: 62rem; transform: rotate(21deg); }
+.auth-route-two::after { animation-delay: -4.5s; background: #3768a5; box-shadow: 0 0 0 5px rgba(55,104,165,.1), 0 0 18px rgba(55,104,165,.35); }
+.auth-panel { border: 1px solid rgba(27,43,94,.12); border-radius: 12px; background: rgba(255,255,255,.9); box-shadow: 0 24px 70px rgba(27,43,94,.10); padding: 2rem; backdrop-filter: blur(14px); animation: lbid-panel-in .35s ease-out both; }
+.auth-trust-chip { border: 1px solid rgba(27,43,94,.11); border-radius: 999px; background: rgba(255,255,255,.64); padding: .45rem .7rem; color: #52627e; font-size: .75rem; font-weight: 600; }
+@keyframes lbid-route { 0%,100% { left: 8%; top: 75%; opacity: .5; } 50% { left: 77%; top: 10%; opacity: 1; } }
+@keyframes lbid-panel-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .auth-route::after, .auth-panel { animation: none; } }
+@media (max-width: 1023px) { .auth-route-one { left: -22rem; top: 12rem; } .auth-route-two { right: -32rem; bottom: 0; } }
