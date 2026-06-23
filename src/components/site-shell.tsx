@@ -49,7 +49,8 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     return () => { active = false; listener.subscription.unsubscribe() }
   }, [t.signedIn])
 
-  if (pathname === `${prefix}/auth`) return <>{children}</>
+  const isStandalonePreview = pathname === `${prefix}/bid-demo` || pathname === `${prefix}/product-preview`
+  if (pathname === `${prefix}/auth` || isStandalonePreview) return <>{children}</>
   const nav: NavItem[] = [
     { href: `${prefix}/dashboard`, label: t.nav[0], icon: Home }, { href: `${prefix}/requests`, label: t.nav[1], icon: PackagePlus }, { href: `${prefix}/marketplace`, label: t.nav[2], icon: BriefcaseBusiness }, { href: `${prefix}/orders`, label: t.nav[3], icon: Building2 },
   ]

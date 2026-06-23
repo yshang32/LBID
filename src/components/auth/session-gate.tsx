@@ -11,7 +11,7 @@ export function SessionGate({ locale, children }: { locale: Locale; children: Re
   const pathname = usePathname()
   const router = useRouter()
   const authPath = `/${locale}/auth`
-  const isPublicPreview = pathname === `/${locale}/bid-demo`
+  const isPublicPreview = pathname === `/${locale}/bid-demo` || pathname === `/${locale}/product-preview`
   const isAuthPage = pathname === authPath || isPublicPreview
   const [ready, setReady] = useState(isAuthPage)
   const [authenticated, setAuthenticated] = useState(false)
