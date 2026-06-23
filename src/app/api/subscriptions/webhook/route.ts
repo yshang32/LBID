@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 
+import { writeAuditLog } from "@/lib/audit-log"
+import { renderSimpleEmail, sendLbidEmail } from "@/lib/email"
 import { confirmPaymentIntent } from "@/lib/payment/confirmPaymentIntent"
+import { createNotification } from "@/lib/notifications"
 import { getStripe } from "@/lib/stripe"
 import { getApiSupabaseServiceClient } from "@/lib/supabase/api"
 
@@ -33,7 +36,15 @@ export async function POST(request: Request) {
         stripe_subscription_id: typeof checkout.subscription === "string" ? checkout.subscription : null,
       })
       .eq("id", intentId)
-    await confirmPaymentIntent(supabase, intentId, null)
+    const result = await confirmPaymentIntent(supabase, intentId, null)
+    if (!result.alreadyConfirmed) {
+      await Promise.all([
+        writeAuditLog(supabase, { action: "stripe_payment_confirmed", entityType: "payment_intent", entityId: intentId, metadata: { stripeSessionId: checkout.id } }),
+        createNotification(supabase, { userId: result.userId, type: "payment_confirmed", title: "Payment confirmed", body: "Your LBID payment has been confirmed and access is now updated.", href: "/subscription", metadata: { paymentIntentId: intentId } }),
+      ])
+      const { data: user } = await supabase.from("users").select("email").eq("id", result.userId).maybeSingle()
+      await sendLbidEmail({ to: user?.email, subject: "LBID: Payment confirmed", text: "Your LBID payment has been confirmed and access is now updated.", html: renderSimpleEmail({ title: "Payment confirmed", body: "Your LBID payment has been confirmed and access is now updated.", ctaHref: `${process.env.NEXT_PUBLIC_APP_URL || ""}/zh/subscription`, ctaLabel: "Open membership" }), idempotencyKey: `stripe-payment-confirmed-${intentId}` })
+    }
   }
 
   if (event.type === "customer.subscription.deleted") {

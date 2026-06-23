@@ -1,59 +1,25 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Banknote, CheckCircle2, Clock3, CreditCard, ExternalLink, Loader2, XCircle } from "lucide-react"
+import { CheckCircle2, ExternalLink, Loader2, Search, XCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 
-type Payment = { id: string; company_name?: string | null; email?: string | null; type: string; payment_method: string; amount: number; currency: string; fps_reference?: string | null; proof_url?: string | null; related_plan?: { plan_id?: string } | null; related_token_package?: { tokens?: number } | null }
-
-const text = {
-  zh: { badge: "ADMIN / PAYMENT REVIEW", title: "確認真實付款，不使用示例資料。", intro: "此頁只顯示仍待確認的 FPS、PayMe 或 Stripe payment intent。確認後才會發放會員資格或 Token。", empty: "目前沒有待確認付款。", loading: "正在讀取付款資料", confirm: "確認付款", reject: "拒絕付款", proof: "查看憑證", type: "類型", method: "付款方式", amount: "金額", effect: "生效項目", error: "未能處理付款。", confirmed: "已確認", rejected: "已拒絕" },
-  en: { badge: "ADMIN / PAYMENT REVIEW", title: "Review real payments, never demo records.", intro: "Only pending FPS, PayMe or Stripe payment intents appear here. Membership or token access is granted only after confirmation.", empty: "No payments require review.", loading: "Loading payments", confirm: "Confirm payment", reject: "Reject payment", proof: "View proof", type: "Type", method: "Method", amount: "Amount", effect: "Effect", error: "Payment could not be processed.", confirmed: "Confirmed", rejected: "Rejected" },
+type Payment = { id: string; company_name?: string | null; email?: string | null; type: string; payment_method: string; amount: number; currency: string; status: string; fps_reference?: string | null; proof_url?: string | null; related_plan?: { plan_id?: string } | null; related_token_package?: { tokens?: number } | null; review_note?: string | null; created_at?: string; confirmed_at?: string | null }
+const copy = {
+  zh: { badge: "ADMIN / 付款審核", title: "付款審核與歷史紀錄", intro: "只有確認後才會發放 Token 或啟用會員。拒絕付款必須保留原因。", search: "搜尋公司、電郵、參考編號", pending: "待審核", confirmed: "已確認", rejected: "已拒絕", all: "全部", loading: "正在載入付款資料", empty: "沒有符合條件的付款紀錄。", confirm: "確認付款", reject: "拒絕付款", proof: "查看證明", reason: "拒絕原因", reasonHint: "說明付款資料需要修正的地方", cancel: "取消", saveReject: "確認拒絕", error: "未能處理付款。", type: "項目", method: "方式", effect: "發放內容" },
+  en: { badge: "ADMIN / PAYMENT REVIEW", title: "Payment review and history", intro: "Tokens and membership are granted only after confirmation. Rejected payments require a retained reason.", search: "Search company, email or reference", pending: "Pending", confirmed: "Confirmed", rejected: "Rejected", all: "All", loading: "Loading payments", empty: "No payments match this filter.", confirm: "Confirm payment", reject: "Reject payment", proof: "View proof", reason: "Rejection reason", reasonHint: "Explain what needs to be corrected", cancel: "Cancel", saveReject: "Confirm rejection", error: "Payment could not be processed.", type: "Type", method: "Method", effect: "Effect" },
 }
 
 export default function PendingPaymentsPage({ params }: { params: { locale: string } }) {
-  const locale: Locale = isLocale(params.locale) ? params.locale : "en"
-  const t = text[locale]
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState("")
-  const [error, setError] = useState("")
-  const [result, setResult] = useState<Record<string, "confirmed" | "rejected">>({})
-
-  useEffect(() => {
-    let cancelled = false
-    apiJson("/api/admin/pending-payments").then(({ response, body }) => {
-      if (cancelled) return
-      if (!response.ok) setError(body.error || t.error)
-      else setPayments(Array.isArray(body.paymentIntents) ? body.paymentIntents : [])
-      setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [t.error])
-
-  async function review(payment: Payment, action: "confirm" | "reject") {
-    setBusy(payment.id)
-    setError("")
-    const { response, body } = await apiJson("/api/admin/pending-payments", { method: "POST", body: JSON.stringify({ action, paymentIntentId: payment.id }) })
-    setBusy("")
-    if (!response.ok) {
-      setError(body.error || t.error)
-      return
-    }
-    setResult((current) => ({ ...current, [payment.id]: action === "confirm" ? "confirmed" : "rejected" }))
-    setPayments((current) => current.filter((item) => item.id !== payment.id))
-  }
-
-  return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:pb-10"><section className="border-b border-lblue/10 pb-7"><Badge variant="gold">{t.badge}</Badge><h1 className="mt-3 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title}</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">{t.intro}</p></section>
-    {loading ? <div className="flex items-center gap-2 py-12 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{t.loading}</div> : error ? <p className="mt-6 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : payments.length === 0 ? <p className="mt-8 border border-dashed border-lblue/15 bg-white p-10 text-center text-sm text-slate-500">{t.empty}</p> : <section className="mt-6 space-y-3">{payments.map((payment) => <Card key={payment.id}><CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><CardTitle>{payment.company_name || payment.email || "LBID member"}</CardTitle><p className="mt-1 font-mono text-xs text-slate-500">{payment.fps_reference || payment.id}</p></div><Badge variant="gold"><Clock3 className="mr-1 h-3 w-3" />Pending</Badge></div></CardHeader><CardContent className="grid gap-4 lg:grid-cols-[1fr_auto]"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Metric icon={CreditCard} label={t.type} value={payment.type} /><Metric icon={Banknote} label={t.method} value={payment.payment_method?.toUpperCase() || "-"} /><Metric icon={CreditCard} label={t.amount} value={`${payment.currency || "HKD"} ${Number(payment.amount || 0).toLocaleString()}`} /><Metric icon={CheckCircle2} label={t.effect} value={payment.type === "token_purchase" ? `+${payment.related_token_package?.tokens || 0} tokens` : payment.related_plan?.plan_id || "subscription"} /></div><div className="flex flex-wrap items-end gap-2">{payment.proof_url ? <Button asChild variant="outline"><a href={payment.proof_url} target="_blank" rel="noreferrer">{t.proof}<ExternalLink className="h-4 w-4" /></a></Button> : null}<Button variant="outline" disabled={busy === payment.id} onClick={() => review(payment, "reject")}><XCircle className="h-4 w-4" />{t.reject}</Button><Button variant="gold" disabled={busy === payment.id} onClick={() => review(payment, "confirm")}>{busy === payment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}{t.confirm}</Button></div></CardContent></Card>)}</section>}
-  </main>
-}
-
-function Metric({ icon: Icon, label, value }: { icon: typeof CreditCard; label: string; value: string }) {
-  return <div className="border border-lblue/10 bg-slate-50 p-3"><Icon className="h-4 w-4 text-lgold" /><div className="mt-2 text-xs text-slate-500">{label}</div><div className="mt-1 break-words text-sm font-semibold text-lblue">{value}</div></div>
+  const locale: Locale = isLocale(params.locale) ? params.locale : "en"; const t = copy[locale]
+  const [payments, setPayments] = useState<Payment[]>([]); const [status, setStatus] = useState("pending"); const [query, setQuery] = useState(""); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(""); const [error, setError] = useState(""); const [rejecting, setRejecting] = useState<Payment | null>(null); const [note, setNote] = useState("")
+  async function load(nextStatus = status, nextQuery = query) { setLoading(true); const params = new URLSearchParams({ status: nextStatus }); if (nextQuery.trim()) params.set("q", nextQuery.trim()); const { response, body } = await apiJson(`/api/admin/pending-payments?${params}`); if (!response.ok) setError(body.error || t.error); else { setError(""); setPayments(body.paymentIntents || []) }; setLoading(false) }
+  useEffect(() => { void load() }, [status])
+  async function review(payment: Payment, action: "confirm" | "reject") { setBusy(payment.id); setError(""); const { response, body } = await apiJson("/api/admin/pending-payments", { method: "POST", body: JSON.stringify({ action, paymentIntentId: payment.id, note }) }); setBusy(""); if (!response.ok) { setError(body.error || t.error); return }; setRejecting(null); setNote(""); await load() }
+  return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:pb-10"><section className="border-b border-lblue/10 pb-7"><Badge variant="gold">{t.badge}</Badge><h1 className="mt-3 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title}</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">{t.intro}</p><div className="mt-5 flex flex-wrap gap-2"><div className="flex min-w-64 flex-1 items-center border border-lblue/15 bg-white px-3"><Search className="h-4 w-4 text-slate-400" /><input className="h-10 w-full bg-transparent px-2 text-sm outline-none" placeholder={t.search} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void load() }} /></div><Button variant="outline" onClick={() => void load()}>{t.search}</Button>{[["pending", t.pending], ["confirmed", t.confirmed], ["rejected", t.rejected], ["all", t.all]].map(([value, label]) => <Button key={value} size="sm" variant={status === value ? "gold" : "outline"} onClick={() => setStatus(value)}>{label}</Button>)}</div></section>{loading ? <div className="flex items-center gap-2 py-12 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{t.loading}</div> : error ? <p className="mt-6 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : !payments.length ? <p className="mt-8 border border-dashed border-lblue/15 bg-white p-10 text-center text-sm text-slate-500">{t.empty}</p> : <section className="mt-6 space-y-3">{payments.map((payment) => <Card key={payment.id}><CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_auto]"><div><div className="flex flex-wrap gap-2"><h2 className="font-semibold text-lblue">{payment.company_name || payment.email || "LBID member"}</h2><Badge variant={payment.status === "confirmed" ? "teal" : payment.status === "rejected" ? "secondary" : "gold"}>{payment.status}</Badge></div><p className="mt-1 font-mono text-xs text-slate-500">{payment.fps_reference || payment.id}</p><div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3"><p>{t.type}: {payment.type}</p><p>{t.method}: {payment.payment_method?.toUpperCase()}</p><p>{payment.currency || "HKD"} {Number(payment.amount).toLocaleString()}</p></div><p className="mt-2 text-sm text-slate-500">{t.effect}: {payment.type === "token_purchase" ? `+${payment.related_token_package?.tokens || 0} Tokens` : payment.related_plan?.plan_id || "subscription"}</p>{payment.review_note ? <p className="mt-2 text-sm text-slate-500">{t.reason}: {payment.review_note}</p> : null}</div><div className="flex flex-wrap items-end gap-2">{payment.proof_url ? <Button asChild variant="outline"><a href={payment.proof_url} target="_blank" rel="noreferrer">{t.proof}<ExternalLink className="h-4 w-4" /></a></Button> : null}{payment.status === "pending" ? <><Button variant="outline" disabled={busy === payment.id} onClick={() => setRejecting(payment)}><XCircle className="h-4 w-4" />{t.reject}</Button><Button variant="gold" disabled={busy === payment.id} onClick={() => void review(payment, "confirm")}><CheckCircle2 className="h-4 w-4" />{t.confirm}</Button></> : null}</div></CardContent></Card>)}</section>}{rejecting ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-lblue/40 px-4"><Card className="w-full max-w-lg"><CardContent className="p-6"><h2 className="font-semibold text-lblue">{t.reason}</h2><textarea autoFocus className="mt-4 min-h-32 w-full border border-lblue/15 p-3 text-sm" placeholder={t.reasonHint} value={note} onChange={(event) => setNote(event.target.value)} /><div className="mt-4 flex justify-end gap-2"><Button variant="outline" onClick={() => { setRejecting(null); setNote("") }}>{t.cancel}</Button><Button variant="gold" disabled={!note.trim() || busy === rejecting.id} onClick={() => void review(rejecting, "reject")}>{t.saveReject}</Button></div></CardContent></Card></div> : null}</main>
 }

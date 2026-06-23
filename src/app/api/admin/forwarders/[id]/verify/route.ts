@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { writeAuditLog } from "@/lib/audit-log"
 import { createNotification } from "@/lib/notifications"
 import { getApiSupabaseServiceClient, getApiSupabaseSession } from "@/lib/supabase/api"
 
@@ -19,12 +20,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const body = await request.json().catch(() => ({}))
   const approved = body.action !== "reject"
+  const note = typeof body.internalNote === "string" ? body.internalNote.trim().slice(0, 2000) : null
+  const documents = Array.isArray(body.documents) ? body.documents.filter((item: unknown) => typeof item === "string").slice(0, 20) : null
   const { data, error } = await service
     .from("company_profiles")
     .update({
       verification_status: approved ? "verified" : "rejected",
       verified_at: approved ? new Date().toISOString() : null,
       verified_by: session.user.id,
+      verification_note: note,
+      verification_documents: documents ?? undefined,
+      verification_reviewed_by: session.user.id,
+      verification_reviewed_at: new Date().toISOString(),
       is_public: approved ? true : body.isPublic ?? false,
     })
     .eq("user_id", params.id)
@@ -41,6 +48,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     href: "/profile",
     metadata: { userId: params.id },
   })
+  await writeAuditLog(service, { actorId: session.user.id, action: approved ? "forwarder_verified" : "forwarder_rejected", entityType: "company_profile", entityId: params.id, metadata: { note, documentCount: documents?.length ?? null } })
 
   return NextResponse.json({ ok: true, profile: data })
 }

@@ -13,7 +13,7 @@ export async function confirmPaymentIntent(
 
   if (intentError) throw intentError
   if (!intent) throw new Error("INVALID_INTENT")
-  if (intent.status === "confirmed") return { ok: true, intentId, alreadyConfirmed: true }
+  if (intent.status === "confirmed") return { ok: true, intentId, userId: intent.user_id, type: intent.type, alreadyConfirmed: true }
   if (intent.status !== "pending") throw new Error("INVALID_INTENT")
 
   if (intent.type === "token_purchase") {
@@ -60,5 +60,5 @@ export async function confirmPaymentIntent(
 
   if (updateError) throw updateError
 
-  return { ok: true, intentId }
+  return { ok: true, intentId, userId: intent.user_id, type: intent.type }
 }

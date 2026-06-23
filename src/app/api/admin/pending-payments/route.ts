@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server"
 
+import { writeAuditLog } from "@/lib/audit-log"
 import { confirmPaymentIntent as confirmDemoPaymentIntent, listPaymentIntents } from "@/lib/backend"
 import { getAdminApiContext } from "@/lib/admin"
 import { confirmPaymentIntent } from "@/lib/payment/confirmPaymentIntent"
 import { createNotification } from "@/lib/notifications"
+import { renderSimpleEmail, sendLbidEmail } from "@/lib/email"
 
 export async function GET(request: Request) {
   const admin = await getAdminApiContext(request)
   if (admin) {
-    const { data, error } = await admin.service
+    const url = new URL(request.url)
+    const status = url.searchParams.get("status") || "pending"
+    const query = url.searchParams.get("q")?.trim()
+    let paymentQuery = admin.service
       .from("payment_intents")
-      .select("id, user_id, type, amount, currency, payment_method, status, fps_reference, proof_url, related_plan, related_token_package, created_at")
-      .eq("status", "pending")
+      .select("id, user_id, type, amount, currency, payment_method, status, fps_reference, proof_url, related_plan, related_token_package, review_note, confirmed_by, confirmed_at, created_at")
       .order("created_at", { ascending: true })
       .limit(100)
+    if (status !== "all") paymentQuery = paymentQuery.eq("status", status)
+    const { data, error } = await paymentQuery
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -38,7 +44,8 @@ export async function GET(request: Request) {
         proof_url: proof?.data?.signedUrl || payment.proof_url,
       }
     }))
-    return NextResponse.json({ paymentIntents })
+    const filtered = query ? paymentIntents.filter((payment) => [payment.company_name, payment.email, payment.fps_reference, payment.id].filter(Boolean).some((value) => String(value).toLowerCase().includes(query.toLowerCase()))) : paymentIntents
+    return NextResponse.json({ paymentIntents: filtered })
   }
 
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) return NextResponse.json({ error: "ADMIN_REQUIRED" }, { status: 403 })
@@ -52,10 +59,12 @@ export async function POST(request: Request) {
   const admin = await getAdminApiContext(request)
   if (admin) {
     try {
+      const note = typeof body.note === "string" ? body.note.trim().slice(0, 1000) : ""
+      if (body.action === "reject" && !note) return NextResponse.json({ error: "PAYMENT_REJECTION_REASON_REQUIRED" }, { status: 400 })
       if (body.action === "reject") {
         const { data: payment, error } = await admin.service
           .from("payment_intents")
-          .update({ status: "rejected" })
+          .update({ status: "rejected", review_note: note, confirmed_by: admin.userId, confirmed_at: new Date().toISOString() })
           .eq("id", body.paymentIntentId)
           .eq("status", "pending")
           .select("id, user_id")
@@ -70,9 +79,20 @@ export async function POST(request: Request) {
           href: "/zh/subscription",
           metadata: { paymentIntentId: payment.id },
         })
+        await writeAuditLog(admin.service, { actorId: admin.userId, action: "payment_rejected", entityType: "payment_intent", entityId: payment.id, metadata: { note } })
+        const { data: user } = await admin.service.from("users").select("email").eq("id", payment.user_id).maybeSingle()
+        await sendLbidEmail({ to: user?.email, subject: "LBID: Payment requires review", text: note, html: renderSimpleEmail({ title: "Payment requires review", body: note, ctaHref: `${process.env.NEXT_PUBLIC_APP_URL || ""}/zh/subscription`, ctaLabel: "Open membership" }), idempotencyKey: `payment-rejected-${payment.id}` })
         return NextResponse.json({ ok: true, paymentIntentId: payment.id, status: "rejected" })
       }
       const result = await confirmPaymentIntent(admin.service, body.paymentIntentId, admin.userId)
+      if (!result.alreadyConfirmed) {
+        await Promise.all([
+          writeAuditLog(admin.service, { actorId: admin.userId, action: "payment_confirmed", entityType: "payment_intent", entityId: body.paymentIntentId, metadata: { note } }),
+          createNotification(admin.service, { userId: result.userId, type: "payment_confirmed", title: "Payment confirmed", body: "Your LBID payment has been confirmed and access is now updated.", href: "/subscription", metadata: { paymentIntentId: body.paymentIntentId } }),
+        ])
+        const { data: user } = await admin.service.from("users").select("email").eq("id", result.userId).maybeSingle()
+        await sendLbidEmail({ to: user?.email, subject: "LBID: Payment confirmed", text: "Your LBID payment has been confirmed and access is now updated.", html: renderSimpleEmail({ title: "Payment confirmed", body: "Your LBID payment has been confirmed and access is now updated.", ctaHref: `${process.env.NEXT_PUBLIC_APP_URL || ""}/zh/subscription`, ctaLabel: "Open membership" }), idempotencyKey: `payment-confirmed-${body.paymentIntentId}` })
+      }
       return NextResponse.json(result)
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : "CONFIRM_FAILED" }, { status: 500 })

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+import { writeAuditLog } from "@/lib/audit-log"
+import { createNotification } from "@/lib/notifications"
 import { getAdminApiContext } from "@/lib/admin"
 
 const plans = ["trial", "monthly", "annual"] as const
@@ -51,9 +53,13 @@ export async function PATCH(request: Request) {
       current_period_end: periodEnd.toISOString(),
       trial_ends_at: plan === "trial" ? periodEnd.toISOString() : null,
     }, { onConflict: "user_id" })
-    .select("user_id, plan, status, current_period_end, trial_ends_at")
+    .select("id, user_id, plan, status, current_period_end, trial_ends_at")
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await Promise.all([
+    writeAuditLog(admin.service, { actorId: admin.userId, action: "membership_adjusted", entityType: "subscription", entityId: data.id, metadata: { userId, plan, status } }),
+    createNotification(admin.service, { userId, type: "membership_updated", title: "Membership updated", body: `Your LBID membership is now ${plan}.`, href: "/subscription", metadata: { plan, status } }),
+  ])
   return NextResponse.json({ ok: true, subscription: data })
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { writeAuditLog } from "@/lib/audit-log"
 import { orderPipeline } from "@/lib/data"
 import { canAccessOrder, canManageOrderFulfillment, getOrderParties } from "@/lib/order-parties"
 import { createNotification } from "@/lib/notifications"
@@ -11,8 +12,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const service = getApiSupabaseServiceClient()
   if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
   if (!(await canAccessOrder(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_ACCESS_DENIED" }, { status: 403 })
-  if (!(await canManageOrderFulfillment(service, params.id, session.user.id))) return NextResponse.json({ error: "ORDER_STATUS_UPDATE_DENIED" }, { status: 403 })
-
   const { data, error } = await service
     .from("orders")
     .select("id, quotation_id, status, created_at, quotations(id, shipment_request_id, forwarder_id, total_amount, line_items, status, created_at, shipment_requests(route, cargo_details))")
@@ -73,6 +72,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       href: `/orders/${params.id}`,
       metadata: { orderId: params.id, status: data.status },
     })))
+    await writeAuditLog(service, { actorId: session.user.id, action: "order_status_updated", entityType: "order", entityId: params.id, metadata: { from: existing.status, to: data.status } })
   }
 
   return NextResponse.json({ ok: true, order: data })

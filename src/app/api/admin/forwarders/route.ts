@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await service
     .from("company_profiles")
-    .select("user_id, company_name_zh, company_name_en, region, verification_status, verified_at, is_public, reputation_score")
+    .select("user_id, company_name_zh, company_name_en, region, verification_status, verified_at, is_public, reputation_score, verification_documents, verification_note, verification_reviewed_at")
     .order("verified_at", { ascending: true, nullsFirst: true })
     .limit(100)
 
@@ -38,5 +38,8 @@ export async function GET(request: Request) {
     verifiedAt: item.verified_at,
     isPublic: item.is_public,
     reputationScore: item.reputation_score || 0,
+    verificationDocuments: item.verification_documents || [],
+    verificationNote: item.verification_note || "",
+    verificationReviewedAt: item.verification_reviewed_at || null,
   })) })
 }

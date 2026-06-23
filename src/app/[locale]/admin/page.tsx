@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { BarChart3, BadgeCheck, CreditCard, Crown, Users, XCircle } from "lucide-react"
+import { BarChart3, BadgeCheck, CreditCard, Crown, ScrollText, Users, XCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -76,11 +76,11 @@ export default function LocalizedAdminPage({ params }: { params: { locale: strin
 
   const verifiedCount = useMemo(() => forwarders.filter((item) => item.verificationStatus === "verified").length, [forwarders])
 
-  async function verifyForwarder(id: string, action: "approve" | "reject") {
+  async function verifyForwarder(id: string, action: "approve" | "reject", internalNote = "") {
     setBusyId(id)
     const { response, body } = await apiJson(`/api/admin/forwarders/${id}/verify`, {
       method: "POST",
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, internalNote }),
     })
     setBusyId("")
 
@@ -120,6 +120,8 @@ export default function LocalizedAdminPage({ params }: { params: { locale: strin
         </Card>
       </section>
 
+      <div className="mt-5"><Button asChild variant="outline"><Link href={`/${locale}/admin/audit`}><ScrollText className="h-4 w-4" />Audit log</Link></Button></div>
+
       <Card className="mt-6 border-white/10 bg-white/[0.045]">
         <CardHeader>
           <CardTitle>{t.queue}</CardTitle>
@@ -132,26 +134,19 @@ export default function LocalizedAdminPage({ params }: { params: { locale: strin
                 <div className="text-sm text-muted-foreground">{forwarder.region}</div>
                 {forwarder.localError ? <div className="mt-2 text-sm font-semibold text-red-700">{forwarder.localError}</div> : null}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={forwarder.verificationStatus === "verified" ? "teal" : forwarder.verificationStatus === "rejected" ? "secondary" : "gold"}>
-                  {forwarder.verificationStatus}
-                </Badge>
-                <Badge variant={forwarder.isPublic ? "teal" : "secondary"}>{forwarder.isPublic ? t.public : t.private}</Badge>
-                <Button size="sm" variant="outline" disabled={busyId === forwarder.id} onClick={() => verifyForwarder(forwarder.id, "reject")}>
-                  <XCircle className="h-4 w-4" />
-                  {t.reject}
-                </Button>
-                <Button size="sm" variant="gold" disabled={busyId === forwarder.id} onClick={() => verifyForwarder(forwarder.id, "approve")}>
-                  <BadgeCheck className="h-4 w-4" />
-                  {t.approve}
-                </Button>
-              </div>
+              <VerificationActions forwarder={forwarder} busy={busyId === forwarder.id} t={t} onReview={verifyForwarder} />
             </div>
           ))}
         </CardContent>
       </Card>
     </main>
   )
+}
+
+function VerificationActions({ forwarder, busy, t, onReview }: { forwarder: any; busy: boolean; t: any; onReview: (id: string, action: "approve" | "reject", note?: string) => void }) {
+  const [note, setNote] = useState(forwarder.verificationNote || "")
+  const documentCount = Array.isArray(forwarder.verificationDocuments) ? forwarder.verificationDocuments.length : 0
+  return <div className="flex min-w-72 flex-col gap-2"><div className="flex flex-wrap items-center gap-2"><Badge variant={forwarder.verificationStatus === "verified" ? "teal" : forwarder.verificationStatus === "rejected" ? "secondary" : "gold"}>{forwarder.verificationStatus}</Badge><Badge variant={forwarder.isPublic ? "teal" : "secondary"}>{forwarder.isPublic ? t.public : t.private}</Badge><span className="text-xs text-slate-500">{documentCount} documents</span></div><textarea className="min-h-16 border border-lblue/15 bg-white p-2 text-xs" placeholder="Internal verification note" value={note} onChange={(event) => setNote(event.target.value)} /><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => onReview(forwarder.id, "reject", note)}><XCircle className="h-4 w-4" />{t.reject}</Button><Button size="sm" variant="gold" disabled={busy} onClick={() => onReview(forwarder.id, "approve", note)}><BadgeCheck className="h-4 w-4" />{t.approve}</Button></div></div>
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: string }) {
