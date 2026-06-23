@@ -87,6 +87,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    const service = getApiSupabaseServiceClient()
+    if (service) {
+      await service
+        .from("bid_recommendations")
+        .update({ status: "bid_submitted", updated_at: new Date().toISOString() })
+        .eq("shipment_request_id", body.sr_id ?? body.shipmentRequestId)
+        .eq("forwarder_id", user.id)
+    }
+
     return NextResponse.json({ success: true, ...data })
   }
 

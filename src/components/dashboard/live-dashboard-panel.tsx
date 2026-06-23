@@ -13,6 +13,7 @@ import { statusLabel } from "@/lib/shipment-workflow"
 type Locale = "zh" | "en"
 type Request = { id: string; route?: { origin?: string; destination?: string }; cargo_details?: { cargo?: string; cargo_type?: string }; status: string }
 type Order = { id: string; status: string; quotations?: { shipment_requests?: { route?: { origin?: string; destination?: string } } } }
+type Recommendation = { id: string; shipment_request_id: string; match_score: number; reasons?: string[]; shipment_requests?: Request | Request[] | null }
 type Action = { id: string; title: string; body: string; href: string; label: string; primary?: boolean }
 
 const copy = {
@@ -69,20 +70,22 @@ export function LiveDashboardPanel({ locale, mode }: { locale: Locale; mode: "co
 
   const ownRequests = (data.ownRequests || []) as Request[]
   const opportunities = (data.opportunities || []) as Request[]
+  const recommendations = (data.recommendations || []) as Recommendation[]
   const orders = (data.orders || []) as Order[]
-  const actions = nextActions(data.profile, ownRequests, opportunities, orders, data.bidCountByRequest || {}, data.documentTypesByOrder || {}, t, prefix)
+  const actions = nextActions(data.profile, ownRequests, opportunities, recommendations, orders, data.bidCountByRequest || {}, data.documentTypesByOrder || {}, t, prefix)
   const tokens = Number(data.profile?.token_balance_free || 0) + Number(data.profile?.token_balance_paid || 0)
 
   return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:pb-10">
     <section className="flex flex-col gap-5 border-b border-lblue/10 pb-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#a17e22]">{t.label}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-lblue sm:text-4xl">{t.title}</h1><p className="mt-3 leading-7 text-slate-600">{t.intro}</p></div><div className="flex flex-wrap gap-2"><Button asChild><Link href={`${prefix}/inquiries/new`}><PackagePlus className="h-4 w-4" />{t.create}</Link></Button><Button asChild variant="outline"><Link href={`${prefix}/marketplace`}><BriefcaseBusiness className="h-4 w-4" />{t.market}</Link></Button><Button asChild variant="ghost"><Link href={`${prefix}/profile`}><Settings2 className="h-4 w-4" />{t.settings}</Link></Button></div></section>
     <section className="mt-6"><div className="mb-3 flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-lgold" /><h2 className="font-semibold text-lblue">{t.next}</h2></div>{actions.length ? <div className="grid gap-3 lg:grid-cols-2">{actions.map((item) => <Card key={item.id} className={item.primary ? "border-lgold/35 bg-[#fcf8ec]" : "bg-white"}><CardContent className="flex gap-4 p-5"><div className="mt-0.5"><FileWarning className="h-5 w-5 text-lgold" /></div><div className="min-w-0 flex-1"><h3 className="font-semibold text-lblue">{item.title}</h3><p className="mt-1 text-sm leading-6 text-slate-600">{item.body}</p><Button asChild className="mt-4" size="sm" variant={item.primary ? "gold" : "outline"}><Link href={item.href}>{item.label}<ArrowRight className="h-4 w-4" /></Link></Button></div></CardContent></Card>)}</div> : <Card><CardContent className="p-6 text-sm text-slate-600">{t.allClear}</CardContent></Card>}</section>
+    {recommendations.length ? <section className="bid-recommended-next mt-6"><div className="flex items-start gap-3"><div className="bid-recommended-score">{recommendations[0].match_score}%</div><div><p className="text-xs font-bold tracking-[.12em] text-[#a17e22]">PROFILE MATCH</p><h2 className="mt-1 text-lg font-semibold text-lblue">{locale === "zh" ? "\u7cfb\u7d71\u63a8\u85a6\u7684\u4efb\u52d9\u6b63\u7b49\u4f60\u8655\u7406" : "A recommended mission is waiting for you"}</h2><p className="mt-1 text-sm text-slate-600">{recommendations[0].reasons?.[0] || "Company profile matched"}</p><Button asChild className="mt-3" size="sm" variant="gold"><Link href={`${prefix}/marketplace/${recommendations[0].shipment_request_id}`}>{locale === "zh" ? "\u67e5\u770b\u63a8\u85a6" : "View recommendation"}<ArrowRight className="h-4 w-4" /></Link></Button></div></div></section> : null}
     <section className="mt-6 grid gap-3 sm:grid-cols-3"><Metric icon={<PackagePlus className="h-4 w-4" />} label={t.requests} value={ownRequests.length} /><Metric icon={<BriefcaseBusiness className="h-4 w-4" />} label={t.opportunities} value={opportunities.length} /><Metric icon={<Coins className="h-4 w-4" />} label={t.wallet} value={tokens} /></section>
     <section className="mt-7 grid gap-5 lg:grid-cols-3"><WorkflowList t={t} title={t.requests} empty={t.noRequests} href={`${prefix}/requests`} rows={ownRequests.slice(0, 3).map((item) => ({ id: item.id, title: route(item, locale), detail: statusLabel(item.status, locale), href: `${prefix}/requests/${item.id}`, badge: item.status }))} /><WorkflowList t={t} title={t.opportunities} empty={t.noOpportunities} href={`${prefix}/marketplace`} rows={opportunities.slice(0, 3).map((item) => ({ id: item.id, title: route(item, locale), detail: item.cargo_details?.cargo || item.cargo_details?.cargo_type || "-", href: `${prefix}/marketplace/${item.id}`, badge: statusLabel(item.status, locale) }))} /><WorkflowList t={t} title={t.orders} empty={t.noOrders} href={`${prefix}/orders`} rows={orders.slice(0, 3).map((item) => ({ id: item.id, title: route(item.quotations?.shipment_requests || {}, locale), detail: item.status, href: `${prefix}/orders/${item.id}`, badge: item.status }))} /></section>
     <div className="mt-6 flex flex-wrap gap-2"><Badge variant={data.profile?.can_be_client ? "teal" : "secondary"}>{t.client}</Badge><Badge variant={data.profile?.can_be_forwarder ? "teal" : "secondary"}>{t.forwarder}</Badge></div>
   </main>
 }
 
-function nextActions(profile: any, ownRequests: Request[], opportunities: Request[], orders: Order[], bidCounts: Record<string, number>, documents: Record<string, string[]>, t: typeof copy.zh, prefix: string) {
+function nextActions(profile: any, ownRequests: Request[], opportunities: Request[], recommendations: Recommendation[], orders: Order[], bidCounts: Record<string, number>, documents: Record<string, string[]>, t: typeof copy.zh, prefix: string) {
   const actions: Action[] = []
   const add = (id: string, values: string[], href: string, primary = false) => actions.push({ id, title: values[0], body: values[1], label: values[2], href, primary })
   if (!profile?.onboarding_completed) add("onboarding", t.actions.onboarding, `${prefix}/onboarding`, true)
@@ -92,6 +95,8 @@ function nextActions(profile: any, ownRequests: Request[], opportunities: Reques
   if (open) add(`open-${open.id}`, t.actions.open, `${prefix}/requests/${open.id}`)
   const closed = ownRequests.find((item) => item.status === "CLOSED" && Number(bidCounts[item.id] || 0) > 0)
   if (closed) add(`closed-${closed.id}`, t.actions.closed, `${prefix}/quotations/compare?srId=${closed.id}`, true)
+  const recommended = recommendations[0]
+  if (recommended) add(`recommended-${recommended.id}`, ["\u7cfb\u7d71\u63a8\u85a6\u7af6\u50f9", "LBID \u5df2\u6839\u64da\u516c\u53f8\u6a94\u6848\u63a8\u9001\u9ad8\u914d\u5c0d\u4efb\u52d9\u3002", "\u67e5\u770b\u63a8\u85a6"], `${prefix}/marketplace/${recommended.shipment_request_id}`, true)
   if (opportunities[0]) add(`opportunity-${opportunities[0].id}`, t.actions.opportunity, `${prefix}/marketplace/${opportunities[0].id}`)
   const missing = orders.find((order) => { const uploaded = (documents[order.id] || []).join(" ").toLowerCase(); return !/(awb|b\/l)/.test(uploaded) || !uploaded.includes("invoice") || !uploaded.includes("packing") })
   if (missing) add(`documents-${missing.id}`, t.actions.documents, `${prefix}/orders/${missing.id}/documents`)

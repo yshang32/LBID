@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { writeAuditLog } from "@/lib/audit-log"
+import { syncBidRecommendations } from "@/lib/bid-recommendations"
 import { renderSimpleEmail, sendLbidEmail } from "@/lib/email"
 import { getAdminApiContext } from "@/lib/admin"
 import { createNotification } from "@/lib/notifications"
@@ -48,11 +49,12 @@ export async function PATCH(request: Request) {
   if (!data) return NextResponse.json({ error: "REQUEST_NOT_PENDING_REVIEW" }, { status: 409 })
   const title = action === "publish" ? "Shipment Request approved" : "Shipment Request needs revision"
   const bodyText = action === "publish" ? "Your request is live. A three-hour sealed bid window has opened." : reason
+  const recommendationResult = action === "publish" ? await syncBidRecommendations(admin.service, data) : { created: 0 }
   await Promise.all([
     writeAuditLog(admin.service, { actorId: admin.userId, action: `shipment_request_${action}ed`, entityType: "shipment_request", entityId: data.id, metadata: { reason: reason || null } }),
     createNotification(admin.service, { userId: data.agent_id, type: action === "publish" ? "shipment_request_published" : "shipment_request_rejected", title, body: bodyText, href: `/requests/${data.id}`, metadata: { shipmentRequestId: data.id } }),
   ])
   const { data: agency } = await admin.service.from("users").select("email").eq("id", data.agent_id).maybeSingle()
   await sendLbidEmail({ to: agency?.email, subject: `LBID: ${title}`, text: bodyText, html: renderSimpleEmail({ title, body: bodyText, ctaHref: `${process.env.NEXT_PUBLIC_APP_URL || ""}/zh/requests/${data.id}`, ctaLabel: "Open request" }), idempotencyKey: `sr-review-${data.id}-${action}` })
-  return NextResponse.json({ ok: true, shipmentRequest: data })
+  return NextResponse.json({ ok: true, shipmentRequest: data, recommendationsCreated: recommendationResult.created })
 }

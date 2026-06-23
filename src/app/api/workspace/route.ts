@@ -9,14 +9,15 @@ export async function GET(request: Request) {
   const service = getApiSupabaseServiceClient()
   if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
 
-  const [profileResult, userResult, requestsResult, ordersResult] = await Promise.all([
+  const [profileResult, userResult, requestsResult, ordersResult, recommendationsResult] = await Promise.all([
     service.from("company_profiles").select("company_name_en, company_name_zh, token_balance_free, token_balance_paid, onboarding_completed, can_be_client, can_be_forwarder").eq("user_id", session.user.id).maybeSingle(),
     service.from("users").select("role").eq("id", session.user.id).maybeSingle(),
     service.from("shipment_requests").select("id, agent_id, route, cargo_details, services_needed, bid_deadline, status, created_at").or(`agent_id.eq.${session.user.id},status.eq.OPEN`).order("created_at", { ascending: false }).limit(100),
     service.from("orders").select("id, status, created_at, quotations(forwarder_id, shipment_request_id, total_amount, shipment_requests(agent_id, route, cargo_details))").order("created_at", { ascending: false }).limit(100),
+    service.from("bid_recommendations").select("id, shipment_request_id, match_score, reasons, status, shipment_requests(id, route, cargo_details, bid_deadline, status)").eq("forwarder_id", session.user.id).order("match_score", { ascending: false }).limit(20),
   ])
 
-  const error = profileResult.error || userResult.error || requestsResult.error || ordersResult.error
+  const error = profileResult.error || userResult.error || requestsResult.error || ordersResult.error || recommendationsResult.error
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const ownRequests = (requestsResult.data || []).filter((item) => item.agent_id === session.user.id)
@@ -54,6 +55,10 @@ export async function GET(request: Request) {
     ownRequests,
     opportunities,
     orders,
+    recommendations: (recommendationsResult.data || []).filter((item: any) => {
+      const shipmentRequest = Array.isArray(item.shipment_requests) ? item.shipment_requests[0] : item.shipment_requests
+      return shipmentRequest?.status === "OPEN" && new Date(shipmentRequest.bid_deadline).getTime() > Date.now()
+    }),
     bidCountByRequest: Object.fromEntries(bidCountByRequest),
     documentTypesByOrder: Object.fromEntries(documentTypesByOrder),
   })
