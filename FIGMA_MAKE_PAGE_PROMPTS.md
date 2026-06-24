@@ -316,9 +316,22 @@ and clear links for account creation and password reset. Add a restrained abstra
 route-line visual in the background using navy, pale blue and gold, but no stock
 photography or dark full-screen background.
 
-Explain in one line that a single company account may use both Client and
-Forwarder capabilities after onboarding. The page should feel premium, secure and
-simple enough for frequent business users.
+The panel must support these connected states without changing visual language:
+Sign in, Create company account, Email verification required, Reset password,
+Set a new password, Reset link sent, Password updated, Loading and server error.
+
+For registration, collect Company name, Contact person, Work email and Password.
+Do not ask a user to select Agency or Forwarder at registration: a single company
+can enable both Client and Forwarder capabilities during onboarding. Show a short
+line explaining this below the form.
+
+After login, show the destination logic in a subtle success/loading state:
+incomplete company setup goes to Unified Onboarding; a completed company goes to
+Today Workspace; an Admin goes to Admin Workspace. A persistent signed-in session
+means that subsequent page visits show company identity, membership tier, Token
+balance and notifications instead of Login/Register buttons.
+
+The page should feel premium, secure and simple enough for frequent business users.
 ```
 
 ## 17. Admin Operations

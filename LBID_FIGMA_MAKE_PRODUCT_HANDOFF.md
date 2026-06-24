@@ -102,6 +102,28 @@ Recommended opportunity includes origin to Hong Kong route visual, freight mode,
 
 Use a guided sequence: `1 Route -> 2 Cargo -> 3 Services -> 4 Review`. Fields are origin, Hong Kong destination, freight mode, cargo type, weight, volume, pickup date, trade term, required services and notes. Explain that submit creates an Admin-review request; approval opens a 3-hour sealed bid window.
 
+### Authentication and Account Entry
+
+Authentication is a real Supabase Auth workflow, not a static marketing form. The auth screen must support four modes in one coherent panel:
+
+| Mode | Required UI | Real behaviour |
+|---|---|---|
+| Sign in | Work email, password, sign-in action, link to register, link to reset password | Calls Supabase password sign-in. Persistent browser session is then maintained by Supabase. |
+| Create company account | Company name, contact person, work email, password of at least 8 characters | Calls Supabase sign-up with company/contact metadata. Do not ask the user to choose a permanent Agency or Forwarder role. |
+| Email verification | Calm success/next-step notice | When email confirmation is required, account creation ends with a verification notice rather than pretending user is already signed in. |
+| Reset password | Work email, send-reset action, return-to-login link | Sends a secure reset link that returns to `/auth?mode=update`. |
+| Set new password | New password, validation, update action | Updates password through Supabase and returns user to sign-in. |
+
+After a successful sign-in, routing is automatic:
+
+1. No completed company onboarding -> `/{locale}/onboarding`.
+2. Completed normal company -> `/{locale}/dashboard`.
+3. Completed Admin account -> `/{locale}/dashboard?mode=admin`.
+
+After sign-up with an immediate session, the app calls `/api/auth/bootstrap` to create initial company context and then opens unified onboarding. The shell listens to Supabase Auth session changes; signed-in users see their company identity, membership tier, Token balance and notification entry instead of Login/Register buttons.
+
+Design requirements: no role picker at registration, no dashboard sidebar on auth page, clear field-level validation, loading state, server-error state, reset-sent notice, verification-required notice and password-updated success notice.
+
 ### Opportunities
 
 Forwarder cards may show route, mode, cargo summary, services, deadline and match fit. Never show Client contact data, bidder count, competitor price/name, or competitor terms.
@@ -124,6 +146,7 @@ Show a clear next action, tracking events, private messages, document checklist 
 | `/api/company-profile` | GET, PATCH | Company details, capability flags, Token balances and directory settings. |
 | `/api/onboarding/save-step` | POST | Persist one onboarding step. |
 | `/api/onboarding/complete` | POST | Mark onboarding complete. |
+| Supabase Auth browser client | sign-in, sign-up, reset password, update password, session listener | Authentication is performed in browser through Supabase Auth rather than a custom LBID password API. |
 | `/api/shipment-requests` | GET, POST | New real request becomes `PENDING_REVIEW`. |
 | `/api/shipment-requests/{id}` | GET, PATCH | Request detail and permitted update. |
 | `/api/shipment-requests/{id}/cancel` | POST | Controlled cancellation workflow. |
