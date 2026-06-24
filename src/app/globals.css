@@ -87,6 +87,9 @@
 .auth-route-two::after { animation-delay: -4.5s; background: #3768a5; box-shadow: 0 0 0 5px rgba(55,104,165,.1), 0 0 18px rgba(55,104,165,.35); }
 .auth-panel { border: 1px solid rgba(27,43,94,.12); border-radius: 12px; background: rgba(255,255,255,.9); box-shadow: 0 24px 70px rgba(27,43,94,.10); padding: 2rem; backdrop-filter: blur(14px); animation: lbid-panel-in .35s ease-out both; }
 .auth-trust-chip { border: 1px solid rgba(27,43,94,.11); border-radius: 999px; background: rgba(255,255,255,.64); padding: .45rem .7rem; color: #52627e; font-size: .75rem; font-weight: 600; }
+.auth-input { width: 100%; border: 2px solid #dfe4ed; border-radius: .75rem; background: #fff; padding: .625rem .875rem; color: #172038; font-size: 13.5px; outline: none; transition: border-color .2s ease, box-shadow .2s ease; }
+.auth-input::placeholder { color: #a0aabc; }
+.auth-input:focus { border-color: #0c1a3e; box-shadow: 0 0 0 3px rgba(12,26,62,.08); }
 @keyframes lbid-route { 0%,100% { left: 8%; top: 75%; opacity: .5; } 50% { left: 77%; top: 10%; opacity: 1; } }
 @keyframes lbid-panel-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .auth-route::after, .auth-panel { animation: none; } }

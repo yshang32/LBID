@@ -2,88 +2,155 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Bell, BriefcaseBusiness, Building2, ChevronRight, Globe2, HelpCircle, Home, LogIn, PackagePlus, Search, Settings2, UserPlus, Wallet } from "lucide-react"
+import {
+  BarChart2, Bell, BriefcaseBusiness, Building2, ChevronRight, CircleHelp,
+  Crown, FileText, LayoutDashboard, LogIn, Map, MessageCircle, Package,
+  Plus, Search, Send, Settings, ShieldCheck, UserPlus, Wallet, Zap,
+} from "lucide-react"
 import { usePathname } from "next/navigation"
 
-import { BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { apiJson } from "@/lib/api-client"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { Locale } from "@/lib/i18n"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-type Identity = { companyName: string; plan: string; tokens: number } | null
-type NavItem = { href: string; label: string; icon: typeof Home }
+type Identity = {
+  companyName: string
+  plan: string
+  tokens: number
+  role: string | null
+  canBeClient: boolean
+  canBeForwarder: boolean
+} | null
 
-const copy = {
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; badge?: number }
+
+const labels = {
   zh: {
-    search: "搜尋需求、公司或訂單編號", workflow: "工作流程", network: "網絡", account: "帳戶", language: "EN", signIn: "登入", register: "建立帳戶", today: "今日", biddingOpen: "競價開放中", settings: "設定", companyDirectory: "公司名錄", tokenWallet: "Token 錢包", companySettings: "公司檔案", member: "會員帳戶", priority: "優先配對 · 已認證服務路線", plans: { trial: "試用會員", monthly: "Standard 會員", annual: "Premium 會員", free: "免費會員" }, nav: ["今日", "我的需求", "接單市場", "訂單"],
+    today: "今日", search: "搜尋需求、公司或訂單編號", open: "競價進行中", signIn: "登入", register: "建立帳戶",
+    create: "建立需求", operations: "工作台", network: "網絡", account: "帳戶", admin: "管理",
+    member: "會員帳戶", routes: "優勢航線已認證", language: "EN",
+    nav: ["今日", "接單機會", "已提交競價", "我的需求", "訂單", "通知"],
+    secondary: ["我的航線", "分析", "公司名錄", "社群"],
+    accountNav: ["Token 錢包", "公司檔案", "會員方案"],
+    adminNav: ["管理主頁", "需求審核", "帳戶管理", "付款審核"],
   },
   en: {
-    search: "Search requests, companies or order IDs", workflow: "Workflow", network: "Network", account: "Account", language: "中文", signIn: "Sign in", register: "Create account", today: "Today", biddingOpen: "Bidding open", settings: "Settings", companyDirectory: "Company directory", tokenWallet: "Token wallet", companySettings: "Company settings", member: "Member account", priority: "Priority access · verified service routes", plans: { trial: "Trial member", monthly: "Standard member", annual: "Premium member", free: "Free member" }, nav: ["Today", "My requests", "Marketplace", "Orders"],
+    today: "Today", search: "Search requests, companies or order IDs", open: "Bidding open", signIn: "Sign in", register: "Create account",
+    create: "New request", operations: "Workspace", network: "Network", account: "Account", admin: "Admin",
+    member: "Member account", routes: "Priority access · verified routes", language: "中文",
+    nav: ["Today", "Opportunities", "Active Bids", "My Requests", "Orders", "Notifications"],
+    secondary: ["My Routes", "Analytics", "Directory", "Community"],
+    accountNav: ["Token Wallet", "Company Profile", "Membership"],
+    adminNav: ["Admin", "Requests", "Accounts", "Payments"],
   },
-}
+} as const
 
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
   const pathname = usePathname()
   const prefix = `/${locale}`
-  const [authenticated, setAuthenticated] = useState(false)
+  const t = labels[locale]
   const [identity, setIdentity] = useState<Identity>(null)
-  const t = copy[locale]
-  const isDashboard = pathname === `${prefix}/dashboard`
+  const [authenticated, setAuthenticated] = useState(false)
 
   useEffect(() => {
     const client = getSupabaseBrowserClient()
     if (!client) return
-    let active = true
-    async function load(signedIn: boolean) {
-      if (!signedIn || !active) { setIdentity(null); return }
+    let mounted = true
+    const loadIdentity = async (signedIn: boolean) => {
+      if (!signedIn || !mounted) { setIdentity(null); return }
       const { response, body } = await apiJson("/api/company-profile")
-      if (!active || !response.ok) return
-      const profile = body.companyProfile
-      const subscription = body.subscription
-      setIdentity({ companyName: profile?.company_name_en || profile?.company_name_zh || t.member, plan: subscription?.plan || "trial", tokens: Number(profile?.token_balance_free || 0) + Number(profile?.token_balance_paid || 0) })
+      if (!mounted || !response.ok) return
+      const profile = body.companyProfile || {}
+      setIdentity({
+        companyName: profile.company_name_en || profile.company_name_zh || t.member,
+        plan: body.subscription?.plan || "trial",
+        tokens: Number(profile.token_balance_free || 0) + Number(profile.token_balance_paid || 0),
+        role: body.role || null,
+        canBeClient: profile.can_be_client !== false,
+        canBeForwarder: profile.can_be_forwarder !== false,
+      })
     }
-    client.auth.getSession().then(({ data }) => { const signedIn = Boolean(data.session); if (active) setAuthenticated(signedIn); void load(signedIn) })
-    const { data: listener } = client.auth.onAuthStateChange((_event, session) => { const signedIn = Boolean(session); setAuthenticated(signedIn); void load(signedIn) })
-    return () => { active = false; listener.subscription.unsubscribe() }
+    client.auth.getSession().then(({ data }) => {
+      const signedIn = Boolean(data.session)
+      if (mounted) setAuthenticated(signedIn)
+      void loadIdentity(signedIn)
+    })
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      const signedIn = Boolean(session)
+      setAuthenticated(signedIn)
+      void loadIdentity(signedIn)
+    })
+    return () => { mounted = false; listener.subscription.unsubscribe() }
   }, [t.member])
 
-  const standalone = pathname === `${prefix}/auth` || pathname === `${prefix}/bid-demo` || pathname === `${prefix}/product-preview`
+  const standalone = pathname === `${prefix}/auth` || pathname === `${prefix}/onboarding` || pathname.startsWith(`${prefix}/onboarding/`) || pathname === `${prefix}/bid-demo` || pathname === `${prefix}/product-preview`
   if (standalone) return <>{children}</>
 
-  const nav: NavItem[] = [
-    { href: `${prefix}/dashboard`, label: t.nav[0], icon: Home },
-    { href: `${prefix}/requests`, label: t.nav[1], icon: PackagePlus },
-    { href: `${prefix}/marketplace`, label: t.nav[2], icon: BriefcaseBusiness },
-    { href: `${prefix}/orders`, label: t.nav[3], icon: Building2 },
+  const primary: NavItem[] = [
+    { href: `${prefix}/dashboard`, label: t.nav[0], icon: LayoutDashboard },
+    { href: `${prefix}/marketplace`, label: t.nav[1], icon: Send },
+    { href: `${prefix}/active-bids`, label: t.nav[2], icon: BriefcaseBusiness },
+    { href: `${prefix}/requests`, label: t.nav[3], icon: FileText },
+    { href: `${prefix}/orders`, label: t.nav[4], icon: Package },
+    { href: `${prefix}/notifications`, label: t.nav[5], icon: Bell, badge: 0 },
   ]
-  const network: NavItem[] = [{ href: `${prefix}/forwarders`, label: t.companyDirectory, icon: Globe2 }]
-  const account: NavItem[] = [{ href: `${prefix}/tokens`, label: t.tokenWallet, icon: Wallet }, { href: `${prefix}/profile`, label: t.companySettings, icon: Settings2 }]
+  const secondary: NavItem[] = [
+    { href: `${prefix}/my-routes`, label: t.secondary[0], icon: Map },
+    { href: `${prefix}/analytics`, label: t.secondary[1], icon: BarChart2 },
+    { href: `${prefix}/forwarders`, label: t.secondary[2], icon: Building2 },
+    { href: `${prefix}/community`, label: t.secondary[3], icon: MessageCircle },
+  ]
+  const account: NavItem[] = [
+    { href: `${prefix}/tokens`, label: t.accountNav[0], icon: Zap },
+    { href: `${prefix}/profile`, label: t.accountNav[1], icon: Building2 },
+    { href: `${prefix}/subscription`, label: t.accountNav[2], icon: Crown },
+  ]
+  const admin: NavItem[] = [
+    { href: `${prefix}/admin`, label: t.adminNav[0], icon: ShieldCheck },
+    { href: `${prefix}/admin/shipment-requests`, label: t.adminNav[1], icon: FileText },
+    { href: `${prefix}/admin/accounts`, label: t.adminNav[2], icon: Building2 },
+    { href: `${prefix}/admin/pending-payments`, label: t.adminNav[3], icon: Crown },
+  ]
   const otherLocale = locale === "zh" ? "en" : "zh"
   const otherHref = pathname.replace(`/${locale}`, `/${otherLocale}`)
 
-  return <div className="min-h-screen bg-canvas">
-    <header className={`fixed top-0 z-50 flex h-14 items-center border-b border-line bg-white/80 backdrop-blur-xl ${isDashboard ? "inset-x-0 lg:left-[228px]" : "inset-x-0"}`}>
-      {isDashboard ? <DashboardTopbar locale={locale} t={t} prefix={prefix} /> : <StandardTopbar authenticated={authenticated} identity={identity} otherHref={otherHref} t={t} locale={locale} prefix={prefix} />}
-    </header>
-    <aside className={`fixed bottom-0 left-0 z-40 hidden w-[228px] border-r border-line bg-white lg:flex lg:flex-col ${isDashboard ? "top-0" : "top-14"}`}>
-      <div className="h-[88px] overflow-hidden"><img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID Logistics Bidding Platform" className="-ml-3 -mt-7 block h-auto w-[272px] select-none mix-blend-multiply" draggable={false} /></div>
-      {isDashboard ? <DashboardSidebar nav={nav} account={account} pathname={pathname} identity={identity} t={t} locale={locale} /> : <><div className="px-3"><NavGroup label={t.workflow} items={nav} pathname={pathname} /><NavGroup label={t.network} items={network} pathname={pathname} className="mt-8" /><NavGroup label={t.account} items={account} pathname={pathname} className="mt-8" /></div><SidebarFooter identity={identity} t={t} locale={locale} /></>}
+  return <div className="min-h-screen bg-[#f0f2f8] text-[#111827]">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[228px] flex-col border-r border-[#dfe4ed] bg-white lg:flex">
+      <Link href={`${prefix}/dashboard`} className="h-[88px] overflow-hidden" aria-label="LBID workspace">
+        <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID Logistics Bidding Platform" className="-ml-3 -mt-7 block h-auto w-[272px] select-none mix-blend-multiply" draggable={false} />
+      </Link>
+      <div className="px-3 pb-3"><Link href={`${prefix}/inquiries/new`} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-dashed border-[#d7dde8] text-[12.5px] font-medium text-[#7b879d] transition hover:border-[#0c1a3e] hover:bg-[#eff3ff] hover:text-[#0c1a3e]"><Plus className="h-3.5 w-3.5" />{t.create}</Link></div>
+      <NavSection items={primary} pathname={pathname} />
+      <div className="mx-3 mt-2 border-t border-[#edf0f4] pt-2"><NavSection items={secondary} pathname={pathname} compact /></div>
+      <div className="mx-3 mt-2 border-t border-[#edf0f4] pt-2"><NavSection items={account} pathname={pathname} /></div>
+      {identity?.role === "admin" ? <div className="mx-3 mt-2 border-t border-[#edf0f4] pt-2"><p className="px-3 pb-1 text-[9.5px] font-bold uppercase tracking-[.09em] text-[#99a4b8]">{t.admin}</p><NavSection items={admin} pathname={pathname} compact admin /></div> : null}
+      <div className="mt-auto border-t border-[#edf0f4] px-3 pb-5 pt-3">
+        <MembershipCard identity={identity} locale={locale} label={t.routes} />
+        <Link href={`${prefix}/profile`} className="group flex items-center gap-2.5 rounded-xl px-1 py-1 transition hover:bg-[#f6f8fc]"><Avatar identity={identity} /><span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-medium text-[#172038]">{identity?.companyName || t.member}</span><span className="mt-0.5 block truncate text-[11px] text-[#8c98ac]">{planLabel(identity?.plan)}</span></span><ChevronRight className="h-3.5 w-3.5 text-[#cbd2df] transition group-hover:text-[#5b6780]" /></Link>
+      </div>
     </aside>
-    <div className={`min-h-screen pb-20 lg:pb-0 lg:pl-[228px] ${isDashboard ? "pt-14" : "pt-14"}`}>{children}</div>
-    <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-line bg-white/95 px-2 py-2 backdrop-blur lg:hidden">{nav.map((item) => { const active = pathname === item.href; return <Link key={item.href} href={item.href} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-semibold transition ${active ? "bg-[#eef1f8] text-lblue" : "text-slate-500 hover:bg-slate-50"}`}><item.icon className="h-5 w-5" /><span>{item.label}</span></Link> })}</nav>
+
+    <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center border-b border-[#dfe4ed] bg-white/85 backdrop-blur-xl lg:left-[228px]">
+      <div className="flex w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-9">
+        <div className="flex min-w-0 items-center gap-3"><span className="hidden text-[14px] font-semibold tracking-[-.2px] text-[#172038] sm:inline">{pageTitle(pathname, prefix, t.today)}</span><span className="hidden border-l border-[#dfe4ed] pl-3 text-[13px] text-[#8c98ac] md:inline">{new Intl.DateTimeFormat(locale === "zh" ? "zh-HK" : "en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}</span><div className="hidden min-w-[220px] items-center gap-2 rounded-lg border border-[#e0e5ee] bg-[#fbfcfe] px-3 py-2 text-[12.5px] text-[#8c98ac] xl:flex"><Search className="h-4 w-4" />{t.search}</div></div>
+        <div className="flex items-center gap-1.5">
+          {authenticated ? <><Link href={`${prefix}/tokens`} className="hidden items-center gap-2 rounded-lg border border-[#ead9a0] bg-[#fffaf0] px-3 py-1.5 text-[12px] font-semibold text-[#80631b] shadow-[0_1px_4px_rgba(0,0,0,.04)] sm:flex"><Wallet className="h-4 w-4" />{identity?.tokens ?? 0} Token</Link><Link href={`${prefix}/notifications`} className="relative grid h-[34px] w-[34px] place-items-center rounded-lg text-[#7e8ba1] transition hover:bg-white hover:text-[#172038] hover:shadow-[0_1px_6px_rgba(0,0,0,.07)]" aria-label="Notifications"><Bell className="h-4 w-4" />{primary.find((item) => item.href.endsWith("notifications"))?.badge ? <span className="absolute right-2 top-2 h-[5px] w-[5px] rounded-full border-[1.5px] border-white bg-[#c49a3c]" /> : null}</Link><button type="button" className="hidden h-[34px] w-[34px] place-items-center rounded-lg text-[#7e8ba1] transition hover:bg-white hover:text-[#172038] hover:shadow-[0_1px_6px_rgba(0,0,0,.07)] md:grid" aria-label="Help"><CircleHelp className="h-4 w-4" /></button><span className="mx-1 hidden h-5 w-px bg-[#dfe4ed] sm:block" /><span className="hidden items-center gap-2 rounded-lg border border-[#dfe4ed] bg-white px-3 py-1.5 text-[12px] font-medium text-[#4c5870] shadow-[0_1px_4px_rgba(0,0,0,.05)] md:inline-flex"><span className="h-[6px] w-[6px] rounded-full bg-[#198754]" />{t.open}</span></> : <><Button asChild size="sm" variant="ghost"><Link href={`${prefix}/auth`}><LogIn className="h-4 w-4" />{t.signIn}</Link></Button><Button asChild size="sm" className="hidden sm:inline-flex"><Link href={`${prefix}/auth?mode=register`}><UserPlus className="h-4 w-4" />{t.register}</Link></Button></>}
+          <Link href={otherHref} className="ml-1 rounded-lg border border-[#dfe4ed] px-2.5 py-1.5 text-[12px] font-semibold text-[#37445c] transition hover:bg-[#f6f8fc]">{t.language}</Link>
+        </div>
+      </div>
+    </header>
+    <main className="min-h-screen pb-20 pt-14 lg:pl-[228px] lg:pb-0">{children}</main>
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#dfe4ed] bg-white/95 px-2 py-2 backdrop-blur lg:hidden">{primary.slice(0, 4).map((item) => <MobileNavItem key={item.href} item={item} active={pathname === item.href} />)}</nav>
   </div>
 }
 
-function DashboardTopbar({ locale, t, prefix }: { locale: Locale; t: typeof copy.zh; prefix: string }) {
-  const date = new Intl.DateTimeFormat(locale === "zh" ? "zh-HK" : "en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())
-  return <div className="flex w-full items-center justify-between px-8 lg:px-9"><div className="flex items-center gap-3"><span className="text-[14px] font-semibold tracking-[-.2px] text-ink">{t.today}</span><span className="border-l border-line pl-3 text-[13px] text-ink-3">{date}</span></div><div className="flex items-center gap-1"><ShellIcon label="Search"><Search className="h-4 w-4" /></ShellIcon><Link href={`${prefix}/notifications`} className="relative"><ShellIcon label="Notifications"><Bell className="h-4 w-4" /></ShellIcon><span className="absolute right-[8px] top-[8px] h-[5px] w-[5px] rounded-full border-[1.5px] border-white bg-lgold" /></Link><ShellIcon label="Help"><HelpCircle className="h-4 w-4" /></ShellIcon><div className="mx-2 h-5 w-px bg-line" /><span className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-[0_1px_4px_rgba(0,0,0,.05)]"><span className="h-[6px] w-[6px] rounded-full bg-emerald" />{t.biddingOpen}</span></div></div>
+function NavSection({ items, pathname, compact = false, admin = false }: { items: NavItem[]; pathname: string; compact?: boolean; admin?: boolean }) {
+  return <nav className="flex flex-col gap-0.5 px-3">{items.map((item) => { const active = pathname === item.href || (item.href.endsWith("/admin") && pathname.startsWith(`${item.href}/`)); return <Link key={item.href} href={item.href} className={`relative flex items-center gap-3 rounded-xl px-3 ${compact ? "py-2 text-[12.5px]" : "py-[9px] text-[13px]"} transition ${active ? (admin ? "bg-[#b7791f] text-white" : "bg-[#0c1a3e] font-medium text-white shadow-[0_2px_10px_rgba(12,26,62,.18)]") : "text-[#59667d] hover:bg-[#eff3ff] hover:text-[#172038]"}`}><item.icon className={compact ? "h-[14px] w-[14px]" : "h-[15px] w-[15px]"} strokeWidth={active ? 2.2 : 1.75} /><span className="min-w-0 flex-1 truncate">{item.label}</span>{item.badge ? <span className="grid h-5 w-5 place-items-center rounded-full bg-red-500 text-[10px] font-bold text-white">{item.badge}</span> : null}</Link> })}</nav>
 }
-function StandardTopbar({ authenticated, identity, otherHref, t, locale, prefix }: { authenticated: boolean; identity: Identity; otherHref: string; t: typeof copy.zh; locale: Locale; prefix: string }) { return <div className="flex w-full items-center gap-3 px-4 sm:px-6"><div className="hidden h-9 max-w-xl flex-1 items-center gap-2 border border-line bg-[#fbfcfe] px-3 text-sm text-ink-3 md:flex"><Search className="h-4 w-4" /><span>{t.search}</span></div><div className="ml-auto flex items-center gap-1.5">{authenticated ? <><Link href={`${prefix}/tokens`} className="hidden h-9 items-center gap-2 rounded-md border border-[#e8d9a0] bg-[#fdf8ec] px-3 text-xs font-semibold text-[#765b16] transition hover:border-[#c49a3c] hover:bg-[#fbf3dc] sm:flex"><Wallet className="h-4 w-4" />{identity?.tokens ?? 0} Token</Link><Link href={`${prefix}/notifications`} className="shell-icon-button" aria-label="Notifications"><Bell className="h-5 w-5" /></Link><CompanyIdentity locale={locale} href={`${prefix}/profile`} identity={identity} t={t} /></> : <><Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link href={`${prefix}/auth`}><LogIn className="h-4 w-4" />{t.signIn}</Link></Button><Button asChild size="sm"><Link href={`${prefix}/auth?mode=register`}><UserPlus className="h-4 w-4" />{t.register}</Link></Button></>}<Button asChild variant="outline" size="sm" className="min-w-10 px-2.5"><Link href={otherHref}>{t.language}</Link></Button></div></div> }
-function DashboardSidebar({ nav, account, pathname, identity, t, locale }: { nav: NavItem[]; account: NavItem[]; pathname: string; identity: Identity; t: typeof copy.zh; locale: Locale }) { return <><nav className="flex-1 space-y-0.5 px-3">{nav.map((item) => <DashboardNavItem key={item.href} item={item} active={pathname === item.href} />)}</nav><div className="border-t border-line-light px-3 pb-6 pt-4"><Link href={account[1].href} className="mb-3 flex items-center gap-3 rounded-xl px-3 py-[9px] text-[13px] text-ink-2 transition hover:bg-[#eef1f8] hover:text-ink"><Settings2 className="h-[15px] w-[15px]" />{t.settings}</Link><MembershipCard identity={identity} t={t} locale={locale} /><CompanyIdentity href={account[1].href} identity={identity} t={t} locale={locale} compact /></div></> }
-function DashboardNavItem({ item, active }: { item: NavItem; active: boolean }) { return <Link href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-[9px] text-[13px] transition ${active ? "bg-lblue font-semibold text-white shadow-[0_2px_10px_rgba(12,26,62,.18)]" : "text-ink-2 hover:bg-[#eef1f8] hover:text-ink"}`}><item.icon className="h-[15px] w-[15px]" strokeWidth={active ? 2.2 : 1.75} />{item.label}</Link> }
-function SidebarFooter({ identity, t, locale }: { identity: Identity; t: typeof copy.zh; locale: Locale }) { return <div className="mt-auto border-t border-line-light px-3 pb-6 pt-4"><MembershipCard identity={identity} t={t} locale={locale} /><CompanyIdentity href={`/${locale}/profile`} identity={identity} t={t} locale={locale} compact /></div> }
-function MembershipCard({ identity, t, locale }: { identity: Identity; t: typeof copy.zh; locale: Locale }) { const plan = t.plans[(identity?.plan || "trial") as keyof typeof t.plans] || t.plans.trial; return <Link href={`/${locale}/subscription`} className="mb-3 block rounded-[13px] bg-[linear-gradient(135deg,#E8D9A0,#C49A3C_50%,#E8D9A0)] p-[1.5px]"><span className="block rounded-[11.5px] bg-[#fdf8ec] px-3 py-2.5"><span className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[.07em] text-[#7a5e18]"><span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-lgold text-[9px] text-white">★</span>{plan}</span><span className="mt-1.5 block text-[11px] leading-[1.4] text-[#9a7517]">{t.priority}</span></span></Link> }
-function ShellIcon({ label, children }: { label: string; children: React.ReactNode }) { return <button aria-label={label} className="grid h-[34px] w-[34px] place-items-center rounded-lg text-ink-3 transition hover:bg-white hover:text-ink hover:shadow-[0_1px_6px_rgba(0,0,0,.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lblue/30">{children}</button> }
-function CompanyIdentity({ href, identity, locale, t, compact = false }: { href: string; identity: Identity; locale: Locale; t: typeof copy.zh; compact?: boolean }) { const name = identity?.companyName || t.member; const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase() || "LB"; const plan = t.plans[(identity?.plan || "trial") as keyof typeof t.plans] || t.plans.trial; return <Link href={href} className={`${compact ? "w-full rounded-xl px-1 py-1 hover:bg-canvas" : "h-10 rounded-md border border-line bg-white px-2 hover:border-[#b8c4dd] hover:bg-[#fbfcfe]"} flex items-center gap-2 transition`} aria-label={locale === "zh" ? "開啟公司設定" : "Open company settings"}><span className="grid h-8 w-8 place-items-center rounded-full border border-line bg-[#eef1f8] text-[10px] font-bold text-lblue">{initials}</span><span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-semibold text-ink">{name}</span><span className="block truncate text-[11px] text-ink-3">{plan}</span></span><ChevronRight className="h-3.5 w-3.5 shrink-0 text-line" /></Link> }
-function NavGroup({ label, items, pathname, className = "" }: { label: string; items: NavItem[]; pathname: string; className?: string }) { return <section className={className}><p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[.12em] text-ink-3">{label}</p><nav className="space-y-1">{items.map((item) => { const active = pathname === item.href; return <Link key={item.href} href={item.href} className={`group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${active ? "bg-[#edf1fb] text-lblue" : "text-ink-2 hover:bg-[#f7f9fc] hover:text-lblue"}`}>{active ? <span className="absolute inset-y-2 left-0 w-0.5 bg-lgold" /> : null}<item.icon className="h-4 w-4" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="h-4 w-4" /> : null}</Link> })}</nav></section> }
+
+function MobileNavItem({ item, active }: { item: NavItem; active: boolean }) { return <Link href={item.href} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-semibold transition ${active ? "bg-[#eef1fb] text-[#0c1a3e]" : "text-[#7e8ba1]"}`}><item.icon className="h-4 w-4" /><span>{item.label}</span></Link> }
+function Avatar({ identity }: { identity: Identity }) { const initials = (identity?.companyName || "LB").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); return <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#dfe4ed] bg-[#eef1f8] text-[10px] font-bold text-[#0c1a3e]">{initials}</span> }
+function MembershipCard({ identity, locale, label }: { identity: Identity; locale: Locale; label: string }) { return <Link href={`/${locale}/subscription`} className="mb-3 block rounded-[13px] bg-[linear-gradient(135deg,#e8d9a0,#c49a3c_50%,#e8d9a0)] p-[1.5px]"><span className="block rounded-[11.5px] bg-[#fffaf0] px-3 py-2.5"><span className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[.07em] text-[#80631b]"><span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-[#c49a3c] text-[9px] text-white"><Crown className="h-2.5 w-2.5" /></span>{planLabel(identity?.plan)}</span><span className="mt-1.5 block text-[11px] leading-[1.4] text-[#a17e22]">{label}</span></span></Link> }
+function planLabel(plan?: string) { if (plan === "annual") return "Premium Member"; if (plan === "monthly") return "Standard Member"; if (plan === "free") return "Free Member"; return "Trial Member" }
+function pageTitle(pathname: string, prefix: string, fallback: string) { const route = pathname.replace(prefix, "") || "/dashboard"; const names: Record<string, string> = { "/dashboard": fallback, "/marketplace": "Opportunities", "/active-bids": "Active Bids", "/requests": "My Requests", "/orders": "Orders", "/notifications": "Notifications", "/forwarders": "Directory", "/community": "Community", "/tokens": "Token Wallet", "/profile": "Company Profile", "/subscription": "Membership" }; return names[route] || fallback }
