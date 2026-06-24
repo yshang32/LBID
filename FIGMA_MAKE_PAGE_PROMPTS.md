@@ -336,3 +336,40 @@ show uploaded certificates, internal notes and approve/reject actions. For payme
 review, show payment reference, proof, history and confirmation status. This is an
 internal work tool, so keep it quiet, precise and auditable.
 ```
+
+## 18. Community
+
+```text
+Create the LBID Community page using the existing LBID Today Workspace design
+system exactly. Keep the shared app shell, sidebar, topbar, pale-gray canvas,
+white surfaces, thin borders, compact type and quiet operational hierarchy.
+
+This is not a general social feed and not a messaging app. It is a curated B2B
+trust surface where logistics companies showcase verified capability, operational
+milestones, route expertise and market insight. Its commercial purpose is to build
+reputation while keeping transaction activity inside LBID.
+
+At the top, show a compact page header titled "Community" with a supporting line
+about capability and trust, plus one restrained "Create post" action. Below, show
+a composer card with a company avatar, text area and simple post-type selector:
+Company update, Route insight, Certification, or Completed milestone.
+
+The composer must show a clear inline compliance note: public posts cannot include
+phone numbers, email addresses, WhatsApp links, external contact routes, direct
+price negotiation, or requests to move a deal outside LBID. When such content is
+detected, replace the normal submit state with an amber warning panel that explains
+the issue and suggests "Interested companies can find us through the LBID Directory."
+
+Below, create an information-dense feed of verified company posts. Each post shows
+company identity, verification badge, reputation/rating, route or capability tag,
+timestamp, concise content and quiet engagement counts. Do not use oversized images,
+influencer styling, noisy reaction controls, or a consumer social-media layout.
+
+Add a right-side or top secondary panel for Community Guidelines: contact details
+unlock after award, active deal communication should remain in LBID order messages,
+and repeated off-platform solicitation may affect reputation and directory visibility.
+
+Include polished loading, no-posts, compliance-warning and post-published success
+states. The overall impression should be a professional logistics network, not a
+social network.
+```
