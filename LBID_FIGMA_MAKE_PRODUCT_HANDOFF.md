@@ -210,3 +210,174 @@ Use this wording before a page-specific prompt:
 5. Codex builds, verifies the focused workflow, commits to GitHub and Vercel deploys from main.
 
 The Figma ZIP is the visual source. Next.js plus Supabase is the functional source of truth.
+
+---
+
+## Appendix A: Complete Page Route Inventory
+
+This appendix lists every page route currently present in the Next.js application. A design AI must distinguish between core product screens, supporting product screens, and legacy/design-preview screens.
+
+### Core product screens
+
+| Route | Status | Function and design requirement |
+|---|---|---|
+| `/{locale}` | Core | Localised app entry; routes users into the product/auth flow. |
+| `/{locale}/auth` | Core | Supabase sign-in, registration and reset entry. No sidebar. |
+| `/{locale}/onboarding` | Core | Unified company onboarding and dual-capability setup. |
+| `/{locale}/dashboard` | Core | Capability-aware Today Workspace. |
+| `/{locale}/requests` | Core | Client request list and status filter surface. |
+| `/{locale}/requests/{id}` | Core | Client request detail and workflow state. |
+| `/{locale}/inquiries/new` | Core | Client shipment request creator. |
+| `/{locale}/marketplace` | Core | Forwarder opportunity marketplace. |
+| `/{locale}/marketplace/{id}` | Core | Forwarder sealed quote console. |
+| `/{locale}/quotations/compare` | Core | Client bid comparison and award decision. |
+| `/{locale}/orders` | Core | Shared order list. |
+| `/{locale}/orders/{id}` | Core | Shared operational order workspace. |
+| `/{locale}/orders/{id}/documents` | Core | Private document checklist and upload. |
+| `/{locale}/orders/{id}/messages` | Core | Private per-order thread. |
+| `/{locale}/orders/{id}/tracking` | Core | Tracking event timeline. |
+| `/{locale}/orders/{id}/awb` | Core | AWB form/output workflow. |
+| `/{locale}/orders/{id}/review` | Core | Client review after completion. |
+| `/{locale}/forwarders` | Core | Public Forwarder directory. |
+| `/{locale}/forwarders/{slug}` | Core | Public Forwarder profile. |
+| `/{locale}/profile` | Core | Private company profile and capability settings. |
+| `/{locale}/tokens` | Core | Token wallet, ledger, purchase and boost work. |
+| `/{locale}/subscription` | Core | Membership tier, checkout and billing management. |
+| `/{locale}/notifications` | Core | Notification centre. |
+
+### Admin screens
+
+| Route | Function |
+|---|---|
+| `/{locale}/admin` | Operations overview / entry point. |
+| `/{locale}/admin/shipment-requests` | Review, publish or reject requests. Rejection UI must collect a reason. |
+| `/{locale}/admin/accounts` | Company capability, membership and account management. |
+| `/{locale}/admin/pending-payments` | Payment evidence queue and confirmation work. |
+| `/{locale}/admin/audit` | Audit history and critical workflow trace. |
+
+### Supporting product and partner-growth screens
+
+| Route | Current implementation | Design implication |
+|---|---|---|
+| `/{locale}/quotations/new` | Quotation builder with line items, calculation and quotation API integration. | Design as a professional pricing builder; show total, line items, generation and share/PDF success states. |
+| `/{locale}/matches/{id}` | Match Record screen. Current page uses example/static match data while live match APIs exist. | Design as the post-award relationship record: parties, contact unlock, commercial terms, document checklist, messages, platform record. Do not claim all static sample values are live. |
+| `/{locale}/community` | Community UI currently reads local fixture content; draft checks phone/email/WhatsApp patterns before publishing. | Treat as planned/pilot social-proof feature. Public posts must never expose contact details or move deals outside LBID. |
+| `/{locale}/services` | Value-added services catalogue currently reads local fixture content. | Treat as separate LBID service-request lead funnel for website/app/ERP/CRM assistance, not as shipment fulfillment. |
+| `/{locale}/directory` | Directory compatibility/entry route. | Use the same company directory visual system as `/forwarders`. |
+| `/{locale}/onboarding/agency` | Compatibility route for earlier Agency onboarding. | Keep visual continuity but point users toward unified onboarding. |
+| `/{locale}/onboarding/forwarder` | Compatibility route for earlier Forwarder onboarding. | Keep visual continuity but point users toward unified onboarding. |
+| `/{locale}/workflow` | Product/workflow explanation screen. | Use for explaining the sealed-bid lifecycle, not for active transactional work. |
+
+### Legacy and design-only screens
+
+| Route | Purpose | Rule |
+|---|---|---|
+| `/{locale}/bid-demo` | Interactive visual demonstration of recommended vs open-market sealed bid. | No real Token debit or bid submission. Keep labelled as design/demo. |
+| `/{locale}/product-preview` | Static full-product presentation preview. | Not a production workflow source. |
+| `/`, `/auth`, `/forwarders`, `/forwarders/{slug}`, `/workflow`, `/admin` | Compatibility/root aliases. | Do not create a separate visual system; redirect or mirror localised routes. |
+
+---
+
+## Appendix B: Complete API Route Inventory
+
+Every current Next.js route handler is listed below. Design AI should use this list to know whether a workflow is real, administrative, automated, or internal-only.
+
+### Authentication, workspace and company
+
+| Endpoint | Methods | Function |
+|---|---|---|
+| `/api/auth/bootstrap` | POST | Creates or initialises the authenticated user's product profile context. |
+| `/api/workspace` | GET | Dashboard aggregate: profile, requests, opportunities, recommendations, orders, Token/document context. |
+| `/api/company-profile` | GET, PATCH | Reads/updates company data and capability settings. |
+| `/api/onboarding/save-step` | POST | Saves progress in unified onboarding. |
+| `/api/onboarding/complete` | POST | Finalises onboarding. |
+| `/api/backend/snapshot` | GET | Legacy/demo backend snapshot; not a source for new production design. |
+
+### Requests, bids, awards and match records
+
+| Endpoint | Methods | Function |
+|---|---|---|
+| `/api/shipment-requests` | GET, POST | Lists/creates requests. Real create begins in `PENDING_REVIEW`. |
+| `/api/shipment-requests/{id}` | GET, PATCH | Request detail and permitted edits. |
+| `/api/shipment-requests/{id}/cancel` | POST | Controlled cancellation/review workflow. |
+| `/api/bids` | GET, POST | Lists authorised bid data and submits sealed bid through Token RPC. |
+| `/api/bids/{id}/accept` | POST | Client accepts a bid and creates quotation, order and match record. |
+| `/api/recommendations` | GET, POST | Match recommendations and recommendation status. |
+| `/api/match-records` | GET | Match record list for authorised user. |
+| `/api/match-records/{id}` | GET, PATCH | One match record and permitted relationship-stage update. |
+
+### Orders, documents, tracking, messages and review
+
+| Endpoint | Methods | Function |
+|---|---|---|
+| `/api/orders/{id}` | GET, PATCH | Order detail and status update. |
+| `/api/orders/{id}/tracking` | GET, POST | Tracking history and fulfilment update. |
+| `/api/orders/{id}/documents` | GET, POST | Private document list/upload. |
+| `/api/orders/{id}/documents/reminder` | POST | Sends document completeness reminder. |
+| `/api/orders/{id}/messages` | GET, POST | Private order messages plus notification/email event. |
+| `/api/orders/{id}/awb` | POST | AWB PDF/generation workflow. |
+| `/api/reviews` | GET, POST | Completed-order reviews. |
+
+### Quotation, directory, notifications and growth
+
+| Endpoint | Methods | Function |
+|---|---|---|
+| `/api/quotations` | POST | Creates formal quotation record. |
+| `/api/quotations/{token}` | GET | Reads a public quotation through a share token. |
+| `/api/quotations/{token}/pdf` | GET, POST | Retrieves/generates quotation PDF. |
+| `/api/directory` | GET | Searchable public company directory. |
+| `/api/directory/{id}` | GET | Public company profile. |
+| `/api/notifications` | GET, POST, PATCH | Lists, creates and marks notifications read. |
+| `/api/points` | GET, POST | Points balance/events and earning/redemption operations. |
+| `/api/referrals` | GET, POST | Referral code, referred user and reward lifecycle. |
+
+### Membership, tokens and payments
+
+| Endpoint | Methods | Function |
+|---|---|---|
+| `/api/tokens` | GET | Token balance and ledger. |
+| `/api/tokens/purchase` | POST | Token purchase request. |
+| `/api/tokens/boost` | POST | Redeems Token-funded directory/profile boost. |
+| `/api/subscriptions` | GET | Subscription tier/status. |
+| `/api/subscriptions/checkout` | POST | Starts Stripe/hosted checkout. |
+| `/api/subscriptions/portal` | POST | Opens billing-management flow. |
+| `/api/subscriptions/webhook` | POST | Server-only payment webhook. Never design this as a human screen. |
+| `/api/payment-intents/{id}/upload-proof` | POST | Uploads manual payment proof. |
+
+### Admin and automation
+
+| Endpoint | Methods | Function |
+|---|---|---|
+| `/api/admin/shipment-requests` | GET, PATCH | Review/publish/reject shipment requests. |
+| `/api/admin/forwarders` | GET | Verification queue. |
+| `/api/admin/forwarders/{id}/verify` | POST | Approve/reject forwarder verification. |
+| `/api/admin/accounts` | GET, PATCH | Manage company capability, tier, Token and account state. |
+| `/api/admin/pending-payments` | GET, POST | Manual payment review/processing. |
+| `/api/admin/payment-intents/{id}/confirm` | POST | Confirms a payment intent. |
+| `/api/admin/analytics` | GET | Platform operational metrics. |
+| `/api/admin/audit-logs` | GET | Audit trail. |
+| `/api/cron/{job}` | GET, POST | Protected scheduled job endpoint, including bid-window and reminder automation. Do not design as a public screen. |
+
+---
+
+## Appendix C: Function Coverage Checklist for Future Design ZIPs
+
+When creating a Figma page, include appropriate states for these existing functions rather than only the happy path:
+
+- Sign in, register, persistent authenticated session and sign out/account menu.
+- Unified company onboarding with independent Client and Forwarder capability toggles.
+- Request creation, review pending, publish/open, close, compare, award and cancellation/cooling-off.
+- Recommended opportunity versus normal open-market opportunity.
+- Sealed bid, Token debit, duplicate-bid prevention, insufficient Token, expired window and submission receipt.
+- Quote comparison, lowest-quote badge and non-lowest confirmation.
+- Formal quotation creation/share/PDF.
+- Order milestones, document checklist/upload/reminder, tracking update, messages and review.
+- Directory profile, verification, rating/reputation, membership and route coverage.
+- Token ledger, token purchase, directory boost, points and referral surfaces.
+- Subscription checkout, billing portal, manual payment proof and post-payment tier upgrade success.
+- In-app notifications and email-triggering events.
+- Admin review, verification, payments, analytics and audit trail.
+- Community contact-detail warning and off-platform contact prevention.
+- Value-added services lead request, clearly separate from shipping marketplace.
+
+The design should make a distinction between **implemented transactional workflows**, **supporting product features**, and **legacy/static previews**. Never visually present a static preview as a confirmed live transaction.
