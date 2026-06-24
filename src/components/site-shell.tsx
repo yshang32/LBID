@@ -67,7 +67,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
       {isDashboard ? <DashboardTopbar locale={locale} t={t} prefix={prefix} /> : <StandardTopbar authenticated={authenticated} identity={identity} otherHref={otherHref} t={t} locale={locale} prefix={prefix} />}
     </header>
     <aside className={`fixed bottom-0 left-0 z-40 hidden w-[228px] border-r border-line bg-white lg:flex lg:flex-col ${isDashboard ? "top-0" : "top-14"}`}>
-      <div className="px-6 pb-7 pt-7"><BrandMark markClassName="h-9 w-[138px]" /><p className="mt-1.5 text-[10px] uppercase tracking-[.08em] text-ink-3">Logistics platform · HK</p></div>
+      <div className="h-[88px] overflow-hidden"><img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID Logistics Bidding Platform" className="-ml-3 -mt-7 block h-auto w-[272px] select-none mix-blend-multiply" draggable={false} /></div>
       {isDashboard ? <DashboardSidebar nav={nav} account={account} pathname={pathname} identity={identity} t={t} locale={locale} /> : <><div className="px-3"><NavGroup label={t.workflow} items={nav} pathname={pathname} /><NavGroup label={t.network} items={network} pathname={pathname} className="mt-8" /><NavGroup label={t.account} items={account} pathname={pathname} className="mt-8" /></div><SidebarFooter identity={identity} t={t} locale={locale} /></>}
     </aside>
     <div className={`min-h-screen pb-20 lg:pb-0 lg:pl-[228px] ${isDashboard ? "pt-14" : "pt-14"}`}>{children}</div>
