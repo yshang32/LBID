@@ -36,8 +36,23 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        lblue: "#1B2B5E",
-        lgold: "#C9A84C",
+        lblue: "#0C1A3E",
+        lgold: "#C49A3C",
+        ink: {
+          DEFAULT: "#0C1220",
+          2: "#4D5566",
+          3: "#9099A8",
+        },
+        canvas: "#F4F5F9",
+        line: {
+          DEFAULT: "#E2E6EE",
+          light: "#EEF0F5",
+        },
+        emerald: {
+          DEFAULT: "#1A7D4A",
+          soft: "#EDFAF3",
+          mid: "#52936E",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

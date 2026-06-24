@@ -4,22 +4,22 @@
 
 @layer base {
   :root {
-    --background: 210 25% 98%;
-    --foreground: 224 38% 13%;
+    --background: 228 26% 97%;
+    --foreground: 224 44% 9%;
     --card: 0 0% 100%;
     --card-foreground: 224 42% 15%;
-    --primary: 226 57% 23%;
+    --primary: 226 67% 15%;
     --primary-foreground: 0 0% 100%;
     --secondary: 216 34% 95%;
     --secondary-foreground: 224 42% 18%;
     --muted: 216 26% 96%;
     --muted-foreground: 218 13% 43%;
-    --accent: 43 52% 54%;
+    --accent: 39 53% 50%;
     --accent-foreground: 224 42% 15%;
     --border: 216 22% 89%;
     --input: 216 22% 86%;
     --ring: 43 52% 54%;
-    --radius: 0.625rem;
+    --radius: 0.5rem;
   }
 
   * {
@@ -28,7 +28,7 @@
 
   body {
     @apply bg-background text-foreground;
-    background: #f8fafc;
+    background: #f4f5f9;
     min-height: 100vh;
     text-rendering: geometricPrecision;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -70,8 +70,13 @@
 @layer base { html { font-family: var(--font-inter), "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; } }
 
 .shell-icon-button { @apply inline-flex h-10 w-10 items-center justify-center rounded-md text-lblue transition; }
-.shell-icon-button:hover { background: #f1f4f9; }
+.shell-icon-button:hover { background: #eef1f8; box-shadow: 0 1px 6px rgba(12, 26, 62, .07); }
 .shell-icon-button:focus-visible { outline: 2px solid rgba(27, 43, 94, .3); outline-offset: 2px; }
+
+.lbid-surface { border: 1px solid #e2e6ee; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(12, 26, 62, .03); }
+.lbid-surface-interactive { transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+.lbid-surface-interactive:hover { border-color: #c8cfdb; box-shadow: 0 8px 24px rgba(12, 26, 62, .08); transform: translateY(-2px); }
+.lbid-eyebrow { color: #9a7520; font-size: .68rem; font-weight: 700; letter-spacing: .1em; }
 
 .auth-scene { position: relative; background: radial-gradient(circle at 12% 28%, rgba(204, 219, 245, .62), transparent 27%), radial-gradient(circle at 84% 82%, rgba(248, 237, 196, .62), transparent 25%), #f8fafc; }
 .auth-scene::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .65; background-image: linear-gradient(rgba(27,43,94,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(27,43,94,.035) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(to bottom, black, transparent 75%); }
