@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { apiJson } from "@/lib/api-client"
+import { getDemoWorkspace } from "@/lib/demo-workspace"
 
 type Locale = "zh" | "en"
 type ShipmentRequest = { id: string; route?: { origin?: string; destination?: string }; cargo_details?: { cargo?: string; cargo_type?: string; mode?: string }; services_needed?: string[]; bid_deadline?: string; status?: string }
@@ -17,6 +18,7 @@ const copy = {
   zh: {
     empty: "\u73fe\u5728\u6c92\u6709\u958b\u653e\u7684\u7af6\u50f9\u9700\u6c42\u3002",
     recommendedEmpty: "\u7cfb\u7d71\u6b63\u5728\u70ba\u4f60\u6383\u63cf\u5408\u9069\u7684\u9700\u6c42\u3002",
+    demo: "Demo data",
     load: "\u6b63\u5728\u6383\u63cf\u7af6\u50f9\u4efb\u52d9",
     recommended: "\u7cfb\u7d71\u63a8\u85a6",
     market: "\u5168\u90e8\u5e02\u5834",
@@ -31,6 +33,7 @@ const copy = {
   en: {
     empty: "There are no open bid opportunities right now.",
     recommendedEmpty: "LBID is scanning for opportunities that fit your company profile.",
+    demo: "Demo data",
     load: "Scanning bid missions",
     recommended: "Recommended for you",
     market: "All marketplace",
@@ -51,20 +54,38 @@ export function LiveMarketplaceList({ locale }: { locale: Locale }) {
   const [activeTab, setActiveTab] = useState<"recommended" | "market">("recommended")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [demoMode, setDemoMode] = useState(false)
 
   useEffect(() => {
     let active = true
     Promise.all([apiJson("/api/shipment-requests"), apiJson("/api/recommendations")]).then(([requestsResult, recommendationsResult]) => {
       if (!active) return
-      if (!requestsResult.response.ok) setError(requestsResult.body.error || t.empty)
-      else setRequests((requestsResult.body.shipmentRequests || []).filter((request: ShipmentRequest) => request.status === "OPEN"))
+      const demo = getDemoWorkspace()
+      let liveRequests: ShipmentRequest[] = []
+      let liveRecommendations: Recommendation[] = []
+      if (requestsResult.response.ok) liveRequests = (requestsResult.body.shipmentRequests || []).filter((request: ShipmentRequest) => request.status === "OPEN")
       if (recommendationsResult.response.ok) {
-        const rows = (recommendationsResult.body.recommendations || []).map((item: Recommendation) => ({ ...item, shipment_requests: Array.isArray(item.shipment_requests) ? item.shipment_requests[0] : item.shipment_requests })).filter((item: Recommendation) => item.shipment_requests)
-        setRecommendations(rows)
-        if (!rows.length) setActiveTab("market")
+        liveRecommendations = (recommendationsResult.body.recommendations || []).map((item: Recommendation) => ({ ...item, shipment_requests: Array.isArray(item.shipment_requests) ? item.shipment_requests[0] : item.shipment_requests })).filter((item: Recommendation) => item.shipment_requests)
+      }
+      if (!liveRequests.length && !liveRecommendations.length) {
+        setRequests(demo.opportunities)
+        setRecommendations(demo.recommendations)
+        setDemoMode(true)
+      } else {
+        setRequests(liveRequests)
+        setRecommendations(liveRecommendations)
+        if (!liveRecommendations.length) setActiveTab("market")
       }
       setLoading(false)
-    }).catch(() => { if (active) { setError(t.empty); setLoading(false) } })
+    }).catch(() => {
+      if (active) {
+        const demo = getDemoWorkspace()
+        setRequests(demo.opportunities)
+        setRecommendations(demo.recommendations)
+        setDemoMode(true)
+        setLoading(false)
+      }
+    })
     return () => { active = false }
   }, [t.empty])
 
@@ -76,6 +97,7 @@ export function LiveMarketplaceList({ locale }: { locale: Locale }) {
     <div className="bid-lane-switch" role="tablist" aria-label="Bid opportunity type">
       <button type="button" role="tab" aria-selected={activeTab === "recommended"} className={activeTab === "recommended" ? "bid-lane-option bid-lane-option-active" : "bid-lane-option"} onClick={() => setActiveTab("recommended")}><Sparkles className="h-4 w-4" />{t.recommended}<strong>{recommendations.length}</strong></button>
       <button type="button" role="tab" aria-selected={activeTab === "market"} className={activeTab === "market" ? "bid-lane-option bid-lane-option-active" : "bid-lane-option"} onClick={() => setActiveTab("market")}><Radar className="h-4 w-4" />{t.market}<strong>{requests.length}</strong></button>
+      {demoMode ? <span className="ml-auto inline-flex items-center rounded-full border border-[#e4d29a] bg-[#fff8e8] px-3 py-1 text-[11px] font-semibold text-[#8a6718]">{t.demo}</span> : null}
     </div>
     {!selected.length ? <p className="mt-5 border border-dashed border-lblue/15 bg-white p-8 text-center text-sm text-slate-500">{activeTab === "recommended" ? t.recommendedEmpty : t.empty}</p> : <div className="mt-5 grid gap-4 lg:grid-cols-2">{activeTab === "recommended" ? recommendations.map((recommendation) => <MissionCard key={recommendation.id} locale={locale} request={recommendation.shipment_requests as ShipmentRequest} recommendation={recommendation} t={t} />) : requests.map((request) => <MissionCard key={request.id} locale={locale} request={request} t={t} />)}</div>}
   </section>
