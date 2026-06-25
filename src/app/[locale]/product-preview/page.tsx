@@ -1,5 +1,7 @@
-import { FullProductPreview } from "@/components/preview/full-product-preview"
+import { UnifiedWorkspacePage } from "@/components/workspace/unified-workspace-page"
+import { isLocale, type Locale } from "@/lib/i18n"
 
 export default function ProductPreviewPage({ params }: { params: { locale: string } }) {
-  return <FullProductPreview locale={params.locale} />
+  const locale: Locale = isLocale(params.locale) ? params.locale : "en"
+  return <UnifiedWorkspacePage locale={locale} kind="preview" />
 }
