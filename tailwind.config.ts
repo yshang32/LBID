@@ -38,6 +38,16 @@ const config: Config = {
         },
         lblue: "#0C1A3E",
         lgold: "#C49A3C",
+        navy: {
+          DEFAULT: "#0C1A3E",
+          soft: "#EEF1F8",
+        },
+        gold: {
+          DEFAULT: "#C49A3C",
+          soft: "#FDF8EC",
+          border: "#E8D9A0",
+          dark: "#7A5E18",
+        },
         ink: {
           DEFAULT: "#0C1220",
           2: "#4D5566",
