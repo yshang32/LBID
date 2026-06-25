@@ -20,6 +20,7 @@ import {
   Send,
   Settings,
   ShieldCheck,
+  Sparkles,
   Users,
   Zap,
 } from "lucide-react"
@@ -56,6 +57,7 @@ const pageTitles: Record<string, string> = {
   "/quotations/compare": "Compare Bids",
   "/orders": "Orders",
   "/community": "Community",
+  "/demo-cases": "Demo Cases",
   "/forwarders": "Forwarder Directory",
   "/profile": "Company Profile",
   "/subscription": "Membership",
@@ -115,6 +117,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     { href: `${prefix}/analytics`, label: "Analytics", icon: BarChart2 },
     { href: `${prefix}/forwarders`, label: "Directory", icon: Users },
     { href: `${prefix}/community`, label: "Community", icon: MessageCircle },
+    { href: `${prefix}/demo-cases`, label: "Demo Cases", icon: Sparkles },
   ]
   const account: NavItem[] = [
     { href: `${prefix}/tokens`, label: "Token Wallet", icon: Zap, badge: identity?.tokens || 12 },
