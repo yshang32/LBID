@@ -98,7 +98,7 @@ const sharedStats = [
 ]
 
 const configs: Record<UnifiedPageKind, PageConfig> = {
-  dashboard: page("Today", "Good morning, Kenny.", "1 high-priority opportunity needs your attention today.", "Create request", "View marketplace", Activity),
+  dashboard: page("Today", "Good morning.", "1 high-priority opportunity needs your attention today.", "Create request", "View marketplace", Activity),
   marketplace: page("Opportunities", "Recommended and open bids in one clean queue.", "Priority matches are pushed first, then open-market requests sorted by deadline and fit.", "Place sealed bid", "Filter routes", Plane),
   "active-bids": page("Sealed Quotes", "Your submitted bids stay sealed until close.", "Track token use, bid status and deadline risk without seeing competitor prices.", "View receipt", "Open marketplace", LockKeyhole),
   "my-routes": page("Route Coverage", "Your service lanes drive recommendations.", "Keep routes, capacity and certifications clear so LBID can push the right work to you.", "Add route", "Edit profile", Route),
@@ -295,10 +295,11 @@ function PageFrame({
 
 function TodayWorkspace({ locale }: { locale: Locale }) {
   const prefix = `/${locale}`
+  const companyName = useWorkspaceCompanyName()
   return (
     <PageFrame
       eyebrow="Today"
-      title="Good morning, Kenny."
+      title={companyName ? `Good morning, ${companyName}.` : "Good morning."}
       intro="1 high-priority opportunity needs your attention today. Recommended work appears first, then normal open-market bids."
       actions={
         <>
@@ -324,6 +325,24 @@ function TodayWorkspace({ locale }: { locale: Locale }) {
       </section>
     </PageFrame>
   )
+}
+
+function useWorkspaceCompanyName() {
+  const [companyName, setCompanyName] = useState("")
+
+  useEffect(() => {
+    let mounted = true
+    apiJson("/api/company-profile").then(({ response, body }) => {
+      if (!mounted || !response.ok) return
+      const profile = body.companyProfile || {}
+      setCompanyName(profile.company_name_en || profile.company_name_zh || "")
+    })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  return companyName
 }
 
 function OpportunitiesWorkspace({ locale }: { locale: Locale }) {

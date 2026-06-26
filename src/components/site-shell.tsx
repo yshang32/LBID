@@ -83,11 +83,17 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         setIdentity(null)
         return
       }
+      setIdentity((current) => current ?? {
+        companyName: "Workspace",
+        plan: "standard",
+        tokens: 0,
+        role: null,
+      })
       const { response, body } = await apiJson("/api/company-profile")
       if (!mounted || !response.ok) return
       const profile = body.companyProfile || {}
       setIdentity({
-        companyName: profile.company_name_en || profile.company_name_zh || "Pacific Forward Ltd.",
+        companyName: profile.company_name_en || profile.company_name_zh || "LBID Company",
         plan: body.subscription?.plan || "monthly",
         tokens: Number(profile.token_balance_free || 0) + Number(profile.token_balance_paid || 0),
         role: body.role || null,
@@ -186,10 +192,10 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
           <Link href={`${prefix}/profile`} className="group flex items-center gap-2.5 px-1">
             <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-line bg-navy-soft text-[11px] font-bold text-navy transition-all duration-200 group-hover:border-navy/30">
-              {initials(identity?.companyName || "Kenny Lam")}
+              {initials(identity?.companyName || "LBID Company")}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[12.5px] font-medium text-ink">{identity?.companyName || "Kenny Lam"}</span>
+              <span className="block truncate text-[12.5px] font-medium text-ink">{identity?.companyName || "LBID Company"}</span>
               <span className="block truncate text-[11px] text-ink-3">{identity ? planLabel(identity.plan) : "Demo workspace"}</span>
             </span>
             <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-line transition-colors duration-200 group-hover:text-ink-3" strokeWidth={2} />
@@ -198,7 +204,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <TopBar pathname={pathname} prefix={prefix} identity={identity} />
+        <TopBar pathname={pathname} prefix={prefix} locale={locale} identity={identity} />
         <div className="flex-1 overflow-y-auto pb-20 lg:pb-0" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
           {children}
         </div>
@@ -211,12 +217,18 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   )
 }
 
-function TopBar({ pathname, prefix, identity }: { pathname: string; prefix: string; identity: Identity }) {
+function TopBar({ pathname, prefix, locale, identity }: { pathname: string; prefix: string; locale: Locale; identity: Identity }) {
   const route = pathname.replace(prefix, "") || "/dashboard"
   const title = pageTitles[route] ?? "LBID"
   const company = identity?.companyName || "Workspace"
   const tokens = identity?.tokens ?? 0
   const signedIn = Boolean(identity)
+  const today = new Intl.DateTimeFormat(locale === "zh" ? "zh-HK" : "en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date())
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-white/85 px-4 backdrop-blur-xl sm:px-6 lg:h-14 lg:px-9">
       <div className="flex min-w-0 items-center gap-3">
@@ -224,7 +236,7 @@ function TopBar({ pathname, prefix, identity }: { pathname: string; prefix: stri
           <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-ml-3 -mt-2 block w-[160px] max-w-none select-none mix-blend-multiply" draggable={false} />
         </Link>
         <span className="hidden truncate text-[14px] font-semibold tracking-[-0.2px] text-ink sm:inline">{title}</span>
-        <span className="hidden border-l border-line pl-3 text-[13px] text-ink-3 md:inline">Tuesday, 23 June 2026</span>
+        <span className="hidden border-l border-line pl-3 text-[13px] text-ink-3 md:inline">{today}</span>
       </div>
       <div className="flex min-w-0 items-center gap-1">
         <IconBtn aria-label="Search"><Search className="h-4 w-4" strokeWidth={1.75} /></IconBtn>
