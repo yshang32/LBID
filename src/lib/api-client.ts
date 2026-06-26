@@ -11,13 +11,13 @@ export async function getAuthHeaders() {
 
 export async function apiJson(path: string, init: RequestInit = {}) {
   const authHeaders = await getAuthHeaders()
+  const headers = new Headers(init.headers)
+  headers.set("content-type", headers.get("content-type") || "application/json")
+  Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value))
+
   const response = await fetch(path, {
     ...init,
-    headers: {
-      "content-type": "application/json",
-      ...authHeaders,
-      ...(init.headers || {}),
-    },
+    headers,
   })
 
   const body = await response.json().catch(() => ({}))

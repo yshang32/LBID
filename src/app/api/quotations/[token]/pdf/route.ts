@@ -164,7 +164,7 @@ async function buildQuotationPdf(token: string) {
 }
 
 function pdfResponse(buffer: Buffer, token: string) {
-  return new Response(buffer, {
+  return new Response(buffer as unknown as BodyInit, {
     headers: {
       "content-type": "application/pdf",
       "content-disposition": `inline; filename="LBID-${token}.pdf"`,

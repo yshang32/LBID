@@ -120,7 +120,7 @@ function normalizeAwb(body: any, orderId: string) {
 }
 
 function pdfResponse(buffer: Buffer, orderId: string) {
-  return new Response(buffer, {
+  return new Response(buffer as unknown as BodyInit, {
     headers: {
       "content-type": "application/pdf",
       "content-disposition": `inline; filename="LBID-AWB-${orderId}.pdf"`,
