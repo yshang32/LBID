@@ -64,9 +64,9 @@ const pageTitles: Record<string, string> = {
   "/tokens": "Token Wallet",
   "/notifications": "Notifications",
   "/admin": "Admin Dashboard",
-  "/admin/shipment-requests": "Admin · Requests",
-  "/admin/accounts": "Admin · Accounts",
-  "/admin/pending-payments": "Admin · Payments",
+  "/admin/shipment-requests": "Admin - Requests",
+  "/admin/accounts": "Admin - Accounts",
+  "/admin/pending-payments": "Admin - Payments",
 }
 
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
@@ -130,28 +130,32 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     { href: `${prefix}/admin/accounts`, label: "Accounts", icon: Building2 },
     { href: `${prefix}/admin/pending-payments`, label: "Payments", icon: Crown },
   ]
+  const mobileNav = [primary[0], primary[1], primary[2], primary[3], primary[4]]
 
   return (
-    <div className="flex h-screen overflow-hidden font-sans text-ink" style={{ background: "linear-gradient(150deg, #F0F2F8 0%, #ECEEF5 100%)" }}>
-      <aside className="hidden w-[228px] flex-shrink-0 flex-col border-r border-line bg-white lg:flex">
+    <div className="flex h-screen overflow-hidden font-sans text-ink" style={{ background: "linear-gradient(150deg, #F7F8FB 0%, #ECEFF6 100%)" }}>
+      <aside className="hidden w-[228px] flex-shrink-0 flex-col border-r border-line bg-white/95 shadow-[1px_0_0_rgba(15,23,42,0.02)] lg:flex">
         <Link href={`${prefix}/dashboard`} className="h-[88px] overflow-hidden" aria-label="LBID workspace">
           <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID Logistics Bidding Platform" className="-ml-3 -mt-7 block h-auto w-[272px] select-none mix-blend-multiply" draggable={false} />
         </Link>
 
         <div className="mb-3 px-3">
-          <Link href={`${prefix}/inquiries/new`} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2 text-[12.5px] font-medium text-ink-3 transition-all duration-200 ease-in-out hover:border-navy hover:bg-navy-soft hover:text-navy">
+          <Link href={`${prefix}/inquiries/new`} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2 text-[12.5px] font-medium text-ink-3 transition-all duration-200 ease-in-out hover:-translate-y-px hover:border-navy hover:bg-navy-soft hover:text-navy hover:shadow-[0_8px_18px_rgba(27,43,94,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/25">
             <Plus className="h-3.5 w-3.5" strokeWidth={2} />
             New Request
           </Link>
         </div>
 
+        <SidebarLabel>Workflow</SidebarLabel>
         <NavSection items={primary} pathname={pathname} />
 
         <div className="mb-1 mt-1 flex flex-col gap-0.5 border-t border-line-light px-3 pt-2">
+          <SidebarLabel compact>Network</SidebarLabel>
           <NavSection items={secondary} pathname={pathname} compact />
         </div>
 
         <div className="mb-1 flex flex-col gap-0.5 px-3">
+          <SidebarLabel compact>Account</SidebarLabel>
           <NavSection items={account} pathname={pathname} />
         </div>
 
@@ -163,12 +167,12 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         ) : null}
 
         <div className="mt-auto flex flex-col gap-3 border-t border-line-light px-3 pb-6 pt-3">
-          <Link href={`${prefix}/profile`} className="flex w-full items-center gap-3 rounded-xl px-3 py-[9px] text-left text-[13px] font-normal text-ink-2 transition-all duration-200 ease-in-out hover:bg-navy-soft hover:text-ink">
+          <Link href={`${prefix}/profile`} className="flex w-full items-center gap-3 rounded-xl px-3 py-[9px] text-left text-[13px] font-normal text-ink-2 transition-all duration-200 ease-in-out hover:bg-navy-soft hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/25">
             <Settings className="h-[15px] w-[15px] flex-shrink-0" strokeWidth={1.75} />
             Settings
           </Link>
 
-          <Link href={`${prefix}/subscription`} className="rounded-[13px] p-[1.5px]" style={{ background: "linear-gradient(135deg, #E8D9A0, #C49A3C 50%, #E8D9A0)" }}>
+          <Link href={`${prefix}/subscription`} className="rounded-[13px] p-[1.5px] transition duration-200 hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(201,168,76,0.14)]" style={{ background: "linear-gradient(135deg, #E8D9A0, #C49A3C 50%, #E8D9A0)" }}>
             <span className="flex flex-col gap-1.5 rounded-[11.5px] bg-gold-soft px-3 py-2.5">
               <span className="flex items-center gap-2">
                 <span className="grid h-[18px] w-[18px] flex-shrink-0 place-items-center rounded-full bg-gold text-white">
@@ -176,7 +180,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
                 </span>
                 <span className="select-none text-[10.5px] font-bold uppercase tracking-[0.07em] text-gold-dark">{planLabel(identity?.plan)}</span>
               </span>
-              <span className="text-[11px] leading-[1.4] text-gold">Priority access · 3 routes certified</span>
+              <span className="text-[11px] leading-[1.4] text-gold">Priority access - 3 routes certified</span>
             </span>
           </Link>
 
@@ -186,7 +190,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[12.5px] font-medium text-ink">{identity?.companyName || "Kenny Lam"}</span>
-              <span className="block truncate text-[11px] text-ink-3">Pacific Forward Ltd.</span>
+              <span className="block truncate text-[11px] text-ink-3">{identity ? planLabel(identity.plan) : "Demo workspace"}</span>
             </span>
             <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-line transition-colors duration-200 group-hover:text-ink-3" strokeWidth={2} />
           </Link>
@@ -195,13 +199,13 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <TopBar pathname={pathname} prefix={prefix} identity={identity} />
-        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
+        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
           {children}
         </div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-white/95 px-2 py-2 backdrop-blur lg:hidden">
-        {primary.slice(0, 4).map((item) => <MobileNavItem key={item.href} item={item} active={isActive(pathname, item)} />)}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-white/95 px-2 py-2 backdrop-blur lg:hidden">
+        {mobileNav.map((item) => <MobileNavItem key={item.href} item={item} active={isActive(pathname, item)} />)}
       </nav>
     </div>
   )
@@ -212,19 +216,23 @@ function TopBar({ pathname, prefix, identity }: { pathname: string; prefix: stri
   const title = pageTitles[route] ?? "LBID"
   const company = identity?.companyName || "Workspace"
   const tokens = identity?.tokens ?? 0
+  const signedIn = Boolean(identity)
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white/80 px-5 backdrop-blur-xl sm:px-9">
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-white/85 px-4 backdrop-blur-xl sm:px-6 lg:h-14 lg:px-9">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="truncate text-[14px] font-semibold tracking-[-0.2px] text-ink">{title}</span>
+        <Link href={`${prefix}/dashboard`} className="flex h-10 w-[124px] items-center overflow-hidden lg:hidden" aria-label="LBID workspace">
+          <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-ml-3 -mt-2 block w-[160px] max-w-none select-none mix-blend-multiply" draggable={false} />
+        </Link>
+        <span className="hidden truncate text-[14px] font-semibold tracking-[-0.2px] text-ink sm:inline">{title}</span>
         <span className="hidden border-l border-line pl-3 text-[13px] text-ink-3 md:inline">Tuesday, 23 June 2026</span>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
         <IconBtn aria-label="Search"><Search className="h-4 w-4" strokeWidth={1.75} /></IconBtn>
         <div className="relative">
           <IconBtn aria-label="Notifications"><Bell className="h-4 w-4" strokeWidth={1.75} /></IconBtn>
           <span aria-hidden className="pointer-events-none absolute right-[8px] top-[8px] h-[5px] w-[5px] rounded-full border-[1.5px] border-white bg-gold" />
         </div>
-        <IconBtn aria-label="Help"><HelpCircle className="h-4 w-4" strokeWidth={1.75} /></IconBtn>
+        <span className="hidden sm:inline-flex"><IconBtn aria-label="Help"><HelpCircle className="h-4 w-4" strokeWidth={1.75} /></IconBtn></span>
         <div className="mx-1 hidden h-5 w-px bg-line sm:block" />
         <Link href={`${prefix}/tokens`} className="hidden items-center gap-2 rounded-lg border border-gold-border bg-gold-soft px-3 py-1.5 text-[12px] font-semibold text-gold-dark shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition hover:-translate-y-px hover:bg-[#fff2c8] sm:flex">
           <Zap className="h-3.5 w-3.5" />
@@ -235,8 +243,8 @@ function TopBar({ pathname, prefix, identity }: { pathname: string; prefix: stri
           {planLabel(identity?.plan)}
         </Link>
         <div className="hidden items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 shadow-[0_1px_4px_rgba(0,0,0,0.05)] sm:flex">
-          <span className="h-[6px] w-[6px] flex-shrink-0 rounded-full bg-emerald" />
-          <span className="text-[12px] font-medium text-ink-2">Signed in</span>
+          <span className={`h-[6px] w-[6px] flex-shrink-0 rounded-full ${signedIn ? "bg-emerald" : "bg-gold"}`} />
+          <span className="text-[12px] font-medium text-ink-2">{signedIn ? "Signed in" : "Demo mode"}</span>
         </div>
         <Link href={`${prefix}/profile`} className="ml-1 flex h-9 items-center gap-2 rounded-full border border-line bg-white py-1 pl-1 pr-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition hover:-translate-y-px hover:border-navy/20">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-navy text-[10px] font-bold text-white">{initials(company)}</span>
@@ -245,6 +253,10 @@ function TopBar({ pathname, prefix, identity }: { pathname: string; prefix: stri
       </div>
     </header>
   )
+}
+
+function SidebarLabel({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
+  return <p className={`${compact ? "mb-1 mt-1" : "mb-1 px-6"} text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-3`}>{children}</p>
 }
 
 function IconBtn({ children, "aria-label": label }: { children: React.ReactNode; "aria-label": string }) {
@@ -261,7 +273,7 @@ function NavSection({ items, pathname, compact = false, admin = false }: { items
       {items.map((item) => {
         const active = isActive(pathname, item)
         return (
-          <Link key={item.href} href={item.href} className={`relative flex items-center gap-3 rounded-xl px-3 ${compact ? "py-[8px] text-[12.5px]" : "py-[9px] text-[13px]"} transition-all duration-200 ease-in-out ${active ? (admin ? "bg-amber-600 font-medium text-white" : "bg-navy font-medium text-white") : admin ? "text-ink-3 hover:bg-amber-50 hover:text-amber-700" : "text-ink-2 hover:bg-navy-soft hover:text-ink"}`}>
+          <Link key={item.href} href={item.href} className={`relative flex items-center gap-3 rounded-xl px-3 ${compact ? "py-[8px] text-[12.5px]" : "py-[9px] text-[13px]"} transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/25 ${active ? (admin ? "bg-amber-600 font-medium text-white shadow-[0_8px_18px_rgba(180,83,9,0.16)]" : "bg-navy font-medium text-white shadow-[0_8px_18px_rgba(27,43,94,0.14)]") : admin ? "text-ink-3 hover:bg-amber-50 hover:text-amber-700" : "text-ink-2 hover:bg-navy-soft hover:text-ink"}`}>
             <item.icon className={compact ? "h-[14px] w-[14px] flex-shrink-0" : "h-[15px] w-[15px] flex-shrink-0"} strokeWidth={active ? 2.2 : 1.75} />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             {item.badge && !active ? (
@@ -283,9 +295,11 @@ function MobileNavItem({ item, active }: { item: NavItem; active: boolean }) {
 function isActive(pathname: string, item: NavItem) {
   return item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`)
 }
+
 function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()
 }
+
 function planLabel(plan?: string) {
   if (plan === "annual" || plan === "premium") return "Premium Member"
   if (plan === "monthly" || plan === "standard") return "Standard Member"
