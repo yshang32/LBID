@@ -510,10 +510,17 @@ function OrderWorkspace({ kind, id }: { kind: UnifiedPageKind; id?: string }) {
 }
 
 function AdminWorkspace({ kind }: { kind: UnifiedPageKind }) {
+  const title = kind === "admin-payments"
+    ? "Confirm payments, then unlock access."
+    : kind === "admin-accounts"
+      ? "Verify companies before trust is displayed."
+      : kind === "admin-audit"
+        ? "Every sensitive action needs a trail."
+        : "Quality control before the marketplace goes live."
   return (
     <PageFrame
       eyebrow="Admin"
-      title="Quality control before the marketplace goes live."
+      title={title}
       intro="Admin reviews SRs, verifies forwarders, confirms payments, updates membership and keeps audit logs."
       actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Open review queue</Button>}
       aside={<AdminAudit kind={kind} />}
@@ -523,6 +530,7 @@ function AdminWorkspace({ kind }: { kind: UnifiedPageKind }) {
         <MetricCard label="Verification" value="5" delta="2 with docs" icon={BadgeCheck} />
         <MetricCard label="Payments" value="12" delta="HKD 18,500" icon={Coins} />
       </section>
+      <AdminCommandPanel kind={kind} />
       <AdminReviewQueue kind={kind} />
     </PageFrame>
   )
@@ -532,42 +540,31 @@ function AccountWorkspace({ kind, id }: { kind: UnifiedPageKind; id?: string }) 
   const isDirectory = kind === "forwarders" || kind === "forwarder-profile"
   const isTokens = kind === "tokens"
   const isSubscription = kind === "subscription"
+  const isProfile = kind === "profile"
   return (
     <PageFrame
       eyebrow={isDirectory ? "Directory" : isTokens ? "Token wallet" : isSubscription ? "Membership" : "Company profile"}
       title={isDirectory ? "Capability should be visible before price." : isTokens ? "Every token movement needs a clean ledger." : isSubscription ? "Upgrade should feel rewarding." : "One company can act as Client, Forwarder, or both."}
       intro="Account pages explain company capability, membership value, token balance and profile trust without forcing a fixed Agency or Forwarder role."
       actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{isDirectory ? "Invite to SR" : "Save changes"}</Button>}
-      aside={<MembershipCard />}
+      aside={isTokens ? <TokenSummaryCard /> : <MembershipCard />}
     >
-      {isDirectory ? <DirectoryGrid id={id} /> : isTokens ? <TokenLedger /> : isSubscription ? <PlanGrid /> : <ProfileEditor />}
+      {isDirectory ? <DirectoryGrid id={id} /> : isTokens ? <TokenLedger /> : isSubscription ? <PlanGrid /> : isProfile ? <ProfileEditor /> : <ProfileEditor />}
     </PageFrame>
   )
 }
 
 function CommunityWorkspace({ kind }: { kind: UnifiedPageKind }) {
+  const isNotifications = kind === "notifications"
   return (
     <PageFrame
-      eyebrow={kind === "notifications" ? "Notifications" : "Community"}
-      title={kind === "notifications" ? "Important events without email chasing." : "A trust layer for logistics operators."}
+      eyebrow={isNotifications ? "Notifications" : "Community"}
+      title={isNotifications ? "Important events without email chasing." : "A trust layer for logistics operators."}
       intro="Community and notification pages should feel calm but alive: platform news, route wins, event tickets, bid close reminders and payment results."
-      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{kind === "notifications" ? "Mark all read" : "Create post"}</Button>}
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{isNotifications ? "Mark all read" : "Create post"}</Button>}
       aside={<ActivityStream />}
     >
-      <section className="grid gap-4 lg:grid-cols-3">
-        {["Route win", "Member spotlight", "LBID event"].map((title, index) => (
-          <Card key={title} className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
-            <CardContent className="p-5">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-navy-soft text-navy">
-                {createElement([Route, Star, Users][index], { className: "h-5 w-5" })}
-              </span>
-              <h3 className="mt-5 text-[17px] font-bold text-ink">{title}</h3>
-              <p className="mt-2 text-[13px] leading-6 text-ink-2">A polished content state with real platform context, moderation and member trust signals.</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-      <NotificationRows />
+      {isNotifications ? <NotificationRows /> : <CommunityBoard />}
     </PageFrame>
   )
 }
@@ -1299,7 +1296,7 @@ function AdminReviewQueue({ kind }: { kind: UnifiedPageKind }) {
 
   return (
     <section className="space-y-3">
-      <div className="grid gap-3 rounded-2xl border border-line bg-white p-4 md:grid-cols-[1fr_180px_1fr]">
+      <div className="grid gap-3 rounded-[24px] border border-line bg-white p-4 shadow-[0_12px_32px_rgba(12,26,62,.045)] md:grid-cols-[1fr_180px_1fr]">
         <input className="h-10 rounded-xl border border-line px-3 text-[13px] outline-none focus:border-navy/40" placeholder="Search company, email, reference..." value={query} onChange={(event) => setQuery(event.target.value)} />
         {kind === "admin-payments" ? (
           <select className="h-10 rounded-xl border border-line px-3 text-[13px] outline-none focus:border-navy/40" value={filter} onChange={(event) => setFilter(event.target.value)}>
@@ -1312,9 +1309,10 @@ function AdminReviewQueue({ kind }: { kind: UnifiedPageKind }) {
         <input className="h-10 rounded-xl border border-line px-3 text-[13px] outline-none focus:border-navy/40" placeholder="Review reason / internal note" value={reason} onChange={(event) => setReason(event.target.value)} />
       </div>
       {visibleRows.map((row) => (
-        <div key={row.id || row.user_id} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] md:grid-cols-[1fr_auto] md:items-center">
+        <div key={row.id || row.user_id} className="grid gap-4 rounded-[24px] border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] transition hover:-translate-y-0.5 hover:border-[#cbd3df] hover:shadow-[0_18px_44px_rgba(12,26,62,.08)] md:grid-cols-[1fr_auto] md:items-center">
           <span>
-            <strong className="block text-[14px] text-ink">{adminRowTitle(kind, row)}</strong>
+            <span className="mb-2 inline-flex rounded-full border border-line bg-canvas px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-3">{kind === "admin-payments" ? "Payment proof" : kind === "admin-accounts" ? "Verification" : "SR review"}</span>
+            <strong className="block text-[15px] text-ink">{adminRowTitle(kind, row)}</strong>
             <span className="mt-1 block text-[12px] text-ink-3">{adminRowMeta(kind, row)}</span>
           </span>
           <span className="flex flex-wrap gap-2">
@@ -1339,6 +1337,29 @@ function AdminReviewQueue({ kind }: { kind: UnifiedPageKind }) {
   )
 }
 
+function AdminCommandPanel({ kind }: { kind: UnifiedPageKind }) {
+  const items = kind === "admin-payments"
+    ? [["Manual payment", "Check proof, reference and amount before tier unlock."], ["Search history", "Keep confirmed and rejected records discoverable."], ["Webhook status", "Stripe/FPS confirmation should reconcile cleanly."]]
+    : kind === "admin-accounts"
+      ? [["Document review", "BR, IATA, company profile and service coverage."], ["Internal note", "Record why verification was approved or rejected."], ["Tier control", "Assign Free, Standard, Premium or Partner."]]
+      : [["Reject reason", "SR cannot be rejected without a visible reason."], ["Publish window", "Approved SR opens a 3-hour sealed bid window."], ["Audit trail", "Every Admin action writes actor, time and reason."]]
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      {items.map(([title, body], index) => (
+        <Card key={title} className={`rounded-[24px] shadow-[0_12px_32px_rgba(12,26,62,.05)] ${index === 0 ? "border-gold-border bg-gold-soft" : "border-line bg-white"}`}>
+          <CardContent className="p-5">
+            <span className={`grid h-11 w-11 place-items-center rounded-2xl ${index === 0 ? "bg-gold text-white" : "bg-navy-soft text-navy"}`}>
+              {createElement([ShieldCheck, FileCheck2, Activity][index], { className: "h-5 w-5" })}
+            </span>
+            <h3 className="mt-4 text-[17px] font-bold text-ink">{title}</h3>
+            <p className="mt-2 text-[13px] leading-6 text-ink-2">{body}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </section>
+  )
+}
+
 function adminRowTitle(kind: UnifiedPageKind, row: any) {
   if (kind === "admin-payments") return `${row.company_name || row.email || row.user_id || "Payment"} - ${row.currency || "HKD"} ${Number(row.amount || 0).toLocaleString("en-HK")}`
   if (kind === "admin-accounts") return row.companyName || row.company_name_en || row.company_name_zh || row.id || "Company profile"
@@ -1359,55 +1380,118 @@ function AdminAudit({ kind }: { kind: UnifiedPageKind }) {
         <Badge variant="gold">Audit</Badge>
         <h2 className="mt-4 text-[20px] font-bold text-ink">{kind}</h2>
         <p className="mt-2 text-[13px] leading-6 text-ink-2">Every approval, rejection, payment and membership change is logged with actor, time and reason.</p>
+        <div className="mt-4 space-y-3">
+          {["Actor: admin@lbid.hk", "Reason required", "Immutable history"].map((item) => (
+            <p key={item} className="flex items-center gap-2 text-[12px] font-semibold text-ink-2"><CheckCircle2 className="h-4 w-4 text-emerald" />{item}</p>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )
 }
 
 function DirectoryGrid({ id }: { id?: string }) {
+  const companies = [
+    { name: "Pacific Forward Ltd.", badge: "Preferred", score: "4.9", orders: "132", routes: "SGN, BKK, KUL to HKG", tone: "gold" },
+    { name: "HarbourLink Cargo", badge: "Verified", score: "4.7", orders: "88", routes: "SEA freight + local delivery", tone: "teal" },
+    { name: id || "Gold Harbour Logistics", badge: "Premium", score: "4.8", orders: "104", routes: "Air freight + customs", tone: "secondary" },
+  ]
   return (
-    <section className="grid gap-4 lg:grid-cols-3">
-      {["Pacific Forward Ltd.", "HarbourLink Cargo", id || "Gold Harbour Logistics"].map((name, index) => (
-        <Card key={name} className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+    <section className="space-y-5">
+      <div className="grid gap-3 rounded-[24px] border border-line bg-white p-4 shadow-[0_12px_32px_rgba(12,26,62,.045)] md:grid-cols-[1fr_180px_180px]">
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-canvas px-3 py-2">
+          <Search className="h-4 w-4 text-ink-3" />
+          <span className="text-[13px] text-ink-3">Search route, service, badge...</span>
+        </div>
+        <button className="rounded-xl border border-line bg-canvas px-3 py-2 text-[13px] font-bold text-ink-2">Air + Sea</button>
+        <button className="rounded-xl border border-line bg-canvas px-3 py-2 text-[13px] font-bold text-ink-2">Verified only</button>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {companies.map((company) => (
+        <Card key={company.name} className={`overflow-hidden rounded-[26px] bg-white shadow-[0_16px_44px_rgba(12,26,62,.07)] transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(12,26,62,.1)] ${company.tone === "gold" ? "border-gold-border" : "border-line"}`}>
+          {company.tone === "gold" ? <div className="h-1 bg-gradient-to-r from-gold via-navy to-gold" /> : null}
           <CardContent className="p-5">
-            <Badge variant={index === 0 ? "gold" : "secondary"}>{index === 0 ? "Preferred" : "Verified"}</Badge>
-            <h3 className="mt-5 text-[18px] font-bold text-ink">{name}</h3>
+            <Badge variant={company.tone === "gold" ? "gold" : company.tone === "teal" ? "teal" : "secondary"}>{company.badge}</Badge>
+            <h3 className="mt-5 text-[19px] font-bold text-ink">{company.name}</h3>
             <p className="mt-2 text-[13px] leading-6 text-ink-2">Air, sea, customs and local delivery coverage with public ratings and completed orders.</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-line bg-canvas p-3"><p className="text-[10px] font-bold uppercase text-ink-3">Rating</p><p className="mt-1 text-[20px] font-bold text-ink">{company.score}</p></div>
+              <div className="rounded-2xl border border-line bg-canvas p-3"><p className="text-[10px] font-bold uppercase text-ink-3">Orders</p><p className="mt-1 text-[20px] font-bold text-ink">{company.orders}</p></div>
+            </div>
+            <p className="mt-4 rounded-xl border border-line bg-white px-3 py-2 text-[12px] font-semibold text-ink-2">{company.routes}</p>
           </CardContent>
         </Card>
       ))}
+      </div>
     </section>
   )
 }
 
 function TokenLedger() {
+  const rows = [
+    ["submit_bid_with_token", "Bid SR-DEMO-001", "-1", "Free token"],
+    ["Referral reward", "New member transacted", "+3", "Earned"],
+    ["Profile boost redeemed", "Directory priority for 7 days", "-2", "Redeemed"],
+    ["Admin adjustment", "Manual correction with audit note", "+5", "Admin"],
+  ]
   return (
     <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-      <Card className="rounded-2xl border-gold-border bg-gold-soft shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <Card className="overflow-hidden rounded-[26px] border-gold-border bg-gold-soft shadow-[0_18px_48px_rgba(181,138,35,.1)]">
+        <div className="h-1 bg-gradient-to-r from-gold via-navy to-gold" />
         <CardContent className="p-6">
           <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-gold-dark">Available token</p>
           <p className="mt-4 text-[48px] font-bold text-ink">8</p>
+          <p className="mt-1 text-[13px] leading-6 text-gold-dark">Free 5 + paid 3. Live bid submission consumes token through Supabase RPC.</p>
           <Button variant="gold" className="mt-5 rounded-xl">Buy tokens</Button>
         </CardContent>
       </Card>
       <div className="grid gap-3">
-        {["submit_bid_with_token - free token -1", "Referral reward +3", "Profile boost redeemed -2"].map((row) => (
-          <div key={row} className="rounded-2xl border border-line bg-white p-5 text-[14px] font-semibold text-ink">{row}</div>
+        {rows.map(([title, meta, value, tag]) => (
+          <div key={title} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] md:grid-cols-[1fr_auto_auto] md:items-center">
+            <span><strong className="block text-[14px] text-ink">{title}</strong><span className="mt-1 block text-[12px] text-ink-3">{meta}</span></span>
+            <Badge variant={value.startsWith("+") ? "teal" : "secondary"}>{tag}</Badge>
+            <span className={`font-mono text-[18px] font-bold ${value.startsWith("+") ? "text-emerald" : "text-ink"}`}>{value}</span>
+          </div>
         ))}
       </div>
     </section>
   )
 }
 
+function TokenSummaryCard() {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <Badge variant="gold">Token economy</Badge>
+        <h2 className="mt-4 text-[20px] font-bold text-ink">Bid, boost, redeem.</h2>
+        <p className="mt-2 text-[13px] leading-6 text-ink-2">Tokens should always show source, action, balance impact and audit-friendly transaction id.</p>
+        <div className="mt-4 rounded-xl border border-line bg-canvas p-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-3">Next unlock</p>
+          <p className="mt-2 text-[18px] font-bold text-ink">Profile boost - 2 tokens</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function PlanGrid() {
+  const plans = [
+    ["Free", "HKD 0", "Basic access and profile presence."],
+    ["Standard", "HKD 500", "More visibility, token offers and core workflow."],
+    ["Premium", "HKD 1500", "Priority discovery, stronger badges and boosts."],
+    ["Partner", "Custom", "Strategic account and event privileges."],
+  ]
   return (
     <section className="grid gap-4 lg:grid-cols-4">
-      {["Free", "Standard", "Premium", "Partner"].map((plan, index) => (
-        <Card key={plan} className={`rounded-2xl bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)] ${index === 2 ? "border-gold-border" : "border-line"}`}>
+      {plans.map(([plan, price, body], index) => (
+        <Card key={plan} className={`relative overflow-hidden rounded-[26px] bg-white shadow-[0_14px_38px_rgba(12,26,62,.06)] transition hover:-translate-y-1 ${index === 2 ? "border-gold-border" : "border-line"}`}>
+          {index === 2 ? <div className="absolute inset-x-0 top-0 h-1 bg-gold" /> : null}
           <CardContent className="p-5">
-            <h3 className="text-[18px] font-bold text-ink">{plan}</h3>
-            <p className="mt-4 text-[28px] font-bold text-ink">{index === 0 ? "HKD 0" : index === 1 ? "HKD 500" : index === 2 ? "HKD 1500" : "Custom"}</p>
-            <p className="mt-2 text-[13px] text-ink-2">Visibility, token and trust benefits for this tier.</p>
+            <Badge variant={index === 2 ? "gold" : "secondary"}>{index === 2 ? "Recommended" : "Plan"}</Badge>
+            <h3 className="mt-4 text-[18px] font-bold text-ink">{plan}</h3>
+            <p className="mt-4 text-[28px] font-bold text-ink">{price}</p>
+            <p className="mt-2 min-h-[48px] text-[13px] leading-6 text-ink-2">{body}</p>
+            <Button variant={index === 2 ? "gold" : "outline"} className="mt-5 w-full rounded-xl">Select</Button>
           </CardContent>
         </Card>
       ))}
@@ -1416,18 +1500,38 @@ function PlanGrid() {
 }
 
 function ProfileEditor() {
+  const fields = [
+    ["Company name", "Pacific Forward Ltd.", "text"],
+    ["Client capability", "Enabled", "select"],
+    ["Forwarder capability", "Enabled", "select"],
+    ["Route coverage", "Vietnam -> Hong Kong, Malaysia -> Hong Kong", "select"],
+    ["Services", "Air freight, Sea freight, Customs, Local delivery", "select"],
+    ["Directory visibility", "Public verified profile", "select"],
+  ]
   return (
-    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+    <section className="grid gap-5 lg:grid-cols-[0.78fr_1.22fr]">
+      <div className="rounded-[26px] border border-gold-border bg-gold-soft p-6 shadow-[0_18px_48px_rgba(181,138,35,.08)]">
+        <Badge variant="gold">Dual capability</Badge>
+        <h2 className="mt-4 text-[26px] font-bold tracking-[-0.6px] text-ink">No fixed Agency / Forwarder account.</h2>
+        <p className="mt-3 text-[13px] leading-6 text-gold-dark">A company can create SRs and bid on SRs. Dashboard modules should appear based on enabled capability.</p>
+        <div className="mt-5 grid gap-3">
+          {["Create SR", "Bid marketplace", "Directory profile"].map((item) => (
+            <p key={item} className="flex items-center gap-2 text-[13px] font-semibold text-gold-dark"><CheckCircle2 className="h-4 w-4" />{item}</p>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
       <div className="grid gap-4 lg:grid-cols-2">
-        {["Company name", "Capabilities", "Route coverage", "Services", "Directory visibility", "Membership tier"].map((field) => (
-          <label key={field} className="block">
+        {fields.map(([field, value, mode]) => (
+          <label key={field} className={field === "Company name" ? "block lg:col-span-2" : "block"}>
             <span className="text-[12px] font-semibold text-ink-2">{field}</span>
             <div className="mt-1.5 flex h-12 items-center justify-between rounded-xl border border-line bg-white px-3 text-[13px] text-ink transition hover:border-[#cbd3df]">
-              <span>{field === "Company name" ? "Pacific Forward Ltd." : "Select option"}</span>
-              <ChevronRight className="h-4 w-4 text-ink-3" />
+              <span>{value}</span>
+              {mode === "select" ? <ChevronRight className="h-4 w-4 text-ink-3" /> : null}
             </div>
           </label>
         ))}
+      </div>
       </div>
     </section>
   )
@@ -1440,20 +1544,67 @@ function MembershipCard() {
         <Badge variant="gold">Standard member</Badge>
         <h2 className="mt-4 text-[22px] font-bold text-ink">Reward moment</h2>
         <p className="mt-2 text-[13px] leading-6 text-ink-2">After payment confirmation, show a warm success state with new benefits, tier badge and next best action.</p>
+        <div className="mt-4 rounded-xl border border-gold-border bg-white/70 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gold-dark">Unlocked</p>
+          <p className="mt-2 text-[16px] font-bold text-ink">Directory priority + token bundle</p>
+        </div>
       </CardContent>
     </Card>
   )
 }
 
 function NotificationRows() {
+  const rows = [
+    ["Bid closes in 42 minutes", "SR-2026-00119 - final window", "Urgent", "red"],
+    ["Payment confirmed - Premium active", "Membership upgraded and badge visible", "Success", "green"],
+    ["Packing List reminder sent", "Order MATCH-1234 - both parties notified", "Document", "gold"],
+    ["Forwarder verification approved", "HarbourLink Cargo is now public", "Admin", "blue"],
+  ]
   return (
     <section className="grid gap-3">
-      {["Bid closes in 42 minutes", "Payment confirmed - Premium active", "Packing List reminder sent", "Forwarder verification approved"].map((item) => (
-        <div key={item} className="flex items-center justify-between rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)]">
-          <span className="text-[14px] font-semibold text-ink">{item}</span>
-          <Bell className="h-4 w-4 text-navy" />
+      {rows.map(([title, meta, tag, tone]) => (
+        <div key={title} className={`grid gap-3 rounded-[24px] border bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] transition hover:-translate-y-0.5 md:grid-cols-[40px_1fr_auto] md:items-center ${tone === "red" ? "border-red-200" : "border-line"}`}>
+          <span className={`grid h-10 w-10 place-items-center rounded-2xl ${tone === "red" ? "bg-red-50 text-red-600" : tone === "green" ? "bg-emerald-soft text-emerald" : "bg-navy-soft text-navy"}`}>
+            <Bell className="h-4 w-4" />
+          </span>
+          <span>
+            <span className="block text-[14px] font-bold text-ink">{title}</span>
+            <span className="mt-1 block text-[12px] text-ink-3">{meta}</span>
+          </span>
+          <Badge variant={tone === "green" ? "teal" : tone === "gold" ? "gold" : "secondary"}>{tag}</Badge>
         </div>
       ))}
+    </section>
+  )
+}
+
+function CommunityBoard() {
+  const cards = [
+    ["Route win", "Vietnam to Hong Kong lane closed with 4 qualified bids and 18% lower awarded price.", Route, "gold"],
+    ["Member spotlight", "Pacific Forward reached 132 completed LBID orders with 4.9 average rating.", Star, "teal"],
+    ["LBID event", "Forwarder growth roundtable - token tickets available for Premium members.", Users, "secondary"],
+  ] as const
+  return (
+    <section className="space-y-5">
+      <div className="relative overflow-hidden rounded-[28px] border border-line bg-[linear-gradient(135deg,#fff,#f2f5fb)] p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+        <div aria-hidden className="absolute -right-6 top-4 text-[92px] font-black italic leading-none tracking-[-0.08em] text-navy/[0.035]">TRUST</div>
+        <Badge variant="gold">Community feed</Badge>
+        <h2 className="relative mt-4 max-w-3xl text-[30px] font-bold tracking-[-0.8px] text-ink">Proof, events and verified wins should make LBID feel alive.</h2>
+        <p className="relative mt-2 max-w-2xl text-[13px] leading-6 text-ink-2">This page is not a chat room. It is a moderated business feed for trust signals and growth activity.</p>
+      </div>
+      <section className="grid gap-4 lg:grid-cols-3">
+        {cards.map(([title, body, Icon, tone]) => (
+          <Card key={title} className="rounded-[26px] border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)] transition hover:-translate-y-1">
+            <CardContent className="p-5">
+              <span className={`grid h-11 w-11 place-items-center rounded-2xl ${tone === "gold" ? "bg-gold-soft text-gold-dark" : tone === "teal" ? "bg-emerald-soft text-emerald" : "bg-navy-soft text-navy"}`}>
+                <Icon className="h-5 w-5" />
+              </span>
+              <h3 className="mt-5 text-[17px] font-bold text-ink">{title}</h3>
+              <p className="mt-2 text-[13px] leading-6 text-ink-2">{body}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
     </section>
   )
 }
