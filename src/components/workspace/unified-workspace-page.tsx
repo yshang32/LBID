@@ -436,11 +436,12 @@ function BidConsoleWorkspace({ locale, kind, id }: { locale: Locale; kind: Unifi
 function RequestWorkspace({ locale, kind, id }: { locale: Locale; kind: UnifiedPageKind; id?: string }) {
   const prefix = `/${locale}`
   const isCreate = kind === "create-request"
+  const isDetail = kind === "request-detail"
   return (
     <PageFrame
-      eyebrow={isCreate ? "Create SR" : "Requests"}
-      title={isCreate ? "Build a shipment request step by step." : "Every request has one clear next step."}
-      intro={isCreate ? "Most answers are dropdowns so users are guided. Only company name, notes and cargo description stay free text." : "SR review, bidding, comparison and award are shown as a live work queue."}
+      eyebrow={isCreate ? "Create SR" : isDetail ? "Request detail" : "Requests"}
+      title={isCreate ? "Build a shipment request step by step." : isDetail ? "One request, one live control room." : "Every request has one clear next step."}
+      intro={isCreate ? "Most answers are guided. Users always see what stage they are in, what Admin will review, and when the 3-hour sealed window starts." : isDetail ? "Route, cargo, bid window, refusal allowance and audit history stay together so Agency knows exactly what happens next." : "SR review, bidding, comparison and award are shown as a live work queue with owner, deadline and next action."}
       actions={
         <Button asChild className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">
           <Link href={isCreate ? `${prefix}/requests` : `${prefix}/inquiries/new`}>{isCreate ? "Save draft" : "Create SR"}</Link>
@@ -448,7 +449,7 @@ function RequestWorkspace({ locale, kind, id }: { locale: Locale; kind: UnifiedP
       }
       aside={<RequestTimeline id={id} />}
     >
-      {isCreate ? <LiveCreateRequestPanel prefix={prefix} /> : <RequestQueue prefix={prefix} />}
+      {isCreate ? <LiveCreateRequestPanel prefix={prefix} /> : isDetail ? <RequestDetailPanel id={id} /> : <RequestQueue prefix={prefix} />}
     </PageFrame>
   )
 }
@@ -463,8 +464,28 @@ function ComparisonWorkspace({ id }: { id?: string }) {
       aside={<DecisionPanel />}
     >
       <LiveComparisonPanel srId={id || ""} />
-      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-[13px] leading-6 text-amber-900">
-        Choosing Pacific Forward is HKD 2,400 above the lowest quote for {id || "SR-DEMO-001"}. The confirmation modal should explain the price difference and record the reason.
+      <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <div className="rounded-[24px] border border-amber-200 bg-[linear-gradient(135deg,#fff8e6,#fff)] p-6 shadow-[0_16px_44px_rgba(181,138,35,.08)]">
+          <Badge variant="gold">Non-lowest confirmation</Badge>
+          <h2 className="mt-4 text-[22px] font-bold tracking-[-0.4px] text-ink">Agency can choose fit, but must explain it.</h2>
+          <p className="mt-2 text-[13px] leading-6 text-amber-900">
+            Choosing Pacific Forward is HKD 2,400 above the lowest quote for {id || "SR-DEMO-001"}. The modal should make the tradeoff clear, then write the reason to the audit log.
+          </p>
+          <div className="mt-5 grid gap-2 sm:grid-cols-3">
+            {["Reliability", "Transit time", "Compliance fit"].map((item) => (
+              <div key={item} className="rounded-xl border border-amber-200 bg-white px-3 py-3 text-[12px] font-bold text-amber-900">{item}</div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[24px] border border-line bg-white p-6 shadow-[0_16px_44px_rgba(12,26,62,.06)]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">After award</p>
+          {["Contact unlock", "Order created", "Responsibility record", "3 refusal counter updated"].map((item, index) => (
+            <div key={item} className="mt-4 flex gap-3">
+              <span className={`grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold ${index < 2 ? "bg-navy text-white" : "bg-canvas text-ink-3"}`}>{index + 1}</span>
+              <span className="text-[13px] font-semibold text-ink">{item}</span>
+            </div>
+          ))}
+        </div>
       </section>
     </PageFrame>
   )
@@ -814,19 +835,32 @@ function GuidedRequestForm() {
 }
 
 function RequestQueue({ prefix }: { prefix: string }) {
+  const rows = [
+    { code: "SR-2026-00124", status: "Waiting admin review", action: "Submit missing cargo notes", tone: "amber", progress: 25 },
+    { code: "SR-2026-00119", status: "Live bidding", action: "3 bids received - closes in 42m", tone: "red", progress: 62 },
+    { code: "SR-2026-00102", status: "Compare quotes", action: "Lowest quote available", tone: "green", progress: 82 },
+  ]
   return (
-    <section className="grid gap-3">
-      {[
-        ["SR-2026-00124", "Waiting admin review", "Submit missing cargo notes"],
-        ["SR-2026-00119", "Live bidding", "3 bids received - closes in 42m"],
-        ["SR-2026-00102", "Compare quotes", "Lowest quote available"],
-      ].map(([code, status, action]) => (
-        <Link key={code} href={`${prefix}/requests/${code}`} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] transition hover:-translate-y-0.5 hover:border-[#cbd3df] md:grid-cols-[1fr_auto] md:items-center">
-          <span>
-            <strong className="block text-[15px] text-ink">{code}</strong>
-            <span className="mt-1 block text-[12px] text-ink-3">{status}</span>
+    <section className="grid gap-4">
+      {rows.map((row) => (
+        <Link key={row.code} href={`${prefix}/requests/${row.code}`} className="group relative overflow-hidden rounded-[24px] border border-line bg-white p-5 shadow-[0_14px_34px_rgba(12,26,62,.055)] transition hover:-translate-y-0.5 hover:border-[#cbd3df] hover:shadow-[0_20px_48px_rgba(12,26,62,.09)]">
+          <span className={`absolute inset-y-0 left-0 w-1.5 ${row.tone === "red" ? "bg-red-500" : row.tone === "green" ? "bg-emerald" : "bg-gold"}`} />
+          <span className="grid gap-4 md:grid-cols-[1fr_280px_auto] md:items-center">
+            <span>
+              <strong className="block text-[16px] text-ink">{row.code}</strong>
+              <span className="mt-1 block text-[12px] text-ink-3">{row.status}</span>
+              <span className="mt-4 block h-2 overflow-hidden rounded-full bg-canvas">
+                <span className={`block h-full rounded-full ${row.tone === "red" ? "bg-red-500" : row.tone === "green" ? "bg-emerald" : "bg-gold"}`} style={{ width: `${row.progress}%` }} />
+              </span>
+            </span>
+            <span className="rounded-2xl border border-line bg-canvas px-4 py-3">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-ink-3">Next action</span>
+              <span className="mt-1 block text-[13px] font-bold text-ink">{row.action}</span>
+            </span>
+            <span className="inline-flex items-center gap-2 text-[12px] font-bold text-navy">
+              Open <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </span>
           </span>
-          <span className="rounded-full border border-gold-border bg-gold-soft px-3 py-1 text-[12px] font-bold text-gold-dark">{action}</span>
         </Link>
       ))}
     </section>
@@ -834,13 +868,15 @@ function RequestQueue({ prefix }: { prefix: string }) {
 }
 
 function RequestTimeline({ id }: { id?: string }) {
+  const steps = ["Draft", "Admin review", "Published", "3-hour bidding", "Compare and award"]
   return (
     <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
       <CardContent className="p-5">
         <h2 className="text-[14px] font-bold text-ink">{id || "SR"} timeline</h2>
-        {["Draft", "Admin review", "Published", "3-hour bidding", "Compare and award"].map((step, index) => (
+        <p className="mt-2 text-[12px] leading-5 text-ink-3">Every SR must pass review before the sealed window starts.</p>
+        {steps.map((step, index) => (
           <div key={step} className="mt-4 flex gap-3">
-            <span className={`mt-0.5 h-5 w-5 rounded-full border ${index < 2 ? "border-navy bg-navy" : "border-line bg-white"}`} />
+            <span className={`mt-0.5 grid h-6 w-6 place-items-center rounded-full border text-[10px] font-bold ${index < 2 ? "border-navy bg-navy text-white" : "border-line bg-white text-ink-3"}`}>{index + 1}</span>
             <span>
               <strong className="block text-[13px] text-ink">{step}</strong>
               <span className="text-[12px] text-ink-3">{index < 2 ? "In progress" : "Upcoming"}</span>
@@ -891,28 +927,74 @@ function LiveCreateRequestPanel({ prefix }: { prefix: string }) {
   }
 
   return (
-    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+    <section className="rounded-[28px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
       <div className="mb-6 grid gap-2 md:grid-cols-4">
         {["Route", "Cargo", "Service", "Review"].map((step, index) => (
-          <div key={step} className={`rounded-full border px-4 py-2 text-center text-[12px] font-bold ${index === 0 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink-2"}`}>{index + 1}. {step}</div>
+          <div key={step} className={`rounded-2xl border px-4 py-3 text-center text-[12px] font-bold transition ${index === 0 ? "border-navy bg-navy text-white shadow-[0_12px_24px_rgba(27,43,94,.14)]" : "border-line bg-canvas text-ink-2"}`}>{index + 1}. {step}</div>
         ))}
       </div>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <LiveInput label="Origin" value={form.origin} onChange={(value) => setForm({ ...form, origin: value })} />
-        <LiveInput label="Destination" value={form.destination} onChange={(value) => setForm({ ...form, destination: value })} />
-        <LiveSelect label="Freight mode" value={form.mode} onChange={(value) => setForm({ ...form, mode: value })} options={["air", "sea", "truck"]} />
-        <LiveSelect label="Cargo type" value={form.cargoType} onChange={(value) => setForm({ ...form, cargoType: value })} options={["general", "dangerous_goods", "cold_chain"]} />
-        <LiveInput label="Weight kg" value={form.weightKg} onChange={(value) => setForm({ ...form, weightKg: value })} />
-        <LiveInput label="CBM" value={form.cbm} onChange={(value) => setForm({ ...form, cbm: value })} />
-        <label className="block lg:col-span-2">
-          <span className="text-[12px] font-semibold text-ink-2">Services needed</span>
-          <input className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink outline-none transition hover:border-navy/20 focus:border-navy/40" value={form.services} onChange={(event) => setForm({ ...form, services: event.target.value })} />
-        </label>
+      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="rounded-[24px] border border-gold-border bg-gold-soft p-5">
+          <Badge variant="gold">Step 1</Badge>
+          <h2 className="mt-4 text-[24px] font-bold tracking-[-0.5px] text-ink">Tell LBID the route first.</h2>
+          <p className="mt-2 text-[13px] leading-6 text-gold-dark">Dropdown-first fields reduce mistakes. After submission, Admin checks data quality before publishing.</p>
+          <div className="mt-5 space-y-3 text-[12px] font-semibold text-gold-dark">
+            {["Agency email required", "Manual review before publishing", "3-hour sealed bid window"].map((item) => (
+              <p key={item} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />{item}</p>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <LiveInput label="Origin" value={form.origin} onChange={(value) => setForm({ ...form, origin: value })} />
+          <LiveInput label="Destination" value={form.destination} onChange={(value) => setForm({ ...form, destination: value })} />
+          <LiveSelect label="Freight mode" value={form.mode} onChange={(value) => setForm({ ...form, mode: value })} options={["air", "sea", "truck"]} />
+          <LiveSelect label="Cargo type" value={form.cargoType} onChange={(value) => setForm({ ...form, cargoType: value })} options={["general", "dangerous_goods", "cold_chain"]} />
+          <LiveInput label="Weight kg" value={form.weightKg} onChange={(value) => setForm({ ...form, weightKg: value })} />
+          <LiveInput label="CBM" value={form.cbm} onChange={(value) => setForm({ ...form, cbm: value })} />
+          <label className="block lg:col-span-2">
+            <span className="text-[12px] font-semibold text-ink-2">Services needed</span>
+            <input className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink outline-none transition hover:border-navy/20 focus:border-navy/40" value={form.services} onChange={(event) => setForm({ ...form, services: event.target.value })} />
+          </label>
+        </div>
       </div>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button onClick={submit} disabled={loading} className="h-11 rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{loading ? "Submitting..." : "Submit for Admin review"}</Button>
         {createdId ? <Link href={`${prefix}/requests/${createdId}`} className="text-[13px] font-semibold text-navy hover:underline">Open {createdId}</Link> : null}
         {status ? <span className={`text-[13px] font-semibold ${createdId ? "text-emerald" : "text-red-600"}`}>{status}</span> : null}
+      </div>
+    </section>
+  )
+}
+
+function RequestDetailPanel({ id }: { id?: string }) {
+  return (
+    <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="rounded-[28px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <Badge variant="gold">{id || "SR-2026-00119"}</Badge>
+            <h2 className="mt-4 text-[28px] font-bold tracking-[-0.7px] text-ink">Ho Chi Minh City to Hong Kong</h2>
+            <p className="mt-2 text-[13px] text-ink-2">Air freight - 500 kg - 3 CBM - Customs + local delivery</p>
+          </div>
+          <span className="rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-right">
+            <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-red-500">bid closes</span>
+            <span className="font-mono text-[18px] font-black text-red-700">00:42:00</span>
+          </span>
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-4">
+          {["Admin approved", "Live bidding", "3 bids received", "2 refusal left"].map((item, index) => (
+            <div key={item} className={`rounded-2xl border p-4 ${index === 1 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink"}`}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-60">State {index + 1}</p>
+              <p className="mt-3 text-[13px] font-bold">{item}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-[28px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">Next best action</p>
+        <h3 className="mt-4 text-[22px] font-bold text-ink">Wait for bid window to close.</h3>
+        <p className="mt-2 text-[13px] leading-6 text-ink-2">After expiry, LBID reveals ranked bids and highlights the lowest valid quote. Contact details stay locked until award.</p>
+        <Button className="mt-5 w-full rounded-xl bg-navy">Open bid comparison</Button>
       </div>
     </section>
   )
@@ -991,18 +1073,37 @@ function LiveComparisonPanel({ srId }: { srId: string }) {
   if (loading) return <section className="rounded-2xl border border-line bg-white p-6 text-[13px] text-ink-3">Loading live bids...</section>
 
   return (
-    <section className="grid gap-4 lg:grid-cols-3">
-      {displayBids.map((bid, index) => (
-        <QuoteCard
-          key={bid.id}
-          name={index === 0 ? "Lowest valid bid" : index === 1 ? "Recommended partner" : "Alternative partner"}
-          price={`${bid.currency || "HKD"} ${Number(bid.price || 0).toLocaleString("en-HK")}`}
-          label={index === 0 ? "Lowest quote" : index === 1 ? "Recommended" : "Fastest"}
-          tone={index === 0 ? "green" : index === 1 ? "gold" : "blue"}
-          meta={`${bid.transit_time || "Transit pending"} - ${bids.length ? "live Supabase bid" : "demo state"}`}
-          onSelect={() => void acceptBid(bid.id)}
-        />
-      ))}
+    <section className="space-y-4">
+      <div className="rounded-[28px] border border-line bg-white p-5 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+        <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">Shipment request</p>
+            <h2 className="mt-2 text-[24px] font-bold tracking-[-0.5px] text-ink">{srId || "SR-DEMO-001"}</h2>
+            <p className="mt-1 text-[13px] text-ink-2">Ho Chi Minh City to Hong Kong - sealed window closed</p>
+          </div>
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-navy text-white shadow-[0_12px_28px_rgba(27,43,94,.22)]">
+            <Award className="h-6 w-6" />
+          </span>
+          <div className="text-left md:text-right">
+            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">Decision mode</p>
+            <p className="mt-2 text-[16px] font-bold text-ink">Lowest highlighted, choice remains open</p>
+            <p className="mt-1 text-[12px] text-ink-3">Non-lowest requires recorded reason.</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {displayBids.map((bid, index) => (
+          <QuoteCard
+            key={bid.id}
+            name={index === 0 ? "Lowest valid bid" : index === 1 ? "Recommended partner" : "Alternative partner"}
+            price={`${bid.currency || "HKD"} ${Number(bid.price || 0).toLocaleString("en-HK")}`}
+            label={index === 0 ? "Lowest quote" : index === 1 ? "Recommended" : "Fastest"}
+            tone={index === 0 ? "green" : index === 1 ? "gold" : "blue"}
+            meta={`${bid.transit_time || "Transit pending"} - ${bids.length ? "live Supabase bid" : "demo state"}`}
+            onSelect={() => void acceptBid(bid.id)}
+          />
+        ))}
+      </div>
       {status ? <p className="lg:col-span-3 rounded-2xl border border-line bg-white p-4 text-[13px] font-semibold text-ink-2">{status}</p> : null}
     </section>
   )
@@ -1029,14 +1130,20 @@ function LiveSelect({ label, value, options, onChange }: { label: string; value:
 }
 
 function QuoteCard({ name, price, label, tone, meta, onSelect }: { name: string; price: string; label: string; tone: "green" | "gold" | "blue"; meta: string; onSelect?: () => void }) {
-  const toneClass = tone === "green" ? "border-emerald/30" : tone === "gold" ? "border-gold-border" : "border-blue-200"
+  const toneClass = tone === "green" ? "border-emerald/35 bg-[linear-gradient(180deg,#f3fcf8,#fff)]" : tone === "gold" ? "border-gold-border bg-[linear-gradient(180deg,#fff8e6,#fff)]" : "border-blue-200 bg-white"
   return (
-    <Card className={`rounded-[24px] bg-white shadow-[0_16px_44px_rgba(12,26,62,.07)] transition hover:-translate-y-1 ${toneClass}`}>
+    <Card className={`relative overflow-hidden rounded-[24px] shadow-[0_16px_44px_rgba(12,26,62,.07)] transition hover:-translate-y-1 ${toneClass}`}>
+      {tone === "green" ? <div className="absolute inset-x-0 top-0 h-1 bg-emerald" /> : tone === "gold" ? <div className="absolute inset-x-0 top-0 h-1 bg-gold" /> : null}
       <CardContent className="p-6">
         <Badge variant={tone === "gold" ? "gold" : tone === "green" ? "teal" : "secondary"}>{label}</Badge>
         <h3 className="mt-5 text-[18px] font-bold text-ink">{name}</h3>
         <p className="mt-4 text-[32px] font-bold tracking-[-0.8px] text-ink">{price}</p>
         <p className="mt-2 text-[13px] text-ink-2">{meta}</p>
+        <div className="mt-5 space-y-2">
+          {(tone === "green" ? ["Best price", "Valid insurance", "Standard transit"] : tone === "gold" ? ["94% profile fit", "Fastest response", "Preferred route"] : ["Fastest transit", "Premium handling", "Higher price"]).map((item) => (
+            <p key={item} className="flex items-center gap-2 text-[12px] text-ink-2"><CheckCircle2 className={`h-4 w-4 ${tone === "gold" ? "text-gold" : "text-emerald"}`} />{item}</p>
+          ))}
+        </div>
         <Button onClick={onSelect} variant={tone === "gold" ? "gold" : "outline"} className="mt-6 h-11 w-full rounded-xl">Select bid</Button>
       </CardContent>
     </Card>
@@ -1044,14 +1151,23 @@ function QuoteCard({ name, price, label, tone, meta, onSelect }: { name: string;
 }
 
 function DocumentChecklist() {
+  const docs = [
+    ["AWB / B/L", "Done", "teal"],
+    ["Commercial Invoice", "Done", "teal"],
+    ["Packing List", "Missing", "gold"],
+    ["Certificate of Origin", "Optional", "secondary"],
+  ] as const
   return (
     <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
       <CardContent className="p-5">
-        <h2 className="text-[14px] font-bold text-ink">Document checklist</h2>
-        {["AWB / B/L", "Commercial Invoice", "Packing List", "Certificate of Origin"].map((doc, index) => (
+        <div className="flex items-center justify-between">
+          <h2 className="text-[14px] font-bold text-ink">Document checklist</h2>
+          <Badge variant="gold">24h reminder</Badge>
+        </div>
+        {docs.map(([doc, status, tone]) => (
           <div key={doc} className="mt-3 flex items-center justify-between rounded-xl border border-line bg-canvas px-3 py-3">
             <span className="text-[13px] font-semibold text-ink">{doc}</span>
-            <Badge variant={index === 2 ? "gold" : "teal"}>{index === 2 ? "Missing" : "Done"}</Badge>
+            <Badge variant={tone}>{status}</Badge>
           </div>
         ))}
       </CardContent>
@@ -1061,15 +1177,29 @@ function DocumentChecklist() {
 
 function OrderPipeline({ active, id }: { active: UnifiedPageKind; id?: string }) {
   const steps = ["Confirmed", "Booked", "In transit", "Arrived HK", "Customs", "Delivered", "Completed"]
+  const activeIndex = active === "documents" || active === "messages" ? 2 : active === "tracking" ? 3 : active === "review" ? 6 : 2
   return (
-    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
-      <Badge variant="gold">Order {id || "MATCH-1234"} - {active}</Badge>
+    <section className="relative overflow-hidden rounded-[28px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-navy via-emerald to-gold" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <Badge variant="gold">Order {id || "MATCH-1234"} - {active}</Badge>
+          <h2 className="mt-4 text-[26px] font-bold tracking-[-0.6px] text-ink">Shipment operations cockpit</h2>
+          <p className="mt-2 text-[13px] text-ink-2">Awarded quote has become an order. Documents, messages and status updates now share one timeline.</p>
+        </div>
+        <Button variant="outline" className="rounded-xl">View audit record</Button>
+      </div>
       <div className="mt-6 grid gap-3 lg:grid-cols-7">
         {steps.map((step, index) => (
-          <div key={step} className={`rounded-2xl border p-4 ${index < 3 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink"}`}>
+          <div key={step} className={`rounded-2xl border p-4 ${index < activeIndex ? "border-navy bg-navy text-white" : index === activeIndex ? "border-gold-border bg-gold-soft text-gold-dark" : "border-line bg-canvas text-ink"}`}>
             <CheckCircle2 className="h-5 w-5" />
             <p className="mt-4 text-[12px] font-bold">{step}</p>
           </div>
+        ))}
+      </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {["Packing List missing", "Partner message unread", "Customs ETA pending"].map((item) => (
+          <div key={item} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-bold text-amber-800">{item}</div>
         ))}
       </div>
     </section>
@@ -1078,10 +1208,14 @@ function OrderPipeline({ active, id }: { active: UnifiedPageKind; id?: string })
 
 function MessagePreview() {
   return (
-    <Card className="rounded-2xl border-line bg-white">
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
       <CardContent className="p-5">
-        <h2 className="text-[16px] font-bold text-ink">Order messages</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[16px] font-bold text-ink">Order messages</h2>
+          <Badge variant="secondary">2 unread</Badge>
+        </div>
         <p className="mt-3 rounded-2xl bg-canvas p-4 text-[13px] leading-6 text-ink-2">Please upload Packing List before 18:00. System will remind both sides 24h before ship date.</p>
+        <div className="mt-3 rounded-2xl border border-line bg-white p-4 text-[13px] leading-6 text-ink-2">System: shipment status changed to In transit and both parties were notified.</div>
       </CardContent>
     </Card>
   )
@@ -1089,10 +1223,18 @@ function MessagePreview() {
 
 function ResponsibilityRecord() {
   return (
-    <Card className="rounded-2xl border-line bg-white">
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
       <CardContent className="p-5">
-        <h2 className="text-[16px] font-bold text-ink">Responsibility record</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[16px] font-bold text-ink">Responsibility record</h2>
+          <ShieldCheck className="h-5 w-5 text-navy" />
+        </div>
         <p className="mt-3 text-[13px] leading-6 text-ink-2">LBID records award, cancellation, status changes, document approvals and admin actions for compliance awareness.</p>
+        <div className="mt-4 space-y-2">
+          {["Platform role: workflow_platform_not_carrier_of_record", "Award accepted by Agency", "Cooling-off policy attached"].map((item) => (
+            <p key={item} className="flex items-center gap-2 text-[12px] text-ink-2"><CheckCircle2 className="h-4 w-4 text-emerald" />{item}</p>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )
