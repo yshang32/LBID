@@ -120,7 +120,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     { href: `${prefix}/demo-cases`, label: "Demo Cases", icon: Sparkles },
   ]
   const account: NavItem[] = [
-    { href: `${prefix}/tokens`, label: "Token Wallet", icon: Zap, badge: identity?.tokens || 12 },
+    { href: `${prefix}/tokens`, label: "Token Wallet", icon: Zap, badge: identity?.tokens || 0 },
     { href: `${prefix}/profile`, label: "Profile", icon: Building2 },
     { href: `${prefix}/subscription`, label: "Membership", icon: Crown },
   ]
@@ -194,7 +194,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <TopBar pathname={pathname} prefix={prefix} />
+        <TopBar pathname={pathname} prefix={prefix} identity={identity} />
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
           {children}
         </div>
@@ -207,9 +207,11 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   )
 }
 
-function TopBar({ pathname, prefix }: { pathname: string; prefix: string }) {
+function TopBar({ pathname, prefix, identity }: { pathname: string; prefix: string; identity: Identity }) {
   const route = pathname.replace(prefix, "") || "/dashboard"
   const title = pageTitles[route] ?? "LBID"
+  const company = identity?.companyName || "Workspace"
+  const tokens = identity?.tokens ?? 0
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white/80 px-5 backdrop-blur-xl sm:px-9">
       <div className="flex min-w-0 items-center gap-3">
@@ -223,11 +225,23 @@ function TopBar({ pathname, prefix }: { pathname: string; prefix: string }) {
           <span aria-hidden className="pointer-events-none absolute right-[8px] top-[8px] h-[5px] w-[5px] rounded-full border-[1.5px] border-white bg-gold" />
         </div>
         <IconBtn aria-label="Help"><HelpCircle className="h-4 w-4" strokeWidth={1.75} /></IconBtn>
-        <div className="mx-2 h-5 w-px bg-line" />
+        <div className="mx-1 hidden h-5 w-px bg-line sm:block" />
+        <Link href={`${prefix}/tokens`} className="hidden items-center gap-2 rounded-lg border border-gold-border bg-gold-soft px-3 py-1.5 text-[12px] font-semibold text-gold-dark shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition hover:-translate-y-px hover:bg-[#fff2c8] sm:flex">
+          <Zap className="h-3.5 w-3.5" />
+          {tokens} Token
+        </Link>
+        <Link href={`${prefix}/subscription`} className="hidden items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-navy shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition hover:-translate-y-px hover:border-gold-border md:flex">
+          <Crown className="h-3.5 w-3.5 text-gold" />
+          {planLabel(identity?.plan)}
+        </Link>
         <div className="hidden items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 shadow-[0_1px_4px_rgba(0,0,0,0.05)] sm:flex">
           <span className="h-[6px] w-[6px] flex-shrink-0 rounded-full bg-emerald" />
-          <span className="text-[12px] font-medium text-ink-2">Bidding open</span>
+          <span className="text-[12px] font-medium text-ink-2">Signed in</span>
         </div>
+        <Link href={`${prefix}/profile`} className="ml-1 flex h-9 items-center gap-2 rounded-full border border-line bg-white py-1 pl-1 pr-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition hover:-translate-y-px hover:border-navy/20">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-navy text-[10px] font-bold text-white">{initials(company)}</span>
+          <span className="hidden max-w-[120px] truncate text-[12px] font-semibold text-ink md:block">{company}</span>
+        </Link>
       </div>
     </header>
   )
@@ -273,8 +287,9 @@ function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()
 }
 function planLabel(plan?: string) {
-  if (plan === "annual") return "Premium Forwarder"
-  if (plan === "monthly") return "Premier Forwarder"
-  if (plan === "free") return "Free Forwarder"
-  return "Premier Forwarder"
+  if (plan === "annual" || plan === "premium") return "Premium Member"
+  if (plan === "monthly" || plan === "standard") return "Standard Member"
+  if (plan === "partner") return "Partner"
+  if (plan === "free") return "Free Member"
+  return "Standard Member"
 }
