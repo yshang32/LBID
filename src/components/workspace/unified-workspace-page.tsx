@@ -272,13 +272,13 @@ function PageFrame({
   aside?: ReactNode
 }) {
   return (
-    <main className="mx-auto w-full max-w-[1640px] px-5 pb-16 pt-8 sm:px-8">
+    <main className="mx-auto w-full max-w-[1640px] px-4 pb-16 pt-7 sm:px-8 lg:px-10">
       <section className="flex flex-col gap-5 pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Badge variant="gold" className="rounded-full border-gold-border bg-gold-soft px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-gold-dark">
             {eyebrow}
           </Badge>
-          <h1 className="mt-4 max-w-4xl text-[34px] font-bold leading-[1.02] tracking-[-1.2px] text-ink sm:text-[48px]">
+          <h1 className="mt-4 max-w-4xl text-[34px] font-bold leading-[1.02] tracking-[-1.2px] text-ink sm:text-[46px]">
             {title}
           </h1>
           <p className="mt-3 max-w-3xl text-[14px] leading-6 text-ink-2">{intro}</p>
@@ -369,19 +369,30 @@ function BidConsoleWorkspace({ locale, kind, id }: { locale: Locale; kind: Unifi
       }
       aside={<BidReceipt id={id} />}
     >
-      <section className="relative overflow-hidden rounded-[26px] border border-[#d9c385] bg-[radial-gradient(circle_at_18%_14%,rgba(201,168,76,.22),transparent_30%),linear-gradient(135deg,#071232,#111b3d_48%,#17265c)] p-6 text-white shadow-[0_24px_70px_rgba(7,18,50,.28)]">
-        <div className="absolute right-6 top-6 rounded-full border border-white/20 bg-white/10 px-3 py-1 font-mono text-[13px] tracking-[0.16em] text-white">
-          00:13:44
+      <section className="relative overflow-hidden rounded-[30px] border border-[#e2c96f] bg-[radial-gradient(circle_at_15%_10%,rgba(201,168,76,.28),transparent_28%),radial-gradient(circle_at_85%_8%,rgba(82,138,255,.18),transparent_25%),linear-gradient(135deg,#050b1f,#101b3b_48%,#182b63)] p-6 text-white shadow-[0_30px_90px_rgba(7,18,50,.36)]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.16]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.28) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.28) 1px, transparent 1px)", backgroundSize: "38px 38px" }} />
+        <div aria-hidden className="absolute -right-10 top-8 text-[120px] font-black italic leading-none tracking-[-0.09em] text-white/[0.045] sm:text-[180px]">SEALED</div>
+        <div className="relative z-[1] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="border-white/20 bg-white/12 text-white">Recommended - 94% profile match</Badge>
+            <span className="inline-flex items-center gap-2 rounded-full border border-red-300/45 bg-red-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-red-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-300 shadow-[0_0_0_5px_rgba(248,113,113,.18)]" />
+              Final 2 bid slots
+            </span>
+          </div>
+          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,.08)] backdrop-blur">
+            <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/55">closes in</p>
+            <p className="font-mono text-[20px] font-black tracking-[0.12em] text-white">00:13:44</p>
+          </div>
         </div>
-        <Badge className="border-white/20 bg-white/12 text-white">Recommended for you - 94% profile match</Badge>
-        <div className="mt-14 grid gap-8 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+        <div className="relative z-[1] mt-12 grid gap-8 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
           <RouteEndpoint label="Origin" city="Ho Chi Minh City" sub="SGN - Tan Son Nhat Intl." inverted />
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white text-navy shadow-[0_16px_36px_rgba(0,0,0,.22)]">
+          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[#e2c96f]/60 bg-white text-navy shadow-[0_0_0_10px_rgba(226,201,111,.08),0_18px_42px_rgba(0,0,0,.28)]">
             <Plane className="h-7 w-7" />
           </div>
           <RouteEndpoint label="Destination" city="Hong Kong" sub="HKG - Hong Kong Intl. Airport" alignRight inverted />
         </div>
-        <div className="mt-8 grid gap-3 border-y border-white/15 py-5 md:grid-cols-6">
+        <div className="relative z-[1] mt-8 grid gap-3 border-y border-white/15 py-5 md:grid-cols-6">
           {["500 kg", "3 CBM", "Air", "General", "26 Jun", "27 Jun"].map((item, index) => (
             <div key={item} className="md:border-l md:border-white/15 md:pl-4 first:border-l-0 first:pl-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/55">{["Weight", "Volume", "Freight", "Cargo", "Pickup", "Delivery"][index]}</p>
@@ -389,12 +400,17 @@ function BidConsoleWorkspace({ locale, kind, id }: { locale: Locale; kind: Unifi
             </div>
           ))}
         </div>
-        <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="relative z-[1] mt-7 grid gap-6 lg:grid-cols-[1fr_320px]">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-gold">Why you were selected</p>
             {["Air cargo capacity above 400 kg verified", "SGN to HKG active route on record", "4.9 star rating on HKG deliveries", "IATA cargo agent certified"].map((item) => (
               <p key={item} className="mt-2 flex items-center gap-2 text-[13px] text-white/82"><CheckCircle2 className="h-4 w-4 text-emerald" />{item}</p>
             ))}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {["1 token locked", "sealed until close", "one quote only"].map((item) => (
+                <span key={item} className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/72">{item}</span>
+              ))}
+            </div>
           </div>
           <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
             <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/55">Your sealed quote</p>
@@ -403,6 +419,7 @@ function BidConsoleWorkspace({ locale, kind, id }: { locale: Locale; kind: Unifi
               <span className="ml-3 text-[28px] font-bold tracking-[-0.4px] text-ink/25">0.00</span>
             </div>
             <Button className="mt-3 h-12 w-full rounded-xl bg-gold text-navy hover:bg-[#d9bc65]">Submit sealed quote</Button>
+            <p className="mt-3 text-center text-[11px] leading-4 text-white/55">Return to submit. Quote becomes binding after Agency accepts.</p>
           </div>
         </div>
       </section>
@@ -564,25 +581,35 @@ function StrategyWorkspace({ kind }: { kind: UnifiedPageKind }) {
 
 function FeaturedOpportunity({ prefix, dramatic = false }: { prefix: string; dramatic?: boolean }) {
   return (
-    <section className={`rounded-[26px] border bg-white p-6 shadow-[0_22px_60px_rgba(12,26,62,.09)] ${dramatic ? "border-gold-border" : "border-line"}`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className={`relative overflow-hidden rounded-[28px] border bg-white p-6 shadow-[0_22px_60px_rgba(12,26,62,.09)] transition hover:-translate-y-0.5 hover:shadow-[0_30px_80px_rgba(12,26,62,.12)] ${dramatic ? "border-gold-border" : "border-line"}`}>
+      {dramatic ? (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold via-navy to-[#4a73c9]" />
+          <div aria-hidden className="pointer-events-none absolute -right-8 top-6 text-[84px] font-black italic leading-none tracking-[-0.08em] text-navy/[0.035] sm:text-[132px]">MATCH</div>
+        </>
+      ) : null}
+      <div className="relative z-[1] flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-gold-dark">Recommended for you</span>
+          <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.13em] text-gold-dark">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_0_5px_rgba(201,168,76,.14)]" />
+            Recommended for you
+          </span>
           <Badge variant="gold" className="rounded-full">94% profile match</Badge>
-          <Badge className="rounded-full border-red-200 bg-red-50 text-red-600">Final window</Badge>
+          <Badge className="rounded-full border-red-200 bg-red-50 text-red-600">Final 2 slots</Badge>
         </div>
-        <span className="rounded-full border border-line bg-white px-4 py-2 font-mono text-[14px] font-bold text-ink shadow-sm">
-          13:44 <span className="font-sans text-[11px] font-medium text-ink-3">remaining</span>
+        <span className="rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-right shadow-sm">
+          <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-red-500">closes in</span>
+          <span className="font-mono text-[17px] font-black tracking-[0.08em] text-red-700">00:13:44</span>
         </span>
       </div>
-      <div className="mt-10 grid gap-8 md:grid-cols-[1fr_auto_1fr] md:items-center">
+      <div className="relative z-[1] mt-10 grid gap-8 md:grid-cols-[1fr_auto_1fr] md:items-center">
         <RouteEndpoint label="Origin" city="Ho Chi Minh City" sub="SGN - Tan Son Nhat Intl." />
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-navy text-white shadow-[0_14px_32px_rgba(12,26,62,.24)]">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-gold-border bg-navy text-white shadow-[0_0_0_10px_rgba(27,43,94,.05),0_14px_32px_rgba(12,26,62,.24)]">
           <Plane className="h-6 w-6" />
         </div>
         <RouteEndpoint label="Destination" city="Hong Kong" sub="HKG - Hong Kong Intl. Airport" alignRight />
       </div>
-      <div className="mt-8 grid gap-3 border-y border-line py-5 md:grid-cols-6">
+      <div className="relative z-[1] mt-8 grid gap-3 border-y border-line py-5 md:grid-cols-6">
         {["500 kg", "3 CBM", "Air", "General", "26 Jun", "27 Jun"].map((item, index) => (
           <div key={item} className="md:border-l md:border-line md:pl-4 first:border-l-0 first:pl-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-3">{["Weight", "Volume", "Freight", "Cargo", "Pickup", "Delivery"][index]}</p>
@@ -590,7 +617,7 @@ function FeaturedOpportunity({ prefix, dramatic = false }: { prefix: string; dra
           </div>
         ))}
       </div>
-      <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="relative z-[1] mt-7 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">Why you were selected</p>
           {["Air cargo capacity above 400 kg verified", "SGN to HKG active route on record", "4.9 star rating on HKG deliveries", "IATA cargo agent certified"].map((item) => (
@@ -639,9 +666,11 @@ function OtherOpportunities({ prefix }: { prefix: string }) {
 }
 
 function OpportunityRow({ prefix, from, to, mode, score, time, label }: { prefix: string; from: string; to: string; mode: string; score: string; time: string; label: string }) {
+  const isUrgent = time.includes("h") || time.includes("m")
+  const Icon = mode === "Air" ? Plane : Ship
   return (
     <Link href={`${prefix}/marketplace/SR-DEMO-001`} className="group grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] transition hover:-translate-y-0.5 hover:border-[#cbd3df] hover:shadow-[0_16px_34px_rgba(12,26,62,.08)] sm:grid-cols-[52px_1fr_auto] sm:items-center">
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-canvas text-navy"><Ship className="h-5 w-5" /></span>
+      <span className={`grid h-12 w-12 place-items-center rounded-2xl ${isUrgent ? "bg-red-50 text-red-600" : "bg-canvas text-navy"}`}><Icon className="h-5 w-5" /></span>
       <span>
         <strong className="block text-[15px] text-ink">{from} to {to}</strong>
         <span className="mt-1 block text-[12px] text-ink-3">{mode} - {label}</span>
@@ -649,7 +678,7 @@ function OpportunityRow({ prefix, from, to, mode, score, time, label }: { prefix
       <span className="flex items-center gap-4 text-right">
         <span>
           <strong className="block text-[13px] text-emerald">{score}</strong>
-          <span className="block text-[11px] text-ink-3">{time}</span>
+          <span className={`block text-[11px] ${isUrgent ? "font-bold text-red-600" : "text-ink-3"}`}>{time}</span>
         </span>
         <ChevronRight className="h-4 w-4 text-ink-3 transition group-hover:translate-x-0.5" />
       </span>
@@ -661,13 +690,24 @@ function FilterStack() {
   return (
     <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
       <CardContent className="space-y-3 p-5">
-        <h2 className="text-[14px] font-bold text-ink">Filters</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[14px] font-bold text-ink">Filters</h2>
+          <Badge variant="gold" className="rounded-full">3 priority</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {["Recommended", "Open market"].map((item, index) => (
+            <button key={item} className={`rounded-xl border px-3 py-2 text-[12px] font-bold transition ${index === 0 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink-2 hover:bg-white"}`}>{item}</button>
+          ))}
+        </div>
         {["Route coverage", "Cargo type", "Deadline", "Membership access", "Token required"].map((item) => (
           <div key={item} className="flex items-center justify-between rounded-xl border border-line bg-canvas px-3 py-3 text-[13px] font-semibold text-ink">
             {item}
             <ChevronRight className="h-4 w-4 text-ink-3" />
           </div>
         ))}
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-[12px] leading-5 text-red-700">
+          Urgent bids are highlighted when fewer than 60 minutes remain or final bid slots are available.
+        </div>
       </CardContent>
     </Card>
   )
