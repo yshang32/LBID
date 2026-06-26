@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { createElement, type ReactNode } from "react"
+import { createElement, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   Activity,
   ArrowRight,
@@ -41,6 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { apiJson } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n"
 
 export type UnifiedPageKind =
@@ -410,6 +411,7 @@ function BidConsoleWorkspace({ locale, kind, id }: { locale: Locale; kind: Unifi
           Your quote is <strong className="text-ink">sealed and confidential</strong>. The shipper sees only that qualified forwarders have responded until the bidding window closes.
         </p>
       </section>
+      <LiveBidSubmitPanel srId={id || "SR-DEMO-001"} />
     </PageFrame>
   )
 }
@@ -429,7 +431,7 @@ function RequestWorkspace({ locale, kind, id }: { locale: Locale; kind: UnifiedP
       }
       aside={<RequestTimeline id={id} />}
     >
-      {isCreate ? <GuidedRequestForm /> : <RequestQueue prefix={prefix} />}
+      {isCreate ? <LiveCreateRequestPanel prefix={prefix} /> : <RequestQueue prefix={prefix} />}
     </PageFrame>
   )
 }
@@ -443,11 +445,7 @@ function ComparisonWorkspace({ id }: { id?: string }) {
       actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Accept recommended bid</Button>}
       aside={<DecisionPanel />}
     >
-      <section className="grid gap-4 lg:grid-cols-3">
-        <QuoteCard name="HarbourLink Cargo" price="HKD 22,400" label="Lowest quote" tone="green" meta="2 days - verified customs" />
-        <QuoteCard name="Pacific Forward Ltd." price="HKD 24,800" label="Recommended" tone="gold" meta="94% match - fastest response" />
-        <QuoteCard name="Gold Harbour Logistics" price="HKD 26,100" label="Fastest" tone="blue" meta="1 day - premium badge" />
-      </section>
+      <LiveComparisonPanel srId={id || ""} />
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-[13px] leading-6 text-amber-900">
         Choosing Pacific Forward is HKD 2,400 above the lowest quote for {id || "SR-DEMO-001"}. The confirmation modal should explain the price difference and record the reason.
       </section>
@@ -814,7 +812,183 @@ function RequestTimeline({ id }: { id?: string }) {
   )
 }
 
-function QuoteCard({ name, price, label, tone, meta }: { name: string; price: string; label: string; tone: "green" | "gold" | "blue"; meta: string }) {
+function LiveCreateRequestPanel({ prefix }: { prefix: string }) {
+  const [form, setForm] = useState({
+    origin: "Ho Chi Minh City",
+    destination: "Hong Kong",
+    mode: "air",
+    cargoType: "general",
+    weightKg: "500",
+    cbm: "3",
+    services: "Customs clearance, Local delivery",
+  })
+  const [status, setStatus] = useState("")
+  const [createdId, setCreatedId] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function submit() {
+    setLoading(true)
+    setStatus("")
+    const { response, body } = await apiJson("/api/shipment-requests", {
+      method: "POST",
+      body: JSON.stringify({
+        origin: form.origin,
+        destination: form.destination,
+        mode: form.mode,
+        cargoType: form.cargoType,
+        weightKg: Number(form.weightKg),
+        cbm: Number(form.cbm),
+        services: form.services.split(",").map((item) => item.trim()).filter(Boolean),
+      }),
+    })
+    setLoading(false)
+    if (!response.ok) {
+      setStatus(body.error || "Create SR failed")
+      return
+    }
+    setCreatedId(body.shipmentRequest?.id || "")
+    setStatus("Shipment Request created and sent to Admin review.")
+  }
+
+  return (
+    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+      <div className="mb-6 grid gap-2 md:grid-cols-4">
+        {["Route", "Cargo", "Service", "Review"].map((step, index) => (
+          <div key={step} className={`rounded-full border px-4 py-2 text-center text-[12px] font-bold ${index === 0 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink-2"}`}>{index + 1}. {step}</div>
+        ))}
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <LiveInput label="Origin" value={form.origin} onChange={(value) => setForm({ ...form, origin: value })} />
+        <LiveInput label="Destination" value={form.destination} onChange={(value) => setForm({ ...form, destination: value })} />
+        <LiveSelect label="Freight mode" value={form.mode} onChange={(value) => setForm({ ...form, mode: value })} options={["air", "sea", "truck"]} />
+        <LiveSelect label="Cargo type" value={form.cargoType} onChange={(value) => setForm({ ...form, cargoType: value })} options={["general", "dangerous_goods", "cold_chain"]} />
+        <LiveInput label="Weight kg" value={form.weightKg} onChange={(value) => setForm({ ...form, weightKg: value })} />
+        <LiveInput label="CBM" value={form.cbm} onChange={(value) => setForm({ ...form, cbm: value })} />
+        <label className="block lg:col-span-2">
+          <span className="text-[12px] font-semibold text-ink-2">Services needed</span>
+          <input className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink outline-none transition hover:border-navy/20 focus:border-navy/40" value={form.services} onChange={(event) => setForm({ ...form, services: event.target.value })} />
+        </label>
+      </div>
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Button onClick={submit} disabled={loading} className="h-11 rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{loading ? "Submitting..." : "Submit for Admin review"}</Button>
+        {createdId ? <Link href={`${prefix}/requests/${createdId}`} className="text-[13px] font-semibold text-navy hover:underline">Open {createdId}</Link> : null}
+        {status ? <span className={`text-[13px] font-semibold ${createdId ? "text-emerald" : "text-red-600"}`}>{status}</span> : null}
+      </div>
+    </section>
+  )
+}
+
+function LiveBidSubmitPanel({ srId }: { srId: string }) {
+  const [price, setPrice] = useState("24800")
+  const [transitTime, setTransitTime] = useState("2 days")
+  const [terms, setTerms] = useState("Customs and local delivery included.")
+  const [status, setStatus] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function submitBid() {
+    setLoading(true)
+    setStatus("")
+    const { response, body } = await apiJson("/api/bids", {
+      method: "POST",
+      body: JSON.stringify({ sr_id: srId, price: Number(price), currency: "HKD", transit_time: transitTime, terms }),
+    })
+    setLoading(false)
+    setStatus(response.ok ? `Sealed bid submitted. ${body.tokenBalanceAfter ? `Token balance: ${body.tokenBalanceAfter}` : ""}` : body.error || "Bid submission failed")
+  }
+
+  return (
+    <section className="rounded-2xl border border-line bg-white p-5 shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <LiveInput label="Sealed quote HKD" value={price} onChange={setPrice} />
+        <LiveInput label="Transit time" value={transitTime} onChange={setTransitTime} />
+        <LiveInput label="Terms" value={terms} onChange={setTerms} />
+        <Button onClick={submitBid} disabled={loading} className="h-11 rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{loading ? "Submitting..." : "Submit live bid"}</Button>
+      </div>
+      {status ? <p className={`mt-3 text-[13px] font-semibold ${status.includes("submitted") ? "text-emerald" : "text-red-600"}`}>{status}</p> : null}
+    </section>
+  )
+}
+
+function LiveComparisonPanel({ srId }: { srId: string }) {
+  const [bids, setBids] = useState<Array<{ id: string; price?: number; currency?: string; transit_time?: string }>>([])
+  const [status, setStatus] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    const query = srId ? `?sr_id=${encodeURIComponent(srId)}` : ""
+    apiJson(`/api/bids${query}`).then(({ response, body }) => {
+      if (!active) return
+      setBids(response.ok ? body.bids || [] : [])
+      setLoading(false)
+    }).catch(() => {
+      if (!active) return
+      setLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [srId])
+
+  const displayBids = useMemo(() => {
+    const live = bids.length ? bids : [
+      { id: "demo-lowest", price: 22400, currency: "HKD", transit_time: "2 days" },
+      { id: "demo-recommended", price: 24800, currency: "HKD", transit_time: "1 day" },
+      { id: "demo-fastest", price: 26100, currency: "HKD", transit_time: "Same day" },
+    ]
+    return [...live].sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
+  }, [bids])
+
+  async function acceptBid(id: string) {
+    if (id.startsWith("demo-")) {
+      setStatus("Demo bid selected. Live accept requires real Supabase bid id.")
+      return
+    }
+    const { response, body } = await apiJson(`/api/bids/${id}/accept`, { method: "POST", body: JSON.stringify({}) })
+    setStatus(response.ok ? `Bid accepted. Order ${body.order?.id || "created"}.` : body.error || "Accept bid failed")
+  }
+
+  if (loading) return <section className="rounded-2xl border border-line bg-white p-6 text-[13px] text-ink-3">Loading live bids...</section>
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      {displayBids.map((bid, index) => (
+        <QuoteCard
+          key={bid.id}
+          name={index === 0 ? "Lowest valid bid" : index === 1 ? "Recommended partner" : "Alternative partner"}
+          price={`${bid.currency || "HKD"} ${Number(bid.price || 0).toLocaleString("en-HK")}`}
+          label={index === 0 ? "Lowest quote" : index === 1 ? "Recommended" : "Fastest"}
+          tone={index === 0 ? "green" : index === 1 ? "gold" : "blue"}
+          meta={`${bid.transit_time || "Transit pending"} - ${bids.length ? "live Supabase bid" : "demo state"}`}
+          onSelect={() => void acceptBid(bid.id)}
+        />
+      ))}
+      {status ? <p className="lg:col-span-3 rounded-2xl border border-line bg-white p-4 text-[13px] font-semibold text-ink-2">{status}</p> : null}
+    </section>
+  )
+}
+
+function LiveInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="block min-w-0 flex-1">
+      <span className="text-[12px] font-semibold text-ink-2">{label}</span>
+      <input className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink outline-none transition hover:border-navy/20 focus:border-navy/40" value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  )
+}
+
+function LiveSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  return (
+    <label className="block">
+      <span className="text-[12px] font-semibold text-ink-2">{label}</span>
+      <select className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3 text-[13px] font-medium text-ink outline-none transition hover:border-navy/20 focus:border-navy/40" value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function QuoteCard({ name, price, label, tone, meta, onSelect }: { name: string; price: string; label: string; tone: "green" | "gold" | "blue"; meta: string; onSelect?: () => void }) {
   const toneClass = tone === "green" ? "border-emerald/30" : tone === "gold" ? "border-gold-border" : "border-blue-200"
   return (
     <Card className={`rounded-[24px] bg-white shadow-[0_16px_44px_rgba(12,26,62,.07)] transition hover:-translate-y-1 ${toneClass}`}>
@@ -823,7 +997,7 @@ function QuoteCard({ name, price, label, tone, meta }: { name: string; price: st
         <h3 className="mt-5 text-[18px] font-bold text-ink">{name}</h3>
         <p className="mt-4 text-[32px] font-bold tracking-[-0.8px] text-ink">{price}</p>
         <p className="mt-2 text-[13px] text-ink-2">{meta}</p>
-        <Button variant={tone === "gold" ? "gold" : "outline"} className="mt-6 h-11 w-full rounded-xl">Select bid</Button>
+        <Button onClick={onSelect} variant={tone === "gold" ? "gold" : "outline"} className="mt-6 h-11 w-full rounded-xl">Select bid</Button>
       </CardContent>
     </Card>
   )
@@ -885,22 +1059,115 @@ function ResponsibilityRecord() {
 }
 
 function AdminReviewQueue({ kind }: { kind: UnifiedPageKind }) {
-  const rows = kind === "admin-payments"
-    ? ["FPS proof - HKD 1,500", "Bank transfer - HKD 500", "Stripe webhook retry"]
+  const [rows, setRows] = useState<any[]>([])
+  const [status, setStatus] = useState("")
+  const [query, setQuery] = useState("")
+  const [reason, setReason] = useState("Need clearer cargo details before publication.")
+  const [filter, setFilter] = useState("pending")
+
+  useEffect(() => {
+    let active = true
+    const endpoint = kind === "admin-payments"
+      ? `/api/admin/pending-payments?status=${filter}&q=${encodeURIComponent(query)}`
+      : kind === "admin-accounts"
+        ? "/api/admin/forwarders"
+        : "/api/admin/shipment-requests"
+    apiJson(endpoint).then(({ response, body }) => {
+      if (!active) return
+      if (!response.ok) {
+        setRows([])
+        setStatus(body.error || "Admin API unavailable")
+        return
+      }
+      setStatus("")
+      setRows(body.shipmentRequests || body.forwarders || body.paymentIntents || [])
+    }).catch(() => {
+      if (!active) return
+      setStatus("Admin API unavailable")
+    })
+    return () => {
+      active = false
+    }
+  }, [kind, filter, query])
+
+  async function reviewRequest(id: string, action: "publish" | "reject") {
+    const { response, body } = await apiJson("/api/admin/shipment-requests", {
+      method: "PATCH",
+      body: JSON.stringify({ id, action, reason }),
+    })
+    setStatus(response.ok ? `Request ${action}ed.` : body.error || "Review failed")
+    if (response.ok) setRows((current) => current.filter((row) => row.id !== id))
+  }
+
+  async function reviewPayment(id: string, action: "confirm" | "reject") {
+    const { response, body } = await apiJson("/api/admin/pending-payments", {
+      method: "POST",
+      body: JSON.stringify({ paymentIntentId: id, action, note: reason }),
+    })
+    setStatus(response.ok ? `Payment ${action}ed.` : body.error || "Payment review failed")
+    if (response.ok) setRows((current) => current.filter((row) => row.id !== id))
+  }
+
+  const fallbackRows = kind === "admin-payments"
+    ? [{ id: "demo-payment", amount: 1500, currency: "HKD", status: "pending", company_name: "Pacific Forward Ltd.", fps_reference: "FPS-3921" }]
     : kind === "admin-accounts"
-      ? ["Pacific Forward Ltd. - Premium", "HarbourLink Cargo - Standard", "VN Export Co. - Client capability"]
-      : ["SR-2026-00124 - pending review", "Forwarder verification - documents ready", "Cancellation review - cooling-off"]
+      ? [{ id: "demo-account", companyName: "HarbourLink Cargo", region: "Hong Kong", verificationStatus: "pending", verificationNote: "BR and IATA docs ready" }]
+      : [{ id: "demo-sr", route: { origin: "Jakarta", destination: "Hong Kong" }, status: "PENDING_REVIEW", cargo_details: { cargo: "General cargo" } }]
+  const visibleRows = rows.length ? rows : fallbackRows
+
   return (
-    <section className="grid gap-3">
-      {rows.map((row) => (
-        <div key={row} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] md:grid-cols-[1fr_auto_auto] md:items-center">
-          <strong className="text-[14px] text-ink">{row}</strong>
-          <span className="text-[12px] text-ink-3">Reason required</span>
-          <Button variant="outline" className="rounded-xl">Review</Button>
+    <section className="space-y-3">
+      <div className="grid gap-3 rounded-2xl border border-line bg-white p-4 md:grid-cols-[1fr_180px_1fr]">
+        <input className="h-10 rounded-xl border border-line px-3 text-[13px] outline-none focus:border-navy/40" placeholder="Search company, email, reference..." value={query} onChange={(event) => setQuery(event.target.value)} />
+        {kind === "admin-payments" ? (
+          <select className="h-10 rounded-xl border border-line px-3 text-[13px] outline-none focus:border-navy/40" value={filter} onChange={(event) => setFilter(event.target.value)}>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="rejected">Rejected</option>
+            <option value="all">All</option>
+          </select>
+        ) : <span className="hidden md:block" />}
+        <input className="h-10 rounded-xl border border-line px-3 text-[13px] outline-none focus:border-navy/40" placeholder="Review reason / internal note" value={reason} onChange={(event) => setReason(event.target.value)} />
+      </div>
+      {visibleRows.map((row) => (
+        <div key={row.id || row.user_id} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] md:grid-cols-[1fr_auto] md:items-center">
+          <span>
+            <strong className="block text-[14px] text-ink">{adminRowTitle(kind, row)}</strong>
+            <span className="mt-1 block text-[12px] text-ink-3">{adminRowMeta(kind, row)}</span>
+          </span>
+          <span className="flex flex-wrap gap-2">
+            {kind === "admin-payments" ? (
+              <>
+                <Button onClick={() => void reviewPayment(row.id, "confirm")} size="sm" className="rounded-xl bg-navy">Confirm</Button>
+                <Button onClick={() => void reviewPayment(row.id, "reject")} size="sm" variant="outline" className="rounded-xl">Reject</Button>
+              </>
+            ) : kind === "admin-accounts" ? (
+              <Button asChild size="sm" variant="outline" className="rounded-xl"><Link href={`/zh/admin/accounts`}>Open verification</Link></Button>
+            ) : (
+              <>
+                <Button onClick={() => void reviewRequest(row.id, "publish")} size="sm" className="rounded-xl bg-navy">Publish</Button>
+                <Button onClick={() => void reviewRequest(row.id, "reject")} size="sm" variant="outline" className="rounded-xl">Reject</Button>
+              </>
+            )}
+          </span>
         </div>
       ))}
+      {status ? <p className="rounded-2xl border border-line bg-white p-4 text-[13px] font-semibold text-ink-2">{status}</p> : null}
     </section>
   )
+}
+
+function adminRowTitle(kind: UnifiedPageKind, row: any) {
+  if (kind === "admin-payments") return `${row.company_name || row.email || row.user_id || "Payment"} - ${row.currency || "HKD"} ${Number(row.amount || 0).toLocaleString("en-HK")}`
+  if (kind === "admin-accounts") return row.companyName || row.company_name_en || row.company_name_zh || row.id || "Company profile"
+  const route = row.route || {}
+  return `${row.id || "SR"} - ${route.origin || "Origin"} to ${route.destination || "Hong Kong"}`
+}
+
+function adminRowMeta(kind: UnifiedPageKind, row: any) {
+  if (kind === "admin-payments") return `${row.status || "pending"} - ${row.fps_reference || row.payment_method || "manual payment"}`
+  if (kind === "admin-accounts") return `${row.region || "Hong Kong"} - ${row.verificationStatus || row.verification_status || "pending"} - ${row.verificationNote || "No internal note"}`
+  return `${row.status || "PENDING_REVIEW"} - ${row.cargo_details?.cargo || row.cargo_details?.cargo_type || "Cargo details pending"}`
 }
 
 function AdminAudit({ kind }: { kind: UnifiedPageKind }) {
