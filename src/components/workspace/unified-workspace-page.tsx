@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { createElement } from "react"
+import { createElement, type ReactNode } from "react"
 import {
   Activity,
   ArrowRight,
@@ -170,6 +170,17 @@ export function UnifiedWorkspacePage({
   kind: UnifiedPageKind
   id?: string
 }) {
+  if (kind === "dashboard") return <TodayWorkspace locale={locale} />
+  if (kind === "marketplace") return <OpportunitiesWorkspace locale={locale} />
+  if (kind === "quote-console" || kind === "active-bids") return <BidConsoleWorkspace locale={locale} kind={kind} id={id} />
+  if (kind === "requests" || kind === "create-request" || kind === "request-detail") return <RequestWorkspace locale={locale} kind={kind} id={id} />
+  if (kind === "quote-compare") return <ComparisonWorkspace id={id} />
+  if (kind === "orders" || kind === "order-detail" || kind === "documents" || kind === "messages" || kind === "tracking" || kind === "awb" || kind === "review") return <OrderWorkspace kind={kind} id={id} />
+  if (kind.startsWith("admin")) return <AdminWorkspace kind={kind} />
+  if (kind === "profile" || kind === "tokens" || kind === "subscription" || kind === "forwarders" || kind === "forwarder-profile") return <AccountWorkspace kind={kind} id={id} />
+  if (kind === "community" || kind === "notifications") return <CommunityWorkspace kind={kind} />
+  if (kind === "workflow" || kind === "preview" || kind === "services" || kind === "analytics" || kind === "my-routes") return <StrategyWorkspace kind={kind} />
+
   const config = configs[kind]
   const prefix = `/${locale}`
   const Icon = config.icon
@@ -241,6 +252,760 @@ export function UnifiedWorkspacePage({
         </aside>
       </section>
     </main>
+  )
+}
+
+function PageFrame({
+  eyebrow,
+  title,
+  intro,
+  actions,
+  children,
+  aside,
+}: {
+  eyebrow: string
+  title: string
+  intro: string
+  actions?: ReactNode
+  children: ReactNode
+  aside?: ReactNode
+}) {
+  return (
+    <main className="mx-auto w-full max-w-[1640px] px-5 pb-16 pt-8 sm:px-8">
+      <section className="flex flex-col gap-5 pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <Badge variant="gold" className="rounded-full border-gold-border bg-gold-soft px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-gold-dark">
+            {eyebrow}
+          </Badge>
+          <h1 className="mt-4 max-w-4xl text-[34px] font-bold leading-[1.02] tracking-[-1.2px] text-ink sm:text-[48px]">
+            {title}
+          </h1>
+          <p className="mt-3 max-w-3xl text-[14px] leading-6 text-ink-2">{intro}</p>
+        </div>
+        {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      </section>
+      <section className={aside ? "grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]" : "space-y-5"}>
+        <div className="space-y-5">{children}</div>
+        {aside ? <aside className="space-y-5">{aside}</aside> : null}
+      </section>
+    </main>
+  )
+}
+
+function TodayWorkspace({ locale }: { locale: Locale }) {
+  const prefix = `/${locale}`
+  return (
+    <PageFrame
+      eyebrow="Today"
+      title="Good morning, Kenny."
+      intro="1 high-priority opportunity needs your attention today. Recommended work appears first, then normal open-market bids."
+      actions={
+        <>
+          <Button asChild className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">
+            <Link href={`${prefix}/marketplace/SR-DEMO-001`}>Open quote console</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link href={`${prefix}/inquiries/new`}>Create SR</Link>
+          </Button>
+        </>
+      }
+      aside={<ActivityStream />}
+    >
+      <section className="grid gap-4 lg:grid-cols-3">
+        <MetricCard label="Bids this month" value="23" delta="+4 vs last month" icon={Activity} />
+        <MetricCard label="Success rate" value="91%" delta="+2pp vs last month" icon={TrendingUp} />
+        <MetricCard label="Total volume" value="HKD 2.4M" delta="June 2026" icon={Award} />
+      </section>
+      <FeaturedOpportunity prefix={prefix} dramatic />
+      <section className="grid gap-5 lg:grid-cols-[1fr_380px]">
+        <OtherOpportunities prefix={prefix} />
+        <DecisionPanel />
+      </section>
+    </PageFrame>
+  )
+}
+
+function OpportunitiesWorkspace({ locale }: { locale: Locale }) {
+  const prefix = `/${locale}`
+  return (
+    <PageFrame
+      eyebrow="Marketplace"
+      title="Recommended bids first. Open bids next."
+      intro="LBID separates system-matched opportunities from normal marketplace work so forwarders know exactly where to focus."
+      actions={
+        <>
+          <Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Recommended</Button>
+          <Button variant="outline" className="rounded-xl">All open SR</Button>
+        </>
+      }
+      aside={<FilterStack />}
+    >
+      <FeaturedOpportunity prefix={prefix} dramatic />
+      <section className="grid gap-3">
+        {[
+          ["Shanghai", "Singapore", "Sea", "82% match", "4h 20m", "Normal bid"],
+          ["Bangkok", "Tokyo", "Air", "78% match", "2 days", "Cold-chain fit"],
+          ["Shenzhen", "London", "Sea", "71% match", "5 days", "Heavy cargo"],
+        ].map(([from, to, mode, score, time, label]) => (
+          <OpportunityRow key={`${from}-${to}`} prefix={prefix} from={from} to={to} mode={mode} score={score} time={time} label={label} />
+        ))}
+      </section>
+    </PageFrame>
+  )
+}
+
+function BidConsoleWorkspace({ locale, kind, id }: { locale: Locale; kind: UnifiedPageKind; id?: string }) {
+  const prefix = `/${locale}`
+  return (
+    <PageFrame
+      eyebrow={kind === "active-bids" ? "Active sealed bids" : "Quote console"}
+      title="One shot. Sealed. Token protected."
+      intro="The console makes urgency visible without revealing competitor data. The forwarder sees match logic, deadline pressure and token impact before submitting."
+      actions={
+        <Button asChild variant="outline" className="rounded-xl">
+          <Link href={`${prefix}/marketplace`}>Back to marketplace</Link>
+        </Button>
+      }
+      aside={<BidReceipt id={id} />}
+    >
+      <section className="relative overflow-hidden rounded-[26px] border border-[#d9c385] bg-[radial-gradient(circle_at_18%_14%,rgba(201,168,76,.22),transparent_30%),linear-gradient(135deg,#071232,#111b3d_48%,#17265c)] p-6 text-white shadow-[0_24px_70px_rgba(7,18,50,.28)]">
+        <div className="absolute right-6 top-6 rounded-full border border-white/20 bg-white/10 px-3 py-1 font-mono text-[13px] tracking-[0.16em] text-white">
+          00:13:44
+        </div>
+        <Badge className="border-white/20 bg-white/12 text-white">Recommended for you - 94% profile match</Badge>
+        <div className="mt-14 grid gap-8 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+          <RouteEndpoint label="Origin" city="Ho Chi Minh City" sub="SGN - Tan Son Nhat Intl." inverted />
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white text-navy shadow-[0_16px_36px_rgba(0,0,0,.22)]">
+            <Plane className="h-7 w-7" />
+          </div>
+          <RouteEndpoint label="Destination" city="Hong Kong" sub="HKG - Hong Kong Intl. Airport" alignRight inverted />
+        </div>
+        <div className="mt-8 grid gap-3 border-y border-white/15 py-5 md:grid-cols-6">
+          {["500 kg", "3 CBM", "Air", "General", "26 Jun", "27 Jun"].map((item, index) => (
+            <div key={item} className="md:border-l md:border-white/15 md:pl-4 first:border-l-0 first:pl-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/55">{["Weight", "Volume", "Freight", "Cargo", "Pickup", "Delivery"][index]}</p>
+              <p className="mt-1 text-[15px] font-semibold">{item}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-gold">Why you were selected</p>
+            {["Air cargo capacity above 400 kg verified", "SGN to HKG active route on record", "4.9 star rating on HKG deliveries", "IATA cargo agent certified"].map((item) => (
+              <p key={item} className="mt-2 flex items-center gap-2 text-[13px] text-white/82"><CheckCircle2 className="h-4 w-4 text-emerald" />{item}</p>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/55">Your sealed quote</p>
+            <div className="mt-3 rounded-xl border border-white/20 bg-white px-4 py-4 text-ink">
+              <span className="text-[12px] font-bold text-ink-3">HKD</span>
+              <span className="ml-3 text-[28px] font-bold tracking-[-0.4px] text-ink/25">0.00</span>
+            </div>
+            <Button className="mt-3 h-12 w-full rounded-xl bg-gold text-navy hover:bg-[#d9bc65]">Submit sealed quote</Button>
+          </div>
+        </div>
+      </section>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+        <p className="text-[13px] leading-6 text-ink-2">
+          Your quote is <strong className="text-ink">sealed and confidential</strong>. The shipper sees only that qualified forwarders have responded until the bidding window closes.
+        </p>
+      </section>
+    </PageFrame>
+  )
+}
+
+function RequestWorkspace({ locale, kind, id }: { locale: Locale; kind: UnifiedPageKind; id?: string }) {
+  const prefix = `/${locale}`
+  const isCreate = kind === "create-request"
+  return (
+    <PageFrame
+      eyebrow={isCreate ? "Create SR" : "Requests"}
+      title={isCreate ? "Build a shipment request step by step." : "Every request has one clear next step."}
+      intro={isCreate ? "Most answers are dropdowns so users are guided. Only company name, notes and cargo description stay free text." : "SR review, bidding, comparison and award are shown as a live work queue."}
+      actions={
+        <Button asChild className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">
+          <Link href={isCreate ? `${prefix}/requests` : `${prefix}/inquiries/new`}>{isCreate ? "Save draft" : "Create SR"}</Link>
+        </Button>
+      }
+      aside={<RequestTimeline id={id} />}
+    >
+      {isCreate ? <GuidedRequestForm /> : <RequestQueue prefix={prefix} />}
+    </PageFrame>
+  )
+}
+
+function ComparisonWorkspace({ id }: { id?: string }) {
+  return (
+    <PageFrame
+      eyebrow="Quote comparison"
+      title="Lowest quote is highlighted. Agency still chooses fit."
+      intro="This page explains why the winner may not be the lowest price, while preserving sealed-bid fairness and an explicit non-lowest confirmation."
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Accept recommended bid</Button>}
+      aside={<DecisionPanel />}
+    >
+      <section className="grid gap-4 lg:grid-cols-3">
+        <QuoteCard name="HarbourLink Cargo" price="HKD 22,400" label="Lowest quote" tone="green" meta="2 days - verified customs" />
+        <QuoteCard name="Pacific Forward Ltd." price="HKD 24,800" label="Recommended" tone="gold" meta="94% match - fastest response" />
+        <QuoteCard name="Gold Harbour Logistics" price="HKD 26,100" label="Fastest" tone="blue" meta="1 day - premium badge" />
+      </section>
+      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-[13px] leading-6 text-amber-900">
+        Choosing Pacific Forward is HKD 2,400 above the lowest quote for {id || "SR-DEMO-001"}. The confirmation modal should explain the price difference and record the reason.
+      </section>
+    </PageFrame>
+  )
+}
+
+function OrderWorkspace({ kind, id }: { kind: UnifiedPageKind; id?: string }) {
+  return (
+    <PageFrame
+      eyebrow="Order workspace"
+      title="From award to completion in one operational cockpit."
+      intro="Status, documents, messages, AWB, review and responsibility records belong together after a bid is accepted."
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Update next status</Button>}
+      aside={<DocumentChecklist />}
+    >
+      <OrderPipeline active={kind} id={id} />
+      <section className="grid gap-4 lg:grid-cols-2">
+        <MessagePreview />
+        <ResponsibilityRecord />
+      </section>
+    </PageFrame>
+  )
+}
+
+function AdminWorkspace({ kind }: { kind: UnifiedPageKind }) {
+  return (
+    <PageFrame
+      eyebrow="Admin"
+      title="Quality control before the marketplace goes live."
+      intro="Admin reviews SRs, verifies forwarders, confirms payments, updates membership and keeps audit logs."
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Open review queue</Button>}
+      aside={<AdminAudit kind={kind} />}
+    >
+      <section className="grid gap-4 lg:grid-cols-3">
+        <MetricCard label="Pending SR" value="8" delta="3 urgent" icon={FileText} />
+        <MetricCard label="Verification" value="5" delta="2 with docs" icon={BadgeCheck} />
+        <MetricCard label="Payments" value="12" delta="HKD 18,500" icon={Coins} />
+      </section>
+      <AdminReviewQueue kind={kind} />
+    </PageFrame>
+  )
+}
+
+function AccountWorkspace({ kind, id }: { kind: UnifiedPageKind; id?: string }) {
+  const isDirectory = kind === "forwarders" || kind === "forwarder-profile"
+  const isTokens = kind === "tokens"
+  const isSubscription = kind === "subscription"
+  return (
+    <PageFrame
+      eyebrow={isDirectory ? "Directory" : isTokens ? "Token wallet" : isSubscription ? "Membership" : "Company profile"}
+      title={isDirectory ? "Capability should be visible before price." : isTokens ? "Every token movement needs a clean ledger." : isSubscription ? "Upgrade should feel rewarding." : "One company can act as Client, Forwarder, or both."}
+      intro="Account pages explain company capability, membership value, token balance and profile trust without forcing a fixed Agency or Forwarder role."
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{isDirectory ? "Invite to SR" : "Save changes"}</Button>}
+      aside={<MembershipCard />}
+    >
+      {isDirectory ? <DirectoryGrid id={id} /> : isTokens ? <TokenLedger /> : isSubscription ? <PlanGrid /> : <ProfileEditor />}
+    </PageFrame>
+  )
+}
+
+function CommunityWorkspace({ kind }: { kind: UnifiedPageKind }) {
+  return (
+    <PageFrame
+      eyebrow={kind === "notifications" ? "Notifications" : "Community"}
+      title={kind === "notifications" ? "Important events without email chasing." : "A trust layer for logistics operators."}
+      intro="Community and notification pages should feel calm but alive: platform news, route wins, event tickets, bid close reminders and payment results."
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">{kind === "notifications" ? "Mark all read" : "Create post"}</Button>}
+      aside={<ActivityStream />}
+    >
+      <section className="grid gap-4 lg:grid-cols-3">
+        {["Route win", "Member spotlight", "LBID event"].map((title, index) => (
+          <Card key={title} className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+            <CardContent className="p-5">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-navy-soft text-navy">
+                {createElement([Route, Star, Users][index], { className: "h-5 w-5" })}
+              </span>
+              <h3 className="mt-5 text-[17px] font-bold text-ink">{title}</h3>
+              <p className="mt-2 text-[13px] leading-6 text-ink-2">A polished content state with real platform context, moderation and member trust signals.</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+      <NotificationRows />
+    </PageFrame>
+  )
+}
+
+function StrategyWorkspace({ kind }: { kind: UnifiedPageKind }) {
+  return (
+    <PageFrame
+      eyebrow={kind}
+      title="The LBID operating system, mapped clearly."
+      intro="Workflow, analytics, routes and growth services should help users understand what to do next instead of reading a static product brochure."
+      actions={<Button className="rounded-xl bg-navy px-5 hover:bg-[#172b5d]">Start next step</Button>}
+      aside={<DecisionPanel />}
+    >
+      <section className="grid gap-4 lg:grid-cols-4">
+        {["Review", "Bidding", "Award", "Order"].map((step, index) => (
+          <Card key={step} className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+            <CardContent className="p-5">
+              <span className="text-[12px] font-bold text-gold-dark">0{index + 1}</span>
+              <h3 className="mt-3 text-[18px] font-bold text-ink">{step}</h3>
+              <p className="mt-2 text-[13px] leading-6 text-ink-2">Clear state, owner, action and audit record for this stage.</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+      <section className="rounded-[24px] border border-line bg-white p-6 shadow-[0_14px_38px_rgba(12,26,62,.06)]">
+        <h2 className="text-[22px] font-bold text-ink">Next best action</h2>
+        <p className="mt-2 text-[14px] leading-6 text-ink-2">Show what the user can do now, what LBID is doing automatically, and what is blocked by missing data.</p>
+      </section>
+    </PageFrame>
+  )
+}
+
+function FeaturedOpportunity({ prefix, dramatic = false }: { prefix: string; dramatic?: boolean }) {
+  return (
+    <section className={`rounded-[26px] border bg-white p-6 shadow-[0_22px_60px_rgba(12,26,62,.09)] ${dramatic ? "border-gold-border" : "border-line"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-gold-dark">Recommended for you</span>
+          <Badge variant="gold" className="rounded-full">94% profile match</Badge>
+          <Badge className="rounded-full border-red-200 bg-red-50 text-red-600">Final window</Badge>
+        </div>
+        <span className="rounded-full border border-line bg-white px-4 py-2 font-mono text-[14px] font-bold text-ink shadow-sm">
+          13:44 <span className="font-sans text-[11px] font-medium text-ink-3">remaining</span>
+        </span>
+      </div>
+      <div className="mt-10 grid gap-8 md:grid-cols-[1fr_auto_1fr] md:items-center">
+        <RouteEndpoint label="Origin" city="Ho Chi Minh City" sub="SGN - Tan Son Nhat Intl." />
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-navy text-white shadow-[0_14px_32px_rgba(12,26,62,.24)]">
+          <Plane className="h-6 w-6" />
+        </div>
+        <RouteEndpoint label="Destination" city="Hong Kong" sub="HKG - Hong Kong Intl. Airport" alignRight />
+      </div>
+      <div className="mt-8 grid gap-3 border-y border-line py-5 md:grid-cols-6">
+        {["500 kg", "3 CBM", "Air", "General", "26 Jun", "27 Jun"].map((item, index) => (
+          <div key={item} className="md:border-l md:border-line md:pl-4 first:border-l-0 first:pl-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-3">{["Weight", "Volume", "Freight", "Cargo", "Pickup", "Delivery"][index]}</p>
+            <p className="mt-1 text-[15px] font-semibold text-ink">{item}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">Why you were selected</p>
+          {["Air cargo capacity above 400 kg verified", "SGN to HKG active route on record", "4.9 star rating on HKG deliveries", "IATA cargo agent certified"].map((item) => (
+            <p key={item} className="mt-2 flex items-center gap-2 text-[13px] text-ink-2"><CheckCircle2 className="h-4 w-4 text-emerald" />{item}</p>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-line bg-canvas p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-ink-3">Your sealed quote</p>
+          <div className="mt-3 rounded-xl border border-line bg-white px-4 py-4">
+            <span className="text-[12px] font-bold text-ink-3">HKD</span>
+            <span className="ml-3 text-[28px] font-bold tracking-[-0.4px] text-ink/15">0.00</span>
+          </div>
+          <Button asChild className="mt-3 h-12 w-full rounded-xl bg-navy hover:bg-[#172b5d]">
+            <Link href={`${prefix}/marketplace/SR-DEMO-001`}>Submit sealed quote</Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function RouteEndpoint({ label, city, sub, alignRight, inverted }: { label: string; city: string; sub: string; alignRight?: boolean; inverted?: boolean }) {
+  return (
+    <div className={alignRight ? "text-left md:text-right" : ""}>
+      <p className={`text-[10px] font-bold uppercase tracking-[0.13em] ${inverted ? "text-white/55" : "text-ink-3"}`}>{label}</p>
+      <h2 className={`mt-2 text-[28px] font-bold tracking-[-0.7px] ${inverted ? "text-white" : "text-ink"}`}>{city}</h2>
+      <p className={`mt-1 text-[13px] ${inverted ? "text-white/68" : "text-ink-2"}`}>{sub}</p>
+    </div>
+  )
+}
+
+function OtherOpportunities({ prefix }: { prefix: string }) {
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[14px] font-bold text-ink">Other opportunities</h2>
+        <Link href={`${prefix}/marketplace`} className="text-[12px] font-semibold text-navy">View all</Link>
+      </div>
+      <div className="grid gap-3">
+        <OpportunityRow prefix={prefix} from="Shanghai" to="Singapore" mode="Sea" score="82% match" time="4h 20m" label="Normal bid" />
+        <OpportunityRow prefix={prefix} from="Bangkok" to="Tokyo" mode="Air" score="78% match" time="2 days" label="Cold-chain fit" />
+        <OpportunityRow prefix={prefix} from="Shenzhen" to="London" mode="Sea" score="71% match" time="5 days" label="Heavy cargo" />
+      </div>
+    </section>
+  )
+}
+
+function OpportunityRow({ prefix, from, to, mode, score, time, label }: { prefix: string; from: string; to: string; mode: string; score: string; time: string; label: string }) {
+  return (
+    <Link href={`${prefix}/marketplace/SR-DEMO-001`} className="group grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] transition hover:-translate-y-0.5 hover:border-[#cbd3df] hover:shadow-[0_16px_34px_rgba(12,26,62,.08)] sm:grid-cols-[52px_1fr_auto] sm:items-center">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-canvas text-navy"><Ship className="h-5 w-5" /></span>
+      <span>
+        <strong className="block text-[15px] text-ink">{from} to {to}</strong>
+        <span className="mt-1 block text-[12px] text-ink-3">{mode} - {label}</span>
+      </span>
+      <span className="flex items-center gap-4 text-right">
+        <span>
+          <strong className="block text-[13px] text-emerald">{score}</strong>
+          <span className="block text-[11px] text-ink-3">{time}</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-ink-3 transition group-hover:translate-x-0.5" />
+      </span>
+    </Link>
+  )
+}
+
+function FilterStack() {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="space-y-3 p-5">
+        <h2 className="text-[14px] font-bold text-ink">Filters</h2>
+        {["Route coverage", "Cargo type", "Deadline", "Membership access", "Token required"].map((item) => (
+          <div key={item} className="flex items-center justify-between rounded-xl border border-line bg-canvas px-3 py-3 text-[13px] font-semibold text-ink">
+            {item}
+            <ChevronRight className="h-4 w-4 text-ink-3" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActivityStream() {
+  const items: Array<[string, string, typeof Plane]> = [
+    ["Quote accepted", "Guangzhou to Sydney - Air - HKD 24,800", CheckCircle2],
+    ["Route certification added", "Vietnam corridor approved by review team", Star],
+    ["Profile verified", "IATA credentials confirmed", BadgeCheck],
+    ["Quote submitted", "Manila to Hong Kong - under review", LockKeyhole],
+  ]
+
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[14px] font-bold text-ink">Activity</h2>
+          <span className="text-[12px] font-semibold text-navy">All</span>
+        </div>
+        {items.map(([title, meta, Icon]) => (
+          <div key={String(title)} className="border-b border-line py-4 last:border-0">
+            <div className="flex gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-navy-soft text-navy">{createElement(Icon, { className: "h-4 w-4" })}</span>
+              <span>
+                <strong className="block text-[13px] text-ink">{title}</strong>
+                <span className="mt-1 block text-[12px] leading-5 text-ink-3">{meta}</span>
+              </span>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function DecisionPanel() {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <Badge variant="gold">Decision logic</Badge>
+        <h2 className="mt-4 text-[20px] font-bold text-ink">Price is not the only winner.</h2>
+        <p className="mt-2 text-[13px] leading-6 text-ink-2">Lowest bid gets a clear badge, but Agency can choose reliability, route fit or speed with a recorded reason.</p>
+        <div className="mt-4 space-y-2">
+          {["Lowest quote badge", "Recommended fit badge", "Non-lowest confirmation", "Audit record generated"].map((item) => (
+            <p key={item} className="flex items-center gap-2 text-[13px] text-ink-2"><CheckCircle2 className="h-4 w-4 text-emerald" />{item}</p>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function BidReceipt({ id }: { id?: string }) {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <Badge variant="gold">Token impact</Badge>
+        <h2 className="mt-4 text-[22px] font-bold text-ink">1 token reserved</h2>
+        <p className="mt-2 text-[13px] leading-6 text-ink-2">Bid {id || "SR-DEMO-001"} will deduct one free token through Supabase RPC after submit.</p>
+        <div className="mt-4 rounded-xl border border-line bg-canvas p-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-3">Balance after bid</p>
+          <p className="mt-2 text-[28px] font-bold text-ink">7 tokens</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function GuidedRequestForm() {
+  const groups: Array<[string, string[]]> = [
+    ["Route", ["Origin country", "Destination", "Freight mode"]],
+    ["Cargo", ["Cargo type", "Weight range", "CBM range"]],
+    ["Service", ["Customs", "Warehousing", "Final delivery"]],
+    ["Timing", ["Ship date", "Bid deadline", "Review notes"]],
+  ]
+  return (
+    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+      <div className="mb-6 grid gap-2 md:grid-cols-4">
+        {groups.map(([title], index) => (
+          <div key={title} className={`rounded-full border px-4 py-2 text-center text-[12px] font-bold ${index === 0 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink-2"}`}>{index + 1}. {title}</div>
+        ))}
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        {groups.map(([title, fields]) => (
+          <div key={title} className="rounded-2xl border border-line bg-canvas p-5">
+            <h3 className="text-[16px] font-bold text-ink">{title}</h3>
+            <div className="mt-4 grid gap-3">
+              {fields.map((field) => (
+                <label key={field} className="block">
+                  <span className="text-[12px] font-semibold text-ink-2">{field}</span>
+                  <div className="mt-1.5 flex h-11 items-center justify-between rounded-xl border border-line bg-white px-3 text-[13px] text-ink transition hover:border-[#cbd3df]">
+                    <span>Select option</span>
+                    <ChevronRight className="h-4 w-4 text-ink-3" />
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RequestQueue({ prefix }: { prefix: string }) {
+  return (
+    <section className="grid gap-3">
+      {[
+        ["SR-2026-00124", "Waiting admin review", "Submit missing cargo notes"],
+        ["SR-2026-00119", "Live bidding", "3 bids received - closes in 42m"],
+        ["SR-2026-00102", "Compare quotes", "Lowest quote available"],
+      ].map(([code, status, action]) => (
+        <Link key={code} href={`${prefix}/requests/${code}`} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] transition hover:-translate-y-0.5 hover:border-[#cbd3df] md:grid-cols-[1fr_auto] md:items-center">
+          <span>
+            <strong className="block text-[15px] text-ink">{code}</strong>
+            <span className="mt-1 block text-[12px] text-ink-3">{status}</span>
+          </span>
+          <span className="rounded-full border border-gold-border bg-gold-soft px-3 py-1 text-[12px] font-bold text-gold-dark">{action}</span>
+        </Link>
+      ))}
+    </section>
+  )
+}
+
+function RequestTimeline({ id }: { id?: string }) {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <h2 className="text-[14px] font-bold text-ink">{id || "SR"} timeline</h2>
+        {["Draft", "Admin review", "Published", "3-hour bidding", "Compare and award"].map((step, index) => (
+          <div key={step} className="mt-4 flex gap-3">
+            <span className={`mt-0.5 h-5 w-5 rounded-full border ${index < 2 ? "border-navy bg-navy" : "border-line bg-white"}`} />
+            <span>
+              <strong className="block text-[13px] text-ink">{step}</strong>
+              <span className="text-[12px] text-ink-3">{index < 2 ? "In progress" : "Upcoming"}</span>
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function QuoteCard({ name, price, label, tone, meta }: { name: string; price: string; label: string; tone: "green" | "gold" | "blue"; meta: string }) {
+  const toneClass = tone === "green" ? "border-emerald/30" : tone === "gold" ? "border-gold-border" : "border-blue-200"
+  return (
+    <Card className={`rounded-[24px] bg-white shadow-[0_16px_44px_rgba(12,26,62,.07)] transition hover:-translate-y-1 ${toneClass}`}>
+      <CardContent className="p-6">
+        <Badge variant={tone === "gold" ? "gold" : tone === "green" ? "teal" : "secondary"}>{label}</Badge>
+        <h3 className="mt-5 text-[18px] font-bold text-ink">{name}</h3>
+        <p className="mt-4 text-[32px] font-bold tracking-[-0.8px] text-ink">{price}</p>
+        <p className="mt-2 text-[13px] text-ink-2">{meta}</p>
+        <Button variant={tone === "gold" ? "gold" : "outline"} className="mt-6 h-11 w-full rounded-xl">Select bid</Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DocumentChecklist() {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <h2 className="text-[14px] font-bold text-ink">Document checklist</h2>
+        {["AWB / B/L", "Commercial Invoice", "Packing List", "Certificate of Origin"].map((doc, index) => (
+          <div key={doc} className="mt-3 flex items-center justify-between rounded-xl border border-line bg-canvas px-3 py-3">
+            <span className="text-[13px] font-semibold text-ink">{doc}</span>
+            <Badge variant={index === 2 ? "gold" : "teal"}>{index === 2 ? "Missing" : "Done"}</Badge>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function OrderPipeline({ active, id }: { active: UnifiedPageKind; id?: string }) {
+  const steps = ["Confirmed", "Booked", "In transit", "Arrived HK", "Customs", "Delivered", "Completed"]
+  return (
+    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+      <Badge variant="gold">Order {id || "MATCH-1234"} - {active}</Badge>
+      <div className="mt-6 grid gap-3 lg:grid-cols-7">
+        {steps.map((step, index) => (
+          <div key={step} className={`rounded-2xl border p-4 ${index < 3 ? "border-navy bg-navy text-white" : "border-line bg-canvas text-ink"}`}>
+            <CheckCircle2 className="h-5 w-5" />
+            <p className="mt-4 text-[12px] font-bold">{step}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MessagePreview() {
+  return (
+    <Card className="rounded-2xl border-line bg-white">
+      <CardContent className="p-5">
+        <h2 className="text-[16px] font-bold text-ink">Order messages</h2>
+        <p className="mt-3 rounded-2xl bg-canvas p-4 text-[13px] leading-6 text-ink-2">Please upload Packing List before 18:00. System will remind both sides 24h before ship date.</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ResponsibilityRecord() {
+  return (
+    <Card className="rounded-2xl border-line bg-white">
+      <CardContent className="p-5">
+        <h2 className="text-[16px] font-bold text-ink">Responsibility record</h2>
+        <p className="mt-3 text-[13px] leading-6 text-ink-2">LBID records award, cancellation, status changes, document approvals and admin actions for compliance awareness.</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function AdminReviewQueue({ kind }: { kind: UnifiedPageKind }) {
+  const rows = kind === "admin-payments"
+    ? ["FPS proof - HKD 1,500", "Bank transfer - HKD 500", "Stripe webhook retry"]
+    : kind === "admin-accounts"
+      ? ["Pacific Forward Ltd. - Premium", "HarbourLink Cargo - Standard", "VN Export Co. - Client capability"]
+      : ["SR-2026-00124 - pending review", "Forwarder verification - documents ready", "Cancellation review - cooling-off"]
+  return (
+    <section className="grid gap-3">
+      {rows.map((row) => (
+        <div key={row} className="grid gap-3 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)] md:grid-cols-[1fr_auto_auto] md:items-center">
+          <strong className="text-[14px] text-ink">{row}</strong>
+          <span className="text-[12px] text-ink-3">Reason required</span>
+          <Button variant="outline" className="rounded-xl">Review</Button>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function AdminAudit({ kind }: { kind: UnifiedPageKind }) {
+  return (
+    <Card className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <Badge variant="gold">Audit</Badge>
+        <h2 className="mt-4 text-[20px] font-bold text-ink">{kind}</h2>
+        <p className="mt-2 text-[13px] leading-6 text-ink-2">Every approval, rejection, payment and membership change is logged with actor, time and reason.</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DirectoryGrid({ id }: { id?: string }) {
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      {["Pacific Forward Ltd.", "HarbourLink Cargo", id || "Gold Harbour Logistics"].map((name, index) => (
+        <Card key={name} className="rounded-2xl border-line bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+          <CardContent className="p-5">
+            <Badge variant={index === 0 ? "gold" : "secondary"}>{index === 0 ? "Preferred" : "Verified"}</Badge>
+            <h3 className="mt-5 text-[18px] font-bold text-ink">{name}</h3>
+            <p className="mt-2 text-[13px] leading-6 text-ink-2">Air, sea, customs and local delivery coverage with public ratings and completed orders.</p>
+          </CardContent>
+        </Card>
+      ))}
+    </section>
+  )
+}
+
+function TokenLedger() {
+  return (
+    <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
+      <Card className="rounded-2xl border-gold-border bg-gold-soft shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+        <CardContent className="p-6">
+          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-gold-dark">Available token</p>
+          <p className="mt-4 text-[48px] font-bold text-ink">8</p>
+          <Button variant="gold" className="mt-5 rounded-xl">Buy tokens</Button>
+        </CardContent>
+      </Card>
+      <div className="grid gap-3">
+        {["submit_bid_with_token - free token -1", "Referral reward +3", "Profile boost redeemed -2"].map((row) => (
+          <div key={row} className="rounded-2xl border border-line bg-white p-5 text-[14px] font-semibold text-ink">{row}</div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function PlanGrid() {
+  return (
+    <section className="grid gap-4 lg:grid-cols-4">
+      {["Free", "Standard", "Premium", "Partner"].map((plan, index) => (
+        <Card key={plan} className={`rounded-2xl bg-white shadow-[0_12px_32px_rgba(12,26,62,.05)] ${index === 2 ? "border-gold-border" : "border-line"}`}>
+          <CardContent className="p-5">
+            <h3 className="text-[18px] font-bold text-ink">{plan}</h3>
+            <p className="mt-4 text-[28px] font-bold text-ink">{index === 0 ? "HKD 0" : index === 1 ? "HKD 500" : index === 2 ? "HKD 1500" : "Custom"}</p>
+            <p className="mt-2 text-[13px] text-ink-2">Visibility, token and trust benefits for this tier.</p>
+          </CardContent>
+        </Card>
+      ))}
+    </section>
+  )
+}
+
+function ProfileEditor() {
+  return (
+    <section className="rounded-[26px] border border-line bg-white p-6 shadow-[0_18px_48px_rgba(12,26,62,.07)]">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {["Company name", "Capabilities", "Route coverage", "Services", "Directory visibility", "Membership tier"].map((field) => (
+          <label key={field} className="block">
+            <span className="text-[12px] font-semibold text-ink-2">{field}</span>
+            <div className="mt-1.5 flex h-12 items-center justify-between rounded-xl border border-line bg-white px-3 text-[13px] text-ink transition hover:border-[#cbd3df]">
+              <span>{field === "Company name" ? "Pacific Forward Ltd." : "Select option"}</span>
+              <ChevronRight className="h-4 w-4 text-ink-3" />
+            </div>
+          </label>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MembershipCard() {
+  return (
+    <Card className="rounded-2xl border-gold-border bg-gold-soft shadow-[0_12px_32px_rgba(12,26,62,.05)]">
+      <CardContent className="p-5">
+        <Badge variant="gold">Standard member</Badge>
+        <h2 className="mt-4 text-[22px] font-bold text-ink">Reward moment</h2>
+        <p className="mt-2 text-[13px] leading-6 text-ink-2">After payment confirmation, show a warm success state with new benefits, tier badge and next best action.</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function NotificationRows() {
+  return (
+    <section className="grid gap-3">
+      {["Bid closes in 42 minutes", "Payment confirmed - Premium active", "Packing List reminder sent", "Forwarder verification approved"].map((item) => (
+        <div key={item} className="flex items-center justify-between rounded-2xl border border-line bg-white p-5 shadow-[0_10px_26px_rgba(12,26,62,.045)]">
+          <span className="text-[14px] font-semibold text-ink">{item}</span>
+          <Bell className="h-4 w-4 text-navy" />
+        </div>
+      ))}
+    </section>
   )
 }
 
