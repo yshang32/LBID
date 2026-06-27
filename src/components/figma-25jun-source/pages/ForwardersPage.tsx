@@ -10,7 +10,7 @@ const FORWARDERS = [
     country: "Hong Kong",
     rating: 4.9, reviews: 47,
     badges: ["IATA Certified", "HKG Preferred", "Premier"],
-    routes: ["Vietnam → HKG", "China Mainland → HKG", "Taiwan → HKG"],
+    routes: ["Vietnam to HKG", "China Mainland to HKG", "Taiwan to HKG"],
     modes: ["Air", "Sea"],
     orders: 148,
     verified: true,
@@ -23,7 +23,7 @@ const FORWARDERS = [
     country: "Hong Kong",
     rating: 4.7, reviews: 31,
     badges: ["IATA Certified"],
-    routes: ["China Mainland → HKG", "Japan → HKG", "South Korea → HKG"],
+    routes: ["China Mainland to HKG", "Japan to HKG", "South Korea to HKG"],
     modes: ["Sea", "Air"],
     orders: 89,
     verified: true,
@@ -36,7 +36,7 @@ const FORWARDERS = [
     country: "Hong Kong",
     rating: 4.4, reviews: 18,
     badges: [],
-    routes: ["Thailand → HKG", "Malaysia → HKG", "Singapore → HKG"],
+    routes: ["Thailand to HKG", "Malaysia to HKG", "Singapore to HKG"],
     modes: ["Air"],
     orders: 42,
     verified: true,
@@ -49,7 +49,7 @@ const FORWARDERS = [
     country: "Hong Kong",
     rating: 4.8, reviews: 62,
     badges: ["IATA Certified", "ISO 9001"],
-    routes: ["China Mainland → HKG", "Vietnam → HKG", "Philippines → HKG"],
+    routes: ["China Mainland to HKG", "Vietnam to HKG", "Philippines to HKG"],
     modes: ["Air", "Sea"],
     orders: 210,
     verified: true,
@@ -62,7 +62,7 @@ const FORWARDERS = [
     country: "Hong Kong",
     rating: 4.5, reviews: 29,
     badges: ["FIATA Member"],
-    routes: ["Japan → HKG", "South Korea → HKG", "Taiwan → HKG"],
+    routes: ["Japan to HKG", "South Korea to HKG", "Taiwan to HKG"],
     modes: ["Air", "Sea"],
     orders: 73,
     verified: true,
@@ -75,7 +75,7 @@ const FORWARDERS = [
     country: "Vietnam",
     rating: 4.6, reviews: 24,
     badges: ["IATA Certified"],
-    routes: ["Vietnam → HKG"],
+    routes: ["Vietnam to HKG"],
     modes: ["Air"],
     orders: 56,
     verified: true,
@@ -129,7 +129,7 @@ export function ForwardersPage() {
           <Search className="w-4 h-4 text-ink-3 flex-shrink-0" strokeWidth={1.75} />
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by company name or route…"
+            placeholder="Search by company name or route"
             className="flex-1 bg-transparent outline-none text-[13.5px] text-ink placeholder:text-ink-3"
           />
         </div>

@@ -112,7 +112,7 @@ function BidDrawer({
   const [submitted,   setSubmitted]   = useState(false);
   const [showWarning, setShowWarning] = useState(false);
 
-  const tokenBalance = MOCK_TOKEN_BALANCE;
+  const tokenBalance: number = MOCK_TOKEN_BALANCE;
   const noTokens     = tokenBalance === 0;
   const quoteNum     = parseFloat(quote);
   const canSubmit    = quote.trim() !== "" && quoteNum > 0;

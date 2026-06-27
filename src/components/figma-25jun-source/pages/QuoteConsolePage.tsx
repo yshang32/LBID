@@ -46,7 +46,8 @@ const FALLBACK = OPP_DATA["1"];
 export function QuoteConsolePage() {
   const { id }   = useParams();
   const navigate = useNavigate();
-  const op       = OPP_DATA[id ?? ""] ?? FALLBACK;
+  const routeId  = Array.isArray(id) ? id[0] : id;
+  const op       = OPP_DATA[routeId ?? ""] ?? FALLBACK;
 
   const [quote,     setQuote]     = useState("");
   const [transit,   setTransit]   = useState("");

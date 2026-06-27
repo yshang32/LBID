@@ -68,11 +68,11 @@ const STATUS_CFG: Record<BidStatus, { label: string; color: string; bg: string; 
   not_selected:      { label: "Not Selected",             color: "text-ink-3",     bg: "bg-canvas",       border: "border-line"         },
 };
 
-const SUMMARY = [
-  { label: "Active",            count: BIDS.filter(b => b.status === "active").length,              color: "text-navy"      },
-  { label: "Closing Soon",      count: BIDS.filter(b => b.status === "closing_soon").length,        color: "text-amber-700" },
-  { label: "Awaiting Decision", count: BIDS.filter(b => b.status === "awaiting_selection").length,  color: "text-blue-700"  },
-  { label: "Awarded",           count: BIDS.filter(b => b.status === "awarded").length,             color: "text-emerald"   },
+const SUMMARY: Array<{ label: string; status: BidStatus; count: number; color: string }> = [
+  { label: "Active",            status: "active",             count: BIDS.filter(b => b.status === "active").length,              color: "text-navy"      },
+  { label: "Closing Soon",      status: "closing_soon",       count: BIDS.filter(b => b.status === "closing_soon").length,        color: "text-amber-700" },
+  { label: "Awaiting Decision", status: "awaiting_selection", count: BIDS.filter(b => b.status === "awaiting_selection").length,  color: "text-blue-700"  },
+  { label: "Awarded",           status: "awarded",            count: BIDS.filter(b => b.status === "awarded").length,             color: "text-emerald"   },
 ];
 
 export function ActiveBidsPage() {
@@ -99,7 +99,7 @@ export function ActiveBidsPage() {
           All ({BIDS.length})
         </button>
         {SUMMARY.map(s => (
-          <button key={s.label} onClick={() => setFilter(s.label.toLowerCase().replace(/ /g,"_") as BidStatus)}
+          <button key={s.label} onClick={() => setFilter(s.status)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-line bg-white text-[13px] font-medium text-ink-2 hover:bg-canvas transition-all duration-200 cursor-pointer">
             <span className={`text-[15px] font-bold ${s.color}`}>{s.count}</span>
             <span>{s.label}</span>

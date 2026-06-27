@@ -21,15 +21,15 @@ import { isLocale, type Locale } from "@/lib/i18n"
 
 const copy = {
   zh: {
-    eyebrow: "Unified onboarding",
-    title: "先設定公司能力，再開始接單和發需求。",
-    intro: "LBID 不再把公司固定分成 Client 或 Forwarder。一間公司可以同時建立 Shipment Request，也可以接收推薦並提交 sealed bid。",
-    next: "下一步",
-    back: "返回",
-    complete: "完成 onboarding",
-    saving: "儲存中",
-    done: "已準備好",
-    dashboard: "稍後到工作台",
+    eyebrow: "\u7d71\u4e00\u8a2d\u5b9a",
+    title: "\u8a2d\u5b9a\u516c\u53f8\u80fd\u529b\uff1aClient\u3001Forwarder\uff0c\u6216\u5169\u8005\u3002",
+    intro: "LBID \u4e0d\u518d\u628a\u516c\u53f8\u56fa\u5b9a\u5206\u6210 Agency \u6216 Forwarder\u3002\u4e00\u9593\u516c\u53f8\u53ef\u4ee5\u540c\u6642\u767c\u51fa Shipment Request\uff0c\u4e5f\u53ef\u4ee5\u63a5\u6536\u63a8\u85a6\u4e26\u63d0\u4ea4 sealed bid\u3002",
+    next: "\u4e0b\u4e00\u6b65",
+    back: "\u8fd4\u56de",
+    complete: "\u5b8c\u6210 onboarding",
+    saving: "\u5132\u5b58\u4e2d",
+    done: "\u5df2\u5b8c\u6210",
+    dashboard: "\u7a0d\u5f8c\u9032\u5165\u5de5\u4f5c\u53f0",
   },
   en: {
     eyebrow: "Unified onboarding",

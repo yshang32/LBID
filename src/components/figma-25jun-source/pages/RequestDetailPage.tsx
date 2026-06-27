@@ -16,7 +16,7 @@ const REQUEST_DATA: Record<string, {
     id: "SR-001", origin: "Guangzhou", dest: "Hong Kong", cargo: "General", weight: "800 kg", cbm: "5.2 CBM",
     type: "Air", pickup: "28 Jun", delivery: "29 Jun",
     status: "pending_review", submitted: "23 Jun 2026", bids: 0, deadline: null, deadlineSecs: null,
-    notes: "Fragile items — careful handling required.",
+    notes: "Fragile items  → careful handling required.",
   },
   "SR-004": {
     id: "SR-004", origin: "Bangkok", dest: "Hong Kong", cargo: "Textiles", weight: "1,200 kg", cbm: "8 CBM",
@@ -38,7 +38,8 @@ const STATUS_STEP: Record<string, number> = {
 export function RequestDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
-  const req      = REQUEST_DATA[id ?? ""] ?? FALLBACK;
+  const routeId  = Array.isArray(id) ? id[0] : id;
+  const req      = REQUEST_DATA[routeId ?? ""] ?? FALLBACK;
   const stepIdx  = STATUS_STEP[req.status] ?? 0;
 
   return (
@@ -52,7 +53,7 @@ export function RequestDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-[26px] font-bold text-ink tracking-[-0.6px] leading-none mb-2 m-0">{req.id}</h1>
-          <p className="text-[14px] text-ink-2">{req.origin} → {req.dest} · {req.weight} · {req.cbm} · {req.cargo}</p>
+          <p className="text-[14px] text-ink-2">{req.origin}  → {req.dest} · {req.weight} · {req.cbm} · {req.cargo}</p>
           <p className="text-[13px] text-ink-3 mt-0.5">Submitted {req.submitted}</p>
         </div>
         {req.status !== "awarded" && req.status !== "cancelled" && (
@@ -130,7 +131,7 @@ export function RequestDetailPage() {
                        hover:bg-blue-800 hover:-translate-y-[1px] hover:shadow-[0_4px_14px_rgba(30,64,175,0.3)]
                        transition-all duration-200 cursor-pointer"
           >
-            Compare {req.bids} Quotes →
+            Compare {req.bids} Quotes
           </button>
         </div>
       )}

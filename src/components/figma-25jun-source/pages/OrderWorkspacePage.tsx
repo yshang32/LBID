@@ -12,11 +12,11 @@ const STATUS_STEPS = [
   "Confirmed", "Shipment Booked", "In Transit", "Arrived HK",
   "Customs Cleared", "Delivered", "Completed",
 ];
-const CURRENT_STEP = 2; // 0-indexed → "In Transit"
+const CURRENT_STEP = 2; // 0-indexed - "In Transit"
 
 const ORDER = {
   id: "ORD-2026-0047",
-  route: "Taipei → Hong Kong",
+  route: "Taipei  → Hong Kong",
   originCode: "TPE", destCode: "HKG",
   mode: "Air", cargo: "Tech Components",
   weight: "450 kg", cbm: "3.1 CBM",
@@ -37,7 +37,7 @@ const DOCUMENTS = [
 ];
 
 const MESSAGES = [
-  { id: 1, from: "Pacific Forward Ltd.", isOwn: false, text: "Good morning. AWB confirmed — EVA Air flight BR872, departing TPE 23 Jun 06:40. ETA HKG 09:10.", time: "21 Jun, 09:15" },
+  { id: 1, from: "Pacific Forward Ltd.", isOwn: false, text: "Good morning. AWB confirmed  → EVA Air flight BR872, departing TPE 23 Jun 06:40. ETA HKG 09:10.", time: "21 Jun, 09:15" },
   { id: 2, from: "Apex Sourcing Ltd.",   isOwn: true,  text: "Thank you. Please note we still need the Commercial Invoice before cargo release. Can you confirm?", time: "21 Jun, 10:02" },
   { id: 3, from: "Pacific Forward Ltd.", isOwn: false, text: "Understood. We're waiting on the shipper. Will upload as soon as received, before the 23rd.", time: "21 Jun, 10:30" },
 ];
@@ -155,7 +155,7 @@ export function OrderWorkspacePage() {
             <p className="text-[13px] font-semibold text-red-700">Document Required</p>
             <p className="text-[12.5px] text-red-600 mt-0.5">
               Commercial Invoice is missing and required for customs clearance.
-              {" "}<button onClick={() => setTab("documents")} className="underline font-medium cursor-pointer">Upload now →</button>
+              {" "}<button onClick={() => setTab("documents")} className="underline font-medium cursor-pointer">Upload now</button>
             </p>
           </div>
         </div>
@@ -185,7 +185,7 @@ export function OrderWorkspacePage() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         >
-          {/* ── Overview ── */}
+          {/* ?? Overview ?? */}
           {tab === "overview" && (
             <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 320px" }}>
               <div className="flex flex-col gap-4">
@@ -257,7 +257,7 @@ export function OrderWorkspacePage() {
             </div>
           )}
 
-          {/* ── Documents ── */}
+          {/* ?? Documents ?? */}
           {tab === "documents" && (
             <div className="flex flex-col gap-2 max-w-[680px]">
               {/* Column header */}
@@ -327,7 +327,7 @@ export function OrderWorkspacePage() {
             </div>
           )}
 
-          {/* ── Messages ── */}
+          {/* ?? Messages ?? */}
           {tab === "messages" && (
             <div className="flex flex-col gap-0 max-w-[620px]">
               <div className="flex flex-col gap-3 mb-4">
@@ -357,7 +357,7 @@ export function OrderWorkspacePage() {
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); }}}
-                  placeholder="Type a message… (Enter to send)"
+                  placeholder="Type a message (Enter to send)"
                   rows={2}
                   className="flex-1 bg-transparent outline-none text-[13.5px] text-ink placeholder:text-ink-3 resize-none"
                 />
@@ -375,7 +375,7 @@ export function OrderWorkspacePage() {
             </div>
           )}
 
-          {/* ── Tracking ── */}
+          {/* ?? Tracking ?? */}
           {tab === "tracking" && (
             <div className="flex flex-col gap-0 max-w-[620px]">
               {/* ETA / ATA column header */}
@@ -418,7 +418,7 @@ export function OrderWorkspacePage() {
                       </div>
                       {/* ETA column */}
                       <p className={`text-[12px] text-right pt-0.5 ${t.eta ? "text-ink-2" : "text-ink-3"}`}>
-                        {t.eta ?? "—"}
+                        {t.eta ?? "-"}
                       </p>
                       {/* ATA column */}
                       <p
@@ -430,7 +430,7 @@ export function OrderWorkspacePage() {
                             : "text-ink-3"
                           }`}
                       >
-                        {t.ata ?? "—"}
+                        {t.ata ?? "-"}
                       </p>
                     </div>
                   </div>

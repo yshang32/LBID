@@ -40,26 +40,26 @@ const FEED_POSTS: Post[] = [
   {
     id: 1, company: "Pacific Forward Ltd.", country: "HK", rating: 4.9, verified: true, premier: true,
     type: "Completed milestone",
-    content: "Proud to announce our 150th completed order on LBID — all Vietnam → HKG air freight. Thank you to all agency partners who trusted us with time-sensitive cargo.",
-    routes: ["Vietnam → HKG"], timestamp: "2 hours ago", likes: 14, comments: 3,
+    content: "Proud to announce our 150th completed order on LBID across Vietnam to HKG air freight. Thank you to all agency partners who trusted us with time-sensitive cargo.",
+    routes: ["Vietnam to HKG"], timestamp: "2 hours ago", likes: 14, comments: 3,
   },
   {
     id: 2, company: "Orient Cargo Solutions", country: "HK", rating: 4.8, verified: true, premier: true,
     type: "Route insight",
-    content: "Air capacity on PVG → HKG is tightening ahead of the Q3 peak season. If your cargo pickup is in late July, we recommend a 14-day lead time for booking. SGN → HKG lanes remain stable.",
-    routes: ["China Mainland → HKG", "Vietnam → HKG"], timestamp: "5 hours ago", likes: 9, comments: 1,
+    content: "Air capacity on PVG to HKG is tightening ahead of the Q3 peak season. If your cargo pickup is in late July, we recommend a 14-day lead time for booking. SGN to HKG lanes remain stable.",
+    routes: ["Vietnam to HKG"], timestamp: "2 hours ago", likes: 14, comments: 3,
   },
   {
     id: 3, company: "Blue Ocean Freight HK", country: "HK", rating: 4.7, verified: true, premier: false,
     type: "Certification",
-    content: "We are pleased to confirm renewal of our IATA Cargo Agent accreditation for 2026–2027. This covers all air freight lanes we operate, including BKK, KUL, and CGK routes to HKG.",
-    routes: ["Thailand → HKG", "Malaysia → HKG", "Indonesia → HKG"], timestamp: "Yesterday", likes: 21, comments: 5,
+    content: "We are pleased to confirm renewal of our IATA Cargo Agent accreditation for 2026-2027. This covers all air freight lanes we operate, including BKK, KUL, and CGK routes to HKG.",
+    routes: ["Thailand to HKG", "Malaysia to HKG", "Indonesia to HKG"], timestamp: "Yesterday", likes: 21, comments: 5,
   },
   {
     id: 4, company: "Trans-Pacific Logistics HK", country: "HK", rating: 4.5, verified: true, premier: false,
     type: "Company update",
-    content: "We've expanded our cold-chain capability with temperature-controlled units at our HKG warehouse, supporting Temp 2–8°C for pharmaceutical and food shipments from Japan and South Korea.",
-    routes: ["Japan → HKG", "South Korea → HKG"], timestamp: "2 days ago", likes: 7, comments: 2,
+    content: "We have expanded our cold-chain capability with temperature-controlled units at our HKG warehouse, supporting Temp 2-8 C for pharmaceutical and food shipments from Japan and South Korea.",
+    routes: ["Japan to HKG", "South Korea to HKG"], timestamp: "2 days ago", likes: 7, comments: 2,
   },
 ];
 
@@ -144,7 +144,7 @@ export function CommunityPage() {
       id: Date.now(), company: "Pacific Forward Ltd.", country: "HK",
       rating: 4.9, verified: true, premier: true,
       type: postType, content: draft.trim(),
-      routes: ["Vietnam → HKG"],
+      routes: ["Vietnam to HKG"],
       timestamp: "Just now", likes: 0, comments: 0,
     };
     setPosts(prev => [newPost, ...prev]);
@@ -178,7 +178,7 @@ export function CommunityPage() {
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 rows={3}
-                placeholder="Share a company update, route insight, certification or milestone…"
+                placeholder="Share a company update, route insight, certification or milestone."
                 className="flex-1 bg-transparent outline-none text-[13.5px] text-ink placeholder:text-ink-3 resize-none leading-relaxed"
               />
             </div>

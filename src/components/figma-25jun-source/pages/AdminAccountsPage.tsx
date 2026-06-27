@@ -76,7 +76,7 @@ function VerifyModal({ account, onClose, onVerify }: {
                 {action === "reject" ? "Rejection reason *" : "Verification note (optional)"}
               </label>
               <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
-                placeholder={action === "reject" ? "Reason for rejection…" : "Internal note for the verification record…"}
+                placeholder={action === "reject" ? "Reason for rejection" : "Internal note for the verification record"}
                 className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line text-[13px] text-ink outline-none resize-none placeholder:text-ink-3
                            focus:border-navy focus:shadow-[0_0_0_3px_rgba(12,26,62,0.08)] transition-all duration-200" />
             </div>

@@ -4,7 +4,7 @@ import { Star, ChevronLeft, Shield, Clock, CheckCircle2, Lock, Award, AlertTrian
 import { motion, AnimatePresence } from "motion/react";
 
 const REQUEST = {
-  id: "SR-004", route: "Bangkok → Hong Kong",
+  id: "SR-004", route: "Bangkok  → Hong Kong",
   cargo: "1,200 kg · 8 CBM · Textiles", mode: "Sea",
   closedAt: "23 Jun 2026, 15:00",
 };
@@ -161,7 +161,7 @@ function AwardModal({
                          hover:bg-navy-hover hover:-translate-y-[1px] hover:shadow-[0_6px_20px_rgba(12,26,62,0.26)]
                          transition-all duration-200 cursor-pointer"
             >
-              Confirm Award →
+              Confirm Award
             </button>
           </div>
         </div>
@@ -218,7 +218,7 @@ export function QuoteComparisonPage() {
         </div>
 
         {awarded ? (
-          /* ── Awarded state ── */
+          /* ?? Awarded state ?? */
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -243,14 +243,14 @@ export function QuoteComparisonPage() {
                          hover:bg-navy-hover hover:-translate-y-[1px] hover:shadow-[0_6px_20px_rgba(12,26,62,0.26)]
                          transition-all duration-200 cursor-pointer"
             >
-              View Order Workspace →
+              View Order Workspace
             </button>
           </motion.div>
         ) : (
-          /* ── Bid cards ── */
+          /* ?? Bid cards ?? */
           <div className="flex flex-col gap-4">
 
-            {/* ── Side-by-side comparison matrix ───────────────────────────── */}
+            {/* ?? Side-by-side comparison matrix ????????????????????????????? */}
             <div className="bg-white rounded-[16px] border border-line overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
               {/* Company headers */}
               <div className="grid border-b border-line" style={{ gridTemplateColumns: "140px repeat(3, 1fr)" }}>
@@ -262,7 +262,7 @@ export function QuoteComparisonPage() {
                   >
                     <p className="text-[12.5px] font-semibold text-ink leading-tight truncate">{bid.company.split(" ")[0]}</p>
                     {bid.isLowest && (
-                      <span className="text-[9.5px] font-bold text-emerald uppercase tracking-[0.07em]">Lowest ✓</span>
+                      <span className="text-[9.5px] font-bold text-emerald uppercase tracking-[0.07em]">Lowest</span>
                     )}
                     {bid.badges.includes("IATA Certified") && !bid.isLowest && (
                       <span className="text-[9.5px] font-medium text-ink-3">IATA</span>
@@ -292,7 +292,7 @@ export function QuoteComparisonPage() {
                 {
                   label: "Rating",
                   values: BIDS.map((b) => ({
-                    text: `${b.rating}★  (${b.reviews})`,
+                    text: `${b.rating} →  (${b.reviews})`,
                     highlight: false,
                     color: b.rating >= 4.8 ? "text-gold-dark font-medium" : "text-ink",
                   })),
@@ -308,7 +308,7 @@ export function QuoteComparisonPage() {
                 {
                   label: "Premier",
                   values: BIDS.map((b) => ({
-                    text: b.badges.includes("HKG Preferred") ? "Premier ★" : "—",
+                    text: b.badges.includes("HKG Preferred") ? "Premier" : "-",
                     highlight: false,
                     color: b.badges.includes("HKG Preferred") ? "text-gold-dark font-semibold" : "text-ink-3",
                   })),
@@ -336,7 +336,7 @@ export function QuoteComparisonPage() {
                 </div>
               ))}
             </div>
-            {/* ─────────────────────────────────────────────────────────────── */}
+            {/* ??????????????????????????????????????????????????????????????? */}
 
             {BIDS.map((bid, i) => (
               <motion.div
@@ -434,7 +434,7 @@ export function QuoteComparisonPage() {
                           : "bg-white border-2 border-line text-ink-2 hover:border-navy/40 hover:text-navy hover:bg-navy-soft"
                         }`}
                     >
-                      {bid.isLowest ? "Award This Bid →" : "Select This Bid"}
+                      {bid.isLowest ? "Award This Bid" : "Select This Bid"}
                     </button>
                   </div>
                 </div>

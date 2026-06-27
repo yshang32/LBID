@@ -13,6 +13,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       "@": path.resolve(process.cwd(), "src"),
+      "react-router": path.resolve(process.cwd(), "src/components/figma-25jun-source/next-router-shim.tsx"),
     }
     return config
   },

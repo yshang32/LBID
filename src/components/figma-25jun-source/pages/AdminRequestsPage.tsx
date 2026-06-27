@@ -75,7 +75,7 @@ function ReviewModal({ req, onClose, onApprove, onReject }: {
                 value={rejectReason}
                 onChange={e => setRejectReason(e.target.value)}
                 rows={3}
-                placeholder="Explain why this request is being rejected so the client can resubmit correctly…"
+                placeholder="Explain why this request is being rejected so the client can resubmit correctly."
                 className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line text-[13px] text-ink outline-none resize-none
                            focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(220,38,38,0.08)] transition-all duration-200 placeholder:text-ink-3"
               />

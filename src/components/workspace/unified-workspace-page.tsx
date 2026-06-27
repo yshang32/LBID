@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { createElement, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
@@ -41,8 +42,58 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { TodayPage as FigmaTodayPage } from "@/components/figma-25jun-source/pages/TodayPage"
+import { OpportunitiesPage as FigmaOpportunitiesPage } from "@/components/figma-25jun-source/pages/OpportunitiesPage"
+import { QuoteConsolePage as FigmaQuoteConsolePage } from "@/components/figma-25jun-source/pages/QuoteConsolePage"
+import { MyRequestsPage as FigmaMyRequestsPage } from "@/components/figma-25jun-source/pages/MyRequestsPage"
+import { CreateRequestPage as FigmaCreateRequestPage } from "@/components/figma-25jun-source/pages/CreateRequestPage"
+import { RequestDetailPage as FigmaRequestDetailPage } from "@/components/figma-25jun-source/pages/RequestDetailPage"
+import { QuoteComparisonPage as FigmaQuoteComparisonPage } from "@/components/figma-25jun-source/pages/QuoteComparisonPage"
+import { OrdersPage as FigmaOrdersPage } from "@/components/figma-25jun-source/pages/OrdersPage"
+import { OrderWorkspacePage as FigmaOrderWorkspacePage } from "@/components/figma-25jun-source/pages/OrderWorkspacePage"
+import { CompanyProfilePage as FigmaCompanyProfilePage } from "@/components/figma-25jun-source/pages/CompanyProfilePage"
+import { TokenWalletPage as FigmaTokenWalletPage } from "@/components/figma-25jun-source/pages/TokenWalletPage"
+import { SubscriptionPage as FigmaSubscriptionPage } from "@/components/figma-25jun-source/pages/SubscriptionPage"
+import { AdminDashboardPage as FigmaAdminDashboardPage } from "@/components/figma-25jun-source/pages/AdminDashboardPage"
+import { AdminRequestsPage as FigmaAdminRequestsPage } from "@/components/figma-25jun-source/pages/AdminRequestsPage"
+import { AdminAccountsPage as FigmaAdminAccountsPage } from "@/components/figma-25jun-source/pages/AdminAccountsPage"
+import { AdminPaymentsPage as FigmaAdminPaymentsPage } from "@/components/figma-25jun-source/pages/AdminPaymentsPage"
+import { AdminAuditPage as FigmaAdminAuditPage } from "@/components/figma-25jun-source/pages/AdminAuditPage"
+import { CommunityPage as FigmaCommunityPage } from "@/components/figma-25jun-source/pages/CommunityPage"
+import { NotificationsPage as FigmaNotificationsPage } from "@/components/figma-25jun-source/pages/NotificationsPage"
+import { ForwardersPage as FigmaForwardersPage } from "@/components/figma-25jun-source/pages/ForwardersPage"
+import { ForwarderProfilePage as FigmaForwarderProfilePage } from "@/components/figma-25jun-source/pages/ForwarderProfilePage"
+import { ActiveBidsPage as FigmaActiveBidsPage } from "@/components/figma-25jun-source/pages/ActiveBidsPage"
+import { MyRoutesPage as FigmaMyRoutesPage } from "@/components/figma-25jun-source/pages/MyRoutesPage"
+import {
+  LiveDashboard,
+  LiveMarketplace,
+  LiveOrderWorkspace,
+  LiveQuoteComparison,
+  LiveQuoteConsole,
+} from "@/components/workspace/live-core-flows"
 import { apiJson } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n"
+
+const FigmaAnalyticsPage = dynamic(
+  () => import("@/components/figma-25jun-source/pages/AnalyticsPage").then((mod) => mod.AnalyticsPage),
+  {
+    ssr: false,
+    loading: () => (
+      <main className="min-h-screen bg-[#eef2f8] px-8 py-10">
+        <div className="mx-auto max-w-[1320px] rounded-[16px] border border-line bg-white p-8 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div className="h-4 w-36 animate-pulse rounded-full bg-slate-100" />
+          <div className="mt-5 h-9 w-72 animate-pulse rounded-xl bg-slate-100" />
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="h-24 animate-pulse rounded-[14px] bg-slate-100" />
+            ))}
+          </div>
+        </div>
+      </main>
+    ),
+  },
+)
 
 export type UnifiedPageKind =
   | "dashboard"
@@ -171,18 +222,33 @@ export function UnifiedWorkspacePage({
   kind: UnifiedPageKind
   id?: string
 }) {
-  if (kind === "dashboard") return <TodayWorkspace locale={locale} />
-  if (kind === "marketplace") return <OpportunitiesWorkspace locale={locale} />
-  if (kind === "quote-console" || kind === "active-bids") return <BidConsoleWorkspace locale={locale} kind={kind} id={id} />
-  if (kind === "requests" || kind === "create-request" || kind === "request-detail") return <RequestWorkspace locale={locale} kind={kind} id={id} />
-  if (kind === "quote-compare") return <ComparisonWorkspace id={id} />
-  if (kind === "orders" || kind === "order-detail" || kind === "documents" || kind === "messages" || kind === "tracking" || kind === "awb" || kind === "review") return <OrderWorkspace kind={kind} id={id} />
-  if (kind.startsWith("admin")) return <AdminWorkspace kind={kind} />
-  if (kind === "profile" || kind === "tokens" || kind === "subscription" || kind === "forwarders" || kind === "forwarder-profile") return <AccountWorkspace kind={kind} id={id} />
-  if (kind === "community" || kind === "notifications") return <CommunityWorkspace kind={kind} />
-  if (kind === "workflow" || kind === "preview" || kind === "services" || kind === "analytics" || kind === "my-routes") return <StrategyWorkspace kind={kind} />
+  if (kind === "dashboard") return <LiveDashboard locale={locale} />
+  if (kind === "marketplace") return <LiveMarketplace locale={locale} />
+  if (kind === "quote-console") return <LiveQuoteConsole locale={locale} id={id} />
+  if (kind === "active-bids") return <FigmaActiveBidsPage />
+  if (kind === "my-routes") return <FigmaMyRoutesPage />
+  if (kind === "analytics") return <FigmaAnalyticsPage />
+  if (kind === "requests") return <FigmaMyRequestsPage />
+  if (kind === "create-request") return <FigmaCreateRequestPage />
+  if (kind === "request-detail") return <FigmaRequestDetailPage />
+  if (kind === "quote-compare") return <LiveQuoteComparison locale={locale} />
+  if (kind === "orders") return <FigmaOrdersPage />
+  if (kind === "order-detail" || kind === "documents" || kind === "messages" || kind === "tracking" || kind === "awb" || kind === "review") return <LiveOrderWorkspace id={id} />
+  if (kind === "admin") return <FigmaAdminDashboardPage />
+  if (kind === "admin-requests") return <FigmaAdminRequestsPage />
+  if (kind === "admin-accounts") return <FigmaAdminAccountsPage />
+  if (kind === "admin-payments") return <FigmaAdminPaymentsPage />
+  if (kind === "admin-audit") return <FigmaAdminAuditPage />
+  if (kind === "profile") return <FigmaCompanyProfilePage />
+  if (kind === "tokens") return <FigmaTokenWalletPage />
+  if (kind === "subscription") return <FigmaSubscriptionPage />
+  if (kind === "forwarders") return <FigmaForwardersPage />
+  if (kind === "forwarder-profile") return <FigmaForwarderProfilePage />
+  if (kind === "community") return <FigmaCommunityPage />
+  if (kind === "notifications") return <FigmaNotificationsPage />
+  if (kind === "workflow" || kind === "preview" || kind === "services") return <StrategyWorkspace kind={kind} />
 
-  const config = configs[kind]
+  const config: PageConfig = (configs as Record<string, PageConfig>)[kind as string] ?? configs.preview
   const prefix = `/${locale}`
   const Icon = config.icon
   const focusTitle = id ? `${config.focus.title} · ${id}` : config.focus.title

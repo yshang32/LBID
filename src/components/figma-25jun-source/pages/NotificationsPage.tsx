@@ -17,21 +17,21 @@ const INIT: Notif[] = [
   {
     id: 1, type: "bid_window", read: false,
     title: "Bid window open",
-    body: "Your request BKK → HKG (SR-004) is now accepting sealed bids. Window closes in 3 hours.",
+    body: "Your request BKK to HKG (SR-004) is now accepting sealed bids. Window closes in 3 hours.",
     time: "2 hours ago",
     action: { label: "View Request", path: "/requests" },
   },
   {
     id: 2, type: "bid_received", read: false,
     title: "New bids received",
-    body: "6 forwarders have submitted sealed bids for your Manila → HKG request (SR-003). Bidding closed.",
+    body: "6 forwarders have submitted sealed bids for your Manila to HKG request (SR-003). Bidding closed.",
     time: "5 hours ago",
     action: { label: "Compare Bids", path: "/quotations/compare" },
   },
   {
     id: 3, type: "awarded", read: true,
     title: "Order confirmed",
-    body: "Pacific Forward Ltd. has been awarded Taipei → HKG (SR-005). Order ORD-2026-0047 is now active.",
+    body: "Pacific Forward Ltd. has been awarded Taipei to HKG (SR-005). Order ORD-2026-0047 is now active.",
     time: "Yesterday",
     action: { label: "View Order", path: "/orders/ORD-2026-0047" },
   },
@@ -44,7 +44,7 @@ const INIT: Notif[] = [
   {
     id: 5, type: "system", read: true,
     title: "Request approved",
-    body: "Your shipment request BKK → HKG (SR-004) has passed LBID review. The 3-hour bid window is now open.",
+    body: "Your request BKK to HKG (SR-004) is now accepting sealed bids. Window closes in 3 hours.",
     time: "20 Jun",
   },
 ];
@@ -102,7 +102,7 @@ export function NotificationsPage() {
                 ${!n.read ? "bg-white border-navy/20 shadow-[0_2px_12px_rgba(12,26,62,0.06)]" : "bg-white border-line"}
                 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)]`}
             >
-              {/* Unread indicator — absolute decoration dot */}
+              {/* Unread indicator */}
               {!n.read && (
                 <span
                   aria-label="Unread"

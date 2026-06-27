@@ -89,15 +89,19 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         tokens: 0,
         role: null,
       })
-      const { response, body } = await apiJson("/api/company-profile")
-      if (!mounted || !response.ok) return
-      const profile = body.companyProfile || {}
-      setIdentity({
-        companyName: profile.company_name_en || profile.company_name_zh || "LBID Company",
-        plan: body.subscription?.plan || "monthly",
-        tokens: Number(profile.token_balance_free || 0) + Number(profile.token_balance_paid || 0),
-        role: body.role || null,
-      })
+      try {
+        const { response, body } = await apiJson("/api/company-profile")
+        if (!mounted || !response.ok) return
+        const profile = body.companyProfile || {}
+        setIdentity({
+          companyName: profile.company_name_en || profile.company_name_zh || "LBID Company",
+          plan: body.subscription?.plan || "monthly",
+          tokens: Number(profile.token_balance_free || 0) + Number(profile.token_balance_paid || 0),
+          role: body.role || null,
+        })
+      } catch {
+        // Keep the signed-in shell usable if profile hydration is temporarily unavailable.
+      }
     }
     client.auth.getSession().then(({ data }) => void loadIdentity(Boolean(data.session)))
     const { data: listener } = client.auth.onAuthStateChange((_event, session) => void loadIdentity(Boolean(session)))

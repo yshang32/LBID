@@ -159,6 +159,7 @@ function RequestCard({
   const navigate = useNavigate();
   const cfg = STATUS_CONFIG[req.status];
   const isUrgent = req.status === "open" && (req as any).deadlineSecs < 3600;
+  const isInteractive = req.status !== "draft";
 
   return (
     <motion.div
@@ -171,17 +172,17 @@ function RequestCard({
       }}
       className={`group bg-white rounded-[16px] border border-line px-6 py-5
                   transition-all duration-200 ease-in-out
-                  ${req.status !== "draft" ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(0,0,0,0.08)] hover:border-[#C8CDD8]" : ""}`}
+                  ${isInteractive ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(0,0,0,0.08)] hover:border-[#C8CDD8]" : ""}`}
     >
       <div className="flex items-center gap-5">
         {/* Icon */}
         <div
           className={`w-10 h-10 rounded-[11px] flex items-center justify-center flex-shrink-0 bg-canvas
-                      transition-colors duration-200 ${req.status !== "draft" ? "group-hover:bg-navy-soft" : ""}`}
+                      transition-colors duration-200 ${isInteractive ? "group-hover:bg-navy-soft" : ""}`}
         >
           {req.type === "Air"
-            ? <Plane className={`w-4 h-4 text-ink-2 transition-colors duration-200 ${req.status !== "draft" ? "group-hover:text-navy" : ""}`} strokeWidth={1.75} />
-            : <Ship  className={`w-4 h-4 text-ink-2 transition-colors duration-200 ${req.status !== "draft" ? "group-hover:text-navy" : ""}`} strokeWidth={1.75} />
+            ? <Plane className={`w-4 h-4 text-ink-2 transition-colors duration-200 ${isInteractive ? "group-hover:text-navy" : ""}`} strokeWidth={1.75} />
+            : <Ship  className={`w-4 h-4 text-ink-2 transition-colors duration-200 ${isInteractive ? "group-hover:text-navy" : ""}`} strokeWidth={1.75} />
           }
         </div>
 

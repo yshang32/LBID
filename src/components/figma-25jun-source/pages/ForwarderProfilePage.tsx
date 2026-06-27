@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router";
-import { Star, Shield, ChevronLeft, MapPin, Plane, Ship, Award, CheckCircle2, Lock } from "lucide-react";
+import { Star, Shield, ChevronLeft, MapPin, Plane, Ship, CheckCircle2, Lock } from "lucide-react";
 import { motion } from "motion/react";
 
 const PROFILES: Record<string, {
@@ -14,13 +14,13 @@ const PROFILES: Record<string, {
     country: "Hong Kong",
     rating: 4.9, reviews: 47, orders: 148,
     joined: "2022", verified: true, premier: true,
-    about: "Specialist air freight forwarder with 10+ years serving Vietnam–Hong Kong and China–Hong Kong lanes. IATA certified. Customs-bonded warehouse at HKG.",
+    about: "Specialist air freight forwarder with 10+ years serving Vietnam to Hong Kong and China to Hong Kong lanes. IATA certified. Customs-bonded warehouse at HKG.",
     badges: ["IATA Certified", "HKG Preferred Partner", "ISO 9001", "Premier Member"],
-    routes: ["Vietnam → HKG", "China Mainland → HKG", "Taiwan → HKG", "Thailand → HKG"],
+    routes: ["Vietnam to HKG", "China Mainland to HKG", "Taiwan to HKG", "Thailand to HKG"],
     modes: ["Air", "Sea"],
     services: ["Customs clearance (HKG)", "Commercial invoice", "Packing list", "Certificate of Origin", "Cargo insurance", "Door-to-door", "Cold chain handling", "Dangerous goods (limited)"],
     reviewList: [
-      { author: "Apex Sourcing Ltd.", rating: 5, text: "Handled our urgent SGN–HKG air shipment perfectly. AWB issued within 2 hours of booking.", date: "15 Jun 2026" },
+      { author: "Apex Sourcing Ltd.", rating: 5, text: "Handled our urgent SGN to HKG air shipment perfectly. AWB issued within 2 hours of booking.", date: "15 Jun 2026" },
       { author: "TechFlow HK",        rating: 5, text: "Reliable and transparent. Tracking updates were proactive.", date: "02 Jun 2026" },
       { author: "MedSupply Asia",     rating: 4, text: "Good service. Minor delay in document preparation but communicated well.", date: "18 May 2026" },
     ],
@@ -43,9 +43,10 @@ function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) 
 }
 
 export function ForwarderProfilePage() {
-  const { slug } = useParams();
+  const params = useParams();
   const navigate  = useNavigate();
-  const p = PROFILES[slug ?? ""] ?? FALLBACK;
+  const slug = typeof params.slug === "string" ? params.slug : Array.isArray(params.slug) ? params.slug[0] : "";
+  const p = PROFILES[slug] ?? FALLBACK;
 
   return (
     <div className="px-9 pt-8 pb-14 flex flex-col gap-6 max-w-[900px]">
