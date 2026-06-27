@@ -3,7 +3,21 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { AlertCircle, CheckCircle2, Eye, EyeOff, LockKeyhole, Plane } from "lucide-react"
+import {
+  AlertCircle,
+  ArrowRight,
+  BadgeCheck,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe2,
+  LockKeyhole,
+  Plane,
+  Radio,
+  ShieldCheck,
+  Timer,
+  WalletCards,
+} from "lucide-react"
 
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
@@ -185,33 +199,94 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
   const passwordMode = mode === "login" || mode === "register" || mode === "update"
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[linear-gradient(150deg,#f0f2f8_0%,#eceef5_100%)] px-5 py-8 text-ink sm:px-6">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-10 lg:grid-cols-[1fr_420px]">
-        <section className="hidden lg:block">
-          <div className="mb-10 h-[112px] overflow-hidden">
-            <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-ml-9 -mt-9 block w-[380px] mix-blend-multiply" draggable={false} />
+    <main className="relative min-h-screen overflow-hidden bg-[#f5f7fb] px-5 py-6 text-ink sm:px-6">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(201,168,76,.22),transparent_24%),radial-gradient(circle_at_82%_12%,rgba(74,118,194,.18),transparent_26%),linear-gradient(135deg,#f8fafc_0%,#eef2f8_48%,#f7f0df_100%)]" />
+        <div className="absolute inset-0 opacity-[.32] [background-image:linear-gradient(rgba(27,43,94,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(27,43,94,.055)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute left-[-10rem] top-[14%] h-[32rem] w-[72rem] rotate-[-17deg] rounded-full border border-navy/10" />
+        <div className="absolute right-[-18rem] top-[18%] h-[30rem] w-[68rem] rotate-[19deg] rounded-full border border-gold/25" />
+        <div className="absolute left-[18%] top-[24%] h-2.5 w-2.5 animate-[lbid-route_8s_ease-in-out_infinite] rounded-full bg-gold shadow-[0_0_0_7px_rgba(201,168,76,.12),0_0_28px_rgba(201,168,76,.55)]" />
+        <div className="absolute right-[28%] top-[14%] h-2 w-2 animate-pulse rounded-full bg-[#3768a5] shadow-[0_0_0_7px_rgba(55,104,165,.10),0_0_24px_rgba(55,104,165,.42)]" />
+        <div className="absolute bottom-[-10rem] left-[10%] h-[22rem] w-[22rem] rounded-full bg-white/40 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-[1240px] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_430px] xl:gap-14">
+        <section className="hidden min-w-0 lg:block">
+          <div className="flex items-center justify-between">
+            <div className="h-[108px] w-[360px] overflow-hidden">
+              <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-ml-10 -mt-10 block w-[390px] mix-blend-multiply" draggable={false} />
+            </div>
+            <div className="rounded-full border border-emerald/20 bg-white/70 px-3 py-1.5 text-[11.5px] font-semibold text-emerald shadow-[0_10px_28px_rgba(12,26,62,.05)] backdrop-blur">
+              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald" />
+              Bidding infrastructure online
+            </div>
           </div>
-          <BadgePill>Sealed bid logistics platform</BadgePill>
-          <h1 className="mt-5 max-w-3xl text-[56px] font-bold leading-[1.02] tracking-[-1.8px] text-ink">
-            Fair prices. Real capability. No connections needed.
-          </h1>
-          <p className="mt-5 max-w-xl text-[15px] leading-7 text-ink-2">{text.intro}</p>
-          <div className="mt-8 grid max-w-xl gap-3 sm:grid-cols-3">
-            {["Sealed bids", "Token ledger", "Order workspace"].map((item, index) => (
-              <div key={item} className="rounded-2xl border border-line bg-white/70 p-4 shadow-[0_10px_28px_rgba(12,26,62,.05)]">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy-soft text-navy">{index === 0 ? <LockKeyhole className="h-4 w-4" /> : index === 1 ? <CheckCircle2 className="h-4 w-4" /> : <Plane className="h-4 w-4" />}</span>
-                <p className="mt-3 text-[12px] font-semibold text-ink">{item}</p>
+
+          <div className="mt-10 grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
+            <div>
+              <BadgePill>Sealed bid logistics platform</BadgePill>
+              <h1 className="mt-5 max-w-3xl text-[58px] font-bold leading-[.98] tracking-[-2.2px] text-ink xl:text-[66px]">
+                Fair prices. Real capability. No connections needed.
+              </h1>
+              <p className="mt-6 max-w-2xl text-[16px] leading-8 text-ink-2">{text.intro}</p>
+            </div>
+
+            <div className="relative self-end rounded-[26px] border border-white/70 bg-white/55 p-4 shadow-[0_24px_70px_rgba(12,26,62,.12)] backdrop-blur-xl">
+              <div className="absolute -right-3 -top-3 grid h-11 w-11 place-items-center rounded-2xl bg-navy text-white shadow-[0_16px_34px_rgba(12,26,62,.25)]">
+                <Plane className="h-5 w-5" />
+              </div>
+              <p className="text-[11px] font-bold uppercase tracking-[.12em] text-gold-dark">Today&apos;s bid window</p>
+              <div className="mt-4 rounded-2xl border border-line bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-ink-3">HCM → HKG</span>
+                  <span className="font-mono text-[13px] font-bold text-navy">02:48:13</span>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-canvas">
+                  <div className="h-full w-[72%] rounded-full bg-[linear-gradient(90deg,#0c1a3e,#c49a3c)]" />
+                </div>
+                <p className="mt-3 text-[12px] leading-5 text-ink-3">3 qualified forwarders invited. Prices remain sealed until close.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-9 grid gap-3 xl:grid-cols-4">
+            <FeatureCard icon={<LockKeyhole className="h-4 w-4" />} title="Sealed bids" body="Forwarders submit once. Competitor pricing stays hidden." />
+            <FeatureCard icon={<WalletCards className="h-4 w-4" />} title="Token ledger" body="Each bid records token movement and transaction history." />
+            <FeatureCard icon={<BadgeCheck className="h-4 w-4" />} title="Smart matching" body="Recommended bids are pushed by route and profile fit." />
+            <FeatureCard icon={<ShieldCheck className="h-4 w-4" />} title="Order workspace" body="Documents, messages and audit trail stay in one place." />
+          </div>
+
+          <div className="mt-6 grid gap-3 xl:grid-cols-[1fr_1fr_1fr]">
+            {[
+              { title: "3-hour window", body: "Fixed urgency after admin approval", icon: Timer },
+              { title: "Hybrid award", body: "Lowest quote highlighted, agency still chooses fit", icon: CheckCircle2 },
+              { title: "SEA -> Hong Kong", body: "Built for regional agency demand", icon: Globe2 },
+            ].map(({ title, body, icon: Icon }) => (
+              <div key={title} className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/50 p-4 shadow-[0_12px_32px_rgba(12,26,62,.06)] backdrop-blur">
+                <Icon className="h-5 w-5 flex-shrink-0 text-gold" />
+                <div>
+                  <p className="text-[13px] font-bold text-ink">{title}</p>
+                  <p className="mt-0.5 text-[12px] leading-5 text-ink-3">{body}</p>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-[420px]">
+        <section className="mx-auto w-full max-w-[430px]">
           <div className="mb-5 flex h-[104px] justify-center overflow-hidden lg:hidden">
             <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-mt-10 block w-[330px] mix-blend-multiply" draggable={false} />
           </div>
 
-          <div className="overflow-hidden rounded-[20px] border border-line bg-white shadow-[0_8px_40px_rgba(0,0,0,.09),0_2px_8px_rgba(0,0,0,.05)]">
+          <div className="mb-4 hidden items-center justify-between rounded-2xl border border-white/70 bg-white/55 px-4 py-3 shadow-[0_14px_34px_rgba(12,26,62,.07)] backdrop-blur lg:flex">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[.12em] text-gold-dark">Secure access</p>
+              <p className="mt-0.5 text-[12px] text-ink-3">Sign in to your company workspace</p>
+            </div>
+            <Radio className="h-5 w-5 animate-pulse text-emerald" />
+          </div>
+
+          <div className="overflow-hidden rounded-[26px] border border-white/70 bg-white/82 shadow-[0_26px_80px_rgba(12,26,62,.16),0_2px_8px_rgba(12,26,62,.05)] backdrop-blur-xl">
             <div className="h-[3px] bg-[linear-gradient(90deg,#0c1a3e_0%,#1e3a7a_55%,#c49a3c_100%)]" />
             {mode === "login" || mode === "register" ? (
               <div className="flex border-b border-line">
@@ -221,6 +296,15 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
             ) : null}
 
             <form onSubmit={submit} className="flex flex-col gap-4 p-7">
+              {mode === "login" || mode === "register" ? (
+                <div className="mb-1">
+                  <h2 className="text-[22px] font-bold tracking-[-.5px] text-ink">{mode === "login" ? "Welcome back." : "Build your LBID company account."}</h2>
+                  <p className="mt-1.5 text-[13px] leading-6 text-ink-3">
+                    {mode === "login" ? "Continue to live requests, sealed bids and order workspaces." : "One account can create shipment requests and submit forwarder bids."}
+                  </p>
+                </div>
+              ) : null}
+
               {mode === "reset" || mode === "update" ? (
                 <div>
                   <h2 className="text-[16px] font-semibold text-ink">{title}</h2>
@@ -253,8 +337,9 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
               {mode === "register" ? <Field label={text.confirm}><input value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Repeat password" type="password" className="auth-input" required /></Field> : null}
               {mode === "login" ? <div className="-mt-1 flex justify-end"><button type="button" onClick={() => switchMode("reset")} className="text-[12px] font-medium text-navy underline-offset-2 transition hover:underline">{text.forgot}</button></div> : null}
 
-              <button disabled={loading} type="submit" className="mt-1 w-full rounded-xl bg-navy py-3.5 text-[13.5px] font-semibold tracking-[.01em] text-white transition duration-200 hover:-translate-y-px hover:bg-[#172d63] hover:shadow-[0_6px_20px_rgba(12,26,62,.26)] disabled:cursor-not-allowed disabled:opacity-60">
+              <button disabled={loading} type="submit" className="group mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-navy py-3.5 text-[13.5px] font-semibold tracking-[.01em] text-white transition duration-200 hover:-translate-y-px hover:bg-[#172d63] hover:shadow-[0_10px_24px_rgba(12,26,62,.28)] disabled:cursor-not-allowed disabled:opacity-60">
                 {loading ? "Working..." : mode === "login" ? text.enter : mode === "register" ? text.create : mode === "reset" ? text.sendReset : text.updatePassword}
+                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </button>
 
               {mode === "reset" || mode === "update" ? <button type="button" onClick={() => switchMode("login")} className="text-center text-[12.5px] font-medium text-ink-3 transition hover:text-ink">{text.back}</button> : null}
@@ -279,6 +364,16 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
 
 function BadgePill({ children }: { children: React.ReactNode }) {
   return <span className="inline-flex rounded-full border border-gold-border bg-gold-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-gold-dark">{children}</span>
+}
+
+function FeatureCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <div className="group rounded-2xl border border-white/70 bg-white/62 p-4 shadow-[0_16px_36px_rgba(12,26,62,.07)] backdrop-blur transition duration-200 hover:-translate-y-1 hover:bg-white/82 hover:shadow-[0_22px_48px_rgba(12,26,62,.11)]">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy-soft text-navy transition duration-200 group-hover:bg-navy group-hover:text-white">{icon}</span>
+      <p className="mt-4 text-[13px] font-bold text-ink">{title}</p>
+      <p className="mt-1 text-[12px] leading-5 text-ink-3">{body}</p>
+    </div>
+  )
 }
 
 function Tab({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
