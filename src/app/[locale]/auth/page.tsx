@@ -76,6 +76,13 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
     return body.role === "admin" ? `/${locale}/dashboard?mode=admin` : `/${locale}/dashboard`
   }
 
+  function authRedirectUrl(next = `/${locale}/auth`) {
+    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "")
+    const browserOrigin = window.location.origin
+    const origin = configuredOrigin || browserOrigin
+    return `${origin}${next.startsWith("/") ? next : `/${next}`}`
+  }
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     resetMessages()
@@ -111,7 +118,7 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
 
     if (mode === "reset") {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/${locale}/auth?mode=update`,
+        redirectTo: authRedirectUrl(`/${locale}/auth?mode=update`),
       })
       setLoading(false)
       if (resetError) setError(resetError.message)
@@ -147,7 +154,7 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/${locale}/auth`,
+        emailRedirectTo: authRedirectUrl(`/${locale}/auth`),
         data: { company_name: company, full_name: name },
       },
     })

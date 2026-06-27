@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LBID System Guide, User Guide And Architecture</title>
+  <style>
+    :root {
+      --navy: #0c1a3e;
+      --navy-2: #1b2b5e;
+      --gold: #c49a3c;
+      --gold-soft: #fff7df;
+      --ink: #111827;
+      --muted: #667085;
+      --line: #d9dee8;
+      --canvas: #f4f6fa;
+      --white: #ffffff;
+      --green: #12805c;
+      --red: #b42318;
+      --blue: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(140deg, #f7f8fb 0%, #edf1f7 100%);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+    a { color: var(--navy-2); font-weight: 700; text-decoration: none; }
+    .shell { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 100vh; }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(18px);
+      padding: 28px 20px;
+    }
+    aside h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; color: var(--navy); }
+    aside p { margin: 4px 0 20px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
+    nav a {
+      display: block;
+      border-radius: 12px;
+      padding: 9px 12px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    nav a:hover { background: #eef3ff; color: var(--navy); }
+    main { padding: 44px; max-width: 1280px; }
+    .hero {
+      border: 1px solid var(--line);
+      background: radial-gradient(circle at 82% 8%, rgba(196,154,60,.18), transparent 28%), var(--white);
+      border-radius: 28px;
+      padding: 40px;
+      box-shadow: 0 24px 70px rgba(15,23,42,.08);
+    }
+    .eyebrow {
+      display: inline-flex;
+      border: 1px solid #ead79d;
+      background: var(--gold-soft);
+      color: #8a640f;
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .hero h2 { margin: 18px 0 10px; font-size: clamp(36px, 6vw, 66px); line-height: .98; letter-spacing: -.055em; color: var(--navy); }
+    .hero .lead { max-width: 780px; color: #475467; font-size: 17px; }
+    section {
+      margin-top: 28px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.9);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 12px 36px rgba(15,23,42,.05);
+    }
+    h2 { margin: 0 0 14px; font-size: 28px; line-height: 1.15; letter-spacing: -.035em; color: var(--navy); }
+    h3 { margin: 22px 0 10px; font-size: 18px; color: var(--ink); }
+    p { color: #475467; }
+    .grid { display: grid; gap: 14px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .card strong { color: var(--navy); }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--canvas);
+      padding: 16px;
+    }
+    .metric span { display: block; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .metric b { display: block; margin-top: 6px; font-size: 26px; color: var(--navy); }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 14px; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 12px; text-align: left; vertical-align: top; }
+    th { background: #f7f9fc; color: var(--navy); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    tr:last-child td { border-bottom: 0; }
+    code {
+      border: 1px solid var(--line);
+      background: #f7f9fc;
+      border-radius: 7px;
+      padding: 2px 6px;
+      font-size: 12px;
+      color: var(--navy);
+    }
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .step {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+    .arrow { color: var(--gold); font-weight: 900; }
+    .status {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .ok { background: #e8f7ef; color: var(--green); }
+    .todo { background: #fff7df; color: #8a640f; }
+    .risk { background: #fee4e2; color: var(--red); }
+    .callout {
+      border-left: 4px solid var(--gold);
+      background: var(--gold-soft);
+      border-radius: 16px;
+      padding: 16px 18px;
+      color: #6f4c04;
+    }
+    ul { padding-left: 20px; color: #475467; }
+    footer { margin: 34px 0 10px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 920px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: relative; height: auto; }
+      main { padding: 22px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .hero { padding: 28px; }
+    }
+    @media print {
+      aside { display: none; }
+      .shell { display: block; }
+      main { max-width: none; padding: 0; }
+      section, .hero { box-shadow: none; break-inside: avoid; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <h1>LBID</h1>
+      <p>System / User / Architecture Guide</p>
+      <nav>
+        <a href="#summary">Executive Summary</a>
+        <a href="#mechanisms">Business Mechanisms</a>
+        <a href="#flows">End-to-End Flows</a>
+        <a href="#pages">Page Guide</a>
+        <a href="#backend">Backend APIs</a>
+        <a href="#database">Database</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#security">Security</a>
+        <a href="#operations">User Operations</a>
+        <a href="#launch">Launch Checklist</a>
+      </nav>
+    </aside>
+    <main>
+      <div class="hero" id="summary">
+        <span class="eyebrow">Production MVP Foundation</span>
+        <h2>LBID System Guide</h2>
+        <p class="lead">A professional system analyst and business analyst view of LBID: product mechanisms, user workflows, page responsibilities, backend APIs, database architecture and launch readiness.</p>
+        <p><strong>Production:</strong> <a href="https://lbid.vercel.app">https://lbid.vercel.app</a></p>
+      </div>
+
+      <section>
+        <h2>1. Product Overview</h2>
+        <p>LBID is a sealed-bidding logistics marketplace connecting overseas agencies with Hong Kong forwarders. It replaces fragmented email, phone and manual quotation workflows with a structured digital transaction process.</p>
+        <div class="grid grid-3">
+          <div class="metric"><span>Core object</span><b>SR</b><p>Shipment Request as the demand record.</p></div>
+          <div class="metric"><span>Core transaction</span><b>Bid</b><p>Forwarder submits sealed quote with token deduction.</p></div>
+          <div class="metric"><span>Core output</span><b>Order</b><p>Accepted bid creates order workspace.</p></div>
+        </div>
+        <div class="callout"><strong>Positioning:</strong> LBID is a workflow platform, not the carrier of record. It supports matching, quotation, documents, communication, tracking and audit.</div>
+      </section>
+
+      <section id="mechanisms">
+        <h2>2. Business Mechanisms</h2>
+        <div class="grid grid-2">
+          <div class="card"><strong>Dual-capability company account</strong><p>One company can enable Client capability, Forwarder capability, or both. This reflects real logistics business behavior.</p></div>
+          <div class="card"><strong>Admin-reviewed SR</strong><p>Shipment requests enter review before publication, protecting marketplace quality and data clarity.</p></div>
+          <div class="card"><strong>Sealed bidding</strong><p>Forwarders submit confidential bids. Competitor prices and identities remain hidden during the bid window.</p></div>
+          <div class="card"><strong>Hybrid award model</strong><p>The lowest valid bid is highlighted, but the client can choose another bid based on value, trust or service fit.</p></div>
+          <div class="card"><strong>Token transaction</strong><p>Bid submission deducts tokens through Supabase RPC to protect the token ledger.</p></div>
+          <div class="card"><strong>Order workspace</strong><p>Awarded bids become operational workspaces with documents, messages and tracking.</p></div>
+        </div>
+      </section>
+
+      <section id="flows">
+        <h2>3. End-to-End Flow</h2>
+        <h3>Client / Agency Flow</h3>
+        <div class="flow">
+          <span class="step">Login</span><span class="arrow">→</span><span class="step">Onboarding</span><span class="arrow">→</span><span class="step">Create SR</span><span class="arrow">→</span><span class="step">Admin Review</span><span class="arrow">→</span><span class="step">Bid Window</span><span class="arrow">→</span><span class="step">Compare Bids</span><span class="arrow">→</span><span class="step">Accept Bid</span><span class="arrow">→</span><span class="step">Order</span>
+        </div>
+        <h3>Forwarder Flow</h3>
+        <div class="flow">
+          <span class="step">Login</span><span class="arrow">→</span><span class="step">Set Routes</span><span class="arrow">→</span><span class="step">Marketplace</span><span class="arrow">→</span><span class="step">Quote Console</span><span class="arrow">→</span><span class="step">Submit Bid</span><span class="arrow">→</span><span class="step">Token Deducted</span><span class="arrow">→</span><span class="step">Awarded Order</span>
+        </div>
+        <h3>Order Status Pipeline</h3>
+        <div class="flow">
+          <span class="step">confirmed</span><span class="arrow">→</span><span class="step">shipment_booked</span><span class="arrow">→</span><span class="step">in_transit</span><span class="arrow">→</span><span class="step">arrived_hk</span><span class="arrow">→</span><span class="step">customs_cleared</span><span class="arrow">→</span><span class="step">delivered</span><span class="arrow">→</span><span class="step">completed</span>
+        </div>
+      </section>
+
+      <section id="pages">
+        <h2>4. Page Guide</h2>
+        <table>
+          <thead><tr><th>Page</th><th>Path</th><th>Purpose</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Login / Sign up</td><td><code>/zh/auth</code></td><td>User entry and Supabase Auth</td><td><span class="status ok">Live</span></td></tr>
+            <tr><td>Dashboard</td><td><code>/zh/dashboard</code></td><td>Next actions and live workspace summary</td><td><span class="status ok">Live API</span></td></tr>
+            <tr><td>Marketplace</td><td><code>/zh/marketplace</code></td><td>Open SR opportunities</td><td><span class="status ok">Live API</span></td></tr>
+            <tr><td>Quote Console</td><td><code>/zh/marketplace/[id]</code></td><td>Submit sealed bid</td><td><span class="status ok">Live API</span></td></tr>
+            <tr><td>Quote Comparison</td><td><code>/zh/quotations/compare</code></td><td>Compare bids and accept one</td><td><span class="status ok">Live API</span></td></tr>
+            <tr><td>Order Workspace</td><td><code>/zh/orders/[id]</code></td><td>Documents, messages, tracking and status</td><td><span class="status ok">Live API</span></td></tr>
+            <tr><td>Requests</td><td><code>/zh/requests</code></td><td>Client SR queue</td><td><span class="status todo">Further binding</span></td></tr>
+            <tr><td>Admin</td><td><code>/zh/admin</code></td><td>Review, account, payment and audit operations</td><td><span class="status todo">Further binding</span></td></tr>
+            <tr><td>Token / Membership</td><td><code>/zh/tokens</code>, <code>/zh/subscription</code></td><td>Commercial account controls</td><td><span class="status todo">Payment QA</span></td></tr>
+            <tr><td>Community</td><td><code>/zh/community</code></td><td>Member updates and events</td><td><span class="status todo">MVP scope</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="backend">
+        <h2>5. Backend APIs</h2>
+        <p>Frontend pages call Next.js route handlers. Sensitive writes are verified server-side and then written through Supabase or RPC.</p>
+        <table>
+          <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>/api/workspace</code></td><td>Dashboard, marketplace and aggregated user workspace data</td></tr>
+            <tr><td><code>/api/shipment-requests</code></td><td>Create and list shipment requests</td></tr>
+            <tr><td><code>/api/shipment-requests/[id]</code></td><td>Read or update a single SR</td></tr>
+            <tr><td><code>/api/bids</code></td><td>List bids or submit sealed bid through token RPC</td></tr>
+            <tr><td><code>/api/bids/[id]/accept</code></td><td>Accept a bid and create order/match records</td></tr>
+            <tr><td><code>/api/orders/[id]</code></td><td>Read or update order status</td></tr>
+            <tr><td><code>/api/orders/[id]/documents</code></td><td>Upload and list order documents</td></tr>
+            <tr><td><code>/api/orders/[id]/messages</code></td><td>Order message thread</td></tr>
+            <tr><td><code>/api/orders/[id]/tracking</code></td><td>Tracking events</td></tr>
+            <tr><td><code>/api/admin/*</code></td><td>Admin operations for SR, accounts, payments and audit</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="database">
+        <h2>6. Database And RPC</h2>
+        <div class="grid grid-2">
+          <div class="card"><strong>Main tables</strong><p><code>users</code>, <code>company_profiles</code>, <code>shipment_requests</code>, <code>bids</code>, <code>quotations</code>, <code>orders</code>, <code>documents</code>, <code>messages</code>, <code>tracking_events</code>, <code>notifications</code>, <code>audit_logs</code>.</p></div>
+          <div class="card"><strong>Critical RPC</strong><p><code>submit_bid_with_token</code>, <code>adjust_token_balance</code>, <code>accept_bid_to_order</code>. These protect commercial transaction integrity.</p></div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <h2>7. System Architecture</h2>
+        <div class="flow">
+          <span class="step">Browser</span><span class="arrow">→</span><span class="step">Next.js on Vercel</span><span class="arrow">→</span><span class="step">API Route Handlers</span><span class="arrow">→</span><span class="step">Supabase Auth</span><span class="arrow">→</span><span class="step">PostgreSQL + RPC</span><span class="arrow">→</span><span class="step">Storage / Realtime / Email / Payment</span>
+        </div>
+        <div class="grid grid-3" style="margin-top:16px">
+          <div class="card"><strong>Frontend</strong><p>Next.js App Router, SiteShell, SessionGate, live workspace components.</p></div>
+          <div class="card"><strong>Backend</strong><p>Next.js route handlers, Supabase session verification, service role for controlled writes.</p></div>
+          <div class="card"><strong>Infrastructure</strong><p>Vercel deployment, Supabase database/auth/storage, Resend email, Stripe/FPS payment.</p></div>
+        </div>
+      </section>
+
+      <section id="security">
+        <h2>8. Security And Governance</h2>
+        <ul>
+          <li>Protected pages redirect unauthenticated users to login.</li>
+          <li>API routes require Supabase access token.</li>
+          <li>Service role key must never be exposed to frontend.</li>
+          <li>Token deduction must remain RPC/transaction based.</li>
+          <li>Admin, payment, bid acceptance and order status changes should be audit logged.</li>
+          <li>Order data should only be accessible by order parties or admin.</li>
+        </ul>
+      </section>
+
+      <section id="operations">
+        <h2>9. User Operation Guide</h2>
+        <div class="grid grid-3">
+          <div class="card"><strong>Client</strong><p>Login → onboarding → create SR → wait for admin approval → compare bids → accept bid → manage order.</p></div>
+          <div class="card"><strong>Forwarder</strong><p>Login → set routes/profile → view marketplace → submit sealed bid → wait for result → manage awarded order.</p></div>
+          <div class="card"><strong>Admin</strong><p>Review SR → approve/reject → verify accounts → confirm payment → monitor audit log.</p></div>
+        </div>
+      </section>
+
+      <section id="launch">
+        <h2>10. Launch Checklist</h2>
+        <table>
+          <thead><tr><th>Item</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Production deployment</td><td><span class="status ok">Done</span></td></tr>
+            <tr><td>Core live API bridge</td><td><span class="status ok">Done</span></td></tr>
+            <tr><td>Supabase full transaction test</td><td><span class="status todo">Next</span></td></tr>
+            <tr><td>Production env vars review</td><td><span class="status todo">Next</span></td></tr>
+            <tr><td>Stripe / FPS payment QA</td><td><span class="status todo">Next</span></td></tr>
+            <tr><td>Resend email QA</td><td><span class="status todo">Next</span></td></tr>
+            <tr><td>Mobile QA</td><td><span class="status todo">Next</span></td></tr>
+            <tr><td>Remaining demo page API binding</td><td><span class="status todo">Ongoing</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer>
+        LBID guide generated for product, system analysis and business analysis review. Source Markdown: LBID_SYSTEM_USER_GUIDE.md.
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
