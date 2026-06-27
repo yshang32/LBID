@@ -47,7 +47,7 @@ export function CompanyProfilePage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1180px] gap-6 px-6 pb-10 pt-8 lg:grid-cols-[minmax(0,760px)_320px] lg:px-9">
+    <div className="mx-auto grid w-full max-w-[1320px] items-start gap-6 px-6 pb-6 pt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-9">
       <div className="flex min-w-0 flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

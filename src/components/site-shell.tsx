@@ -143,7 +143,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   const mobileNav = [primary[0], primary[1], primary[2], primary[3], primary[4]]
 
   return (
-    <div className="flex h-screen overflow-hidden font-sans text-ink" style={{ background: "linear-gradient(150deg, #F7F8FB 0%, #ECEFF6 100%)" }}>
+    <div className="flex h-[100dvh] max-h-[100dvh] overflow-hidden font-sans text-ink" style={{ background: "linear-gradient(150deg, #F7F8FB 0%, #ECEFF6 100%)" }}>
       <aside className="hidden w-[228px] flex-shrink-0 flex-col border-r border-line bg-white/95 shadow-[1px_0_0_rgba(15,23,42,0.02)] lg:flex">
         <Link href={`${prefix}/dashboard`} className="h-[88px] overflow-hidden" aria-label="LBID workspace">
           <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID Logistics Bidding Platform" className="-ml-3 -mt-7 block h-auto w-[272px] select-none mix-blend-multiply" draggable={false} />
@@ -207,9 +207,9 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <TopBar pathname={pathname} prefix={prefix} locale={locale} identity={identity} />
-        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
+        <div className="min-h-0 flex-1 overflow-y-auto max-lg:pb-20" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
           {children}
         </div>
       </main>
