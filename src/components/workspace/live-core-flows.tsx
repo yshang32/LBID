@@ -8,9 +8,14 @@ import {
   ArrowRight,
   Award,
   BadgeCheck,
+  Bell,
+  Briefcase,
   CheckCircle2,
   Clock3,
+  Coins,
+  Crown,
   FileText,
+  Inbox,
   Lock,
   MessageSquare,
   Package,
@@ -798,4 +803,474 @@ function activityItems(workspace: LiveWorkspace) {
     { icon: Lock, title: `${opportunities.length} open sealed opportunity(ies)`, meta: "Forwarder bidding queue from live SR records." },
     { icon: Package, title: `${orders.length} order workspace(s)`, meta: "Awarded work ready for documents and messages." },
   ]
+}
+
+export function LiveOrders({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [orders, setOrders] = useState<JsonRecord[]>([])
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    apiJson("/api/workspace").then(({ response, body }) => {
+      if (!active) return
+      if (!response.ok) {
+        setError(body.error || "WORKSPACE_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      setOrders(body.orders || [])
+      setState("ready")
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return (
+    <WorkspaceSurface eyebrow="Orders" title="Order workspaces." intro="Awarded shipments, pulled live from Supabase — documents, messages and tracking live inside each one.">
+      {state === "loading" ? <StatePanel title="Loading orders" body="Reading awarded orders from Supabase." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Orders could not load" body={error} /> : null}
+      {state === "ready" && orders.length === 0 ? <StatePanel title="No orders yet" body="Once a sealed bid is accepted, the resulting order workspace will appear here." /> : null}
+      <div className="grid gap-3">
+        {orders.map((order) => (
+          <LiveOrderRow key={order.id} locale={locale} order={order} />
+        ))}
+      </div>
+    </WorkspaceSurface>
+  )
+}
+
+function LiveOrderRow({ locale, order }: { locale: Locale; order: JsonRecord }) {
+  const quotation = Array.isArray(order.quotations) ? order.quotations[0] : order.quotations
+  const shipmentRequest = Array.isArray(quotation?.shipment_requests) ? quotation?.shipment_requests[0] : quotation?.shipment_requests
+  const forwarderRecord = Array.isArray(quotation?.forwarder) ? quotation?.forwarder[0] : quotation?.forwarder
+  const forwarderName = forwarderRecord?.company_name || `Forwarder ${shortId(quotation?.forwarder_id)}`
+  return (
+    <Link href={`/${locale}/orders/${order.id}`} className="group flex items-center justify-between gap-4 rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_14px_36px_rgba(15,23,42,0.09)]">
+      <div className="flex min-w-0 items-center gap-4">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-canvas text-navy group-hover:bg-navy group-hover:text-white"><Truck className="h-5 w-5" /></span>
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold text-ink">{routeText(shipmentRequest?.route)}</p>
+          <p className="mt-1 text-[13px] text-ink-3">{cargoText(shipmentRequest?.cargo_details)} · with {forwarderName}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-ink-3">Order {shortId(order.id)} · {formatDate(order.created_at)}</p>
+        </div>
+      </div>
+      <div className="flex flex-shrink-0 items-center gap-3">
+        <span className="rounded-xl border border-emerald/20 bg-emerald-soft px-3 py-2 text-[12px] font-bold capitalize text-emerald">{String(order.status || "").replace(/_/g, " ")}</span>
+        <p className="text-[15px] font-bold text-ink">HKD {Number(quotation?.total_amount || 0).toLocaleString()}</p>
+        <ArrowRight className="h-4 w-4 text-ink-3" />
+      </div>
+    </Link>
+  )
+}
+
+export function LiveMyRequests({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [workspace, setWorkspace] = useState<LiveWorkspace>({})
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    apiJson("/api/workspace").then(({ response, body }) => {
+      if (!active) return
+      if (!response.ok) {
+        setError(body.error || "WORKSPACE_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      setWorkspace(body)
+      setState("ready")
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const requests = workspace.ownRequests || []
+  const bidCounts = workspace.bidCountByRequest || {}
+
+  return (
+    <WorkspaceSurface eyebrow="My Requests" title="Your shipment requests." intro="Every SR you have created, pulled live from Supabase — from admin review through sealed bidding to award.">
+      {state === "loading" ? <StatePanel title="Loading requests" body="Reading your shipment requests from Supabase." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Requests could not load" body={error} /> : null}
+      {state === "ready" && requests.length === 0 ? <StatePanel title="No shipment requests yet" body="Create your first SR to start receiving sealed bids from forwarders." /> : null}
+      <div className="grid gap-3">
+        {requests.map((item) => (
+          <Link key={item.id} href={`/${locale}/requests/${item.id}`} className="group flex items-center justify-between gap-4 rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_14px_36px_rgba(15,23,42,0.09)]">
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-canvas text-navy group-hover:bg-navy group-hover:text-white"><FileText className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <p className="text-[15px] font-bold text-ink">{routeText(item.route)}</p>
+                <p className="mt-1 text-[13px] text-ink-3">{cargoText(item.cargo_details)}</p>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-ink-3">SR {shortId(item.id)} · {formatDate(item.created_at)}</p>
+              </div>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-3">
+              {item.status === "CLOSED" ? <span className="rounded-xl border border-gold-border bg-gold-soft px-3 py-2 text-[12px] font-bold text-gold-dark">{bidCounts[item.id] || 0} bids received</span> : null}
+              <span className={`rounded-xl border px-3 py-2 text-[12px] font-bold capitalize ${statusTone(item.status)}`}>{String(item.status || "").replace(/_/g, " ").toLowerCase()}</span>
+              <ArrowRight className="h-4 w-4 text-ink-3" />
+            </div>
+          </Link>
+        ))}
+      </div>
+    </WorkspaceSurface>
+  )
+}
+
+export function LiveRequestDetail({ locale, id }: { locale: Locale; id?: string }) {
+  const params = useParams()
+  const srId = id || String(params.id || "")
+  const [state, setState] = useState<LoadState>("loading")
+  const [request, setRequest] = useState<JsonRecord | null>(null)
+  const [bidCount, setBidCount] = useState(0)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      setState("loading")
+      const { response, body } = await apiJson(`/api/shipment-requests/${srId}`)
+      if (!active) return
+      if (!response.ok) {
+        setError(body.error || "SR_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      setRequest(body.shipmentRequest)
+      if (body.shipmentRequest?.status === "CLOSED" || body.shipmentRequest?.status === "AWARDED") {
+        const bidsResult = await apiJson(`/api/bids?sr_id=${srId}`)
+        if (active && bidsResult.response.ok) setBidCount((bidsResult.body.bids || []).length)
+      }
+      setState("ready")
+    }
+    if (srId) void load()
+    return () => {
+      active = false
+    }
+  }, [srId])
+
+  const cargo = request?.cargo_details || {}
+
+  return (
+    <WorkspaceSurface eyebrow="Request Detail" title={request ? routeText(request.route) : "Loading request..."} intro="Live status for this shipment request, pulled directly from Supabase by SR id.">
+      {state === "loading" ? <StatePanel title="Loading shipment request" body="Reading route, cargo and status." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Request could not load" body={error} /> : null}
+      {request ? (
+        <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+          <section className="rounded-[22px] border border-line bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+            <div className="flex items-center justify-between gap-4">
+              <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] ${statusTone(request.status)}`}>{String(request.status || "").replace(/_/g, " ")}</span>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">SR {shortId(request.id)}</p>
+            </div>
+            <RouteBlock route={request.route} cargo={cargo} />
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <InfoTile label="Weight" value={`${cargo.weight_kg || "-"} kg`} />
+              <InfoTile label="Volume" value={`${cargo.cbm || "-"} CBM`} />
+              <InfoTile label="Mode" value={modeLabel(cargo.mode)} />
+            </div>
+            <p className="mt-4 text-[12.5px] text-ink-3">Services: {Array.isArray(request.services_needed) && request.services_needed.length ? request.services_needed.join(", ") : "Not specified"}</p>
+            <p className="mt-1 text-[12.5px] text-ink-3">Created {formatDate(request.created_at)}</p>
+          </section>
+          <aside className="rounded-[22px] border border-line bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.07)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">What happens next</p>
+            {request.status === "PENDING_REVIEW" ? <StatePanel title="Waiting for admin review" body="LBID admin must approve this SR before the sealed-bid window opens." /> : null}
+            {request.status === "OPEN" ? <Countdown deadline={request.bid_deadline} /> : null}
+            {request.status === "CLOSED" ? (
+              <div className="mt-4">
+                <p className="text-[13px] text-ink-2">{bidCount} sealed bid(s) received. Compare and award below.</p>
+                <Link href={`/${locale}/quotations/compare?sr_id=${request.id}`} className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-navy px-4 text-[13px] font-bold text-white transition hover:-translate-y-px hover:bg-navy-hover">
+                  Compare bids <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : null}
+            {request.status === "AWARDED" ? <StatePanel title="Awarded" body="This request has been awarded. Check Orders for the resulting order workspace." /> : null}
+          </aside>
+        </div>
+      ) : null}
+    </WorkspaceSurface>
+  )
+}
+
+export function LiveActiveBids({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [rows, setRows] = useState<JsonRecord[]>([])
+  const [tab, setTab] = useState<"all" | "active" | "closing" | "deciding" | "awarded">("all")
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      setState("loading")
+      const bidsResult = await apiJson("/api/bids")
+      if (!active) return
+      if (!bidsResult.response.ok) {
+        setError(bidsResult.body.error || "BIDS_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      const bids: JsonRecord[] = bidsResult.body.bids || []
+      const uniqueSrIds = Array.from(new Set(bids.map((bid) => bid.sr_id))).slice(0, 60)
+      const requestResults = await Promise.all(uniqueSrIds.map((srId) => apiJson(`/api/shipment-requests/${srId}`)))
+      if (!active) return
+      const requestById = new Map<string, JsonRecord>()
+      requestResults.forEach((result, index) => {
+        if (result.response.ok) requestById.set(uniqueSrIds[index], result.body.shipmentRequest)
+      })
+      const merged = bids.map((bid) => ({ ...bid, shipmentRequest: requestById.get(bid.sr_id) || null }))
+      setRows(merged)
+      setState("ready")
+    }
+    void load()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const bucket = (row: JsonRecord) => {
+    const status = row.shipmentRequest?.status
+    if (status === "AWARDED") return "awarded"
+    if (status === "CLOSED") return "deciding"
+    if (status === "OPEN" && secondsLeft(row.shipmentRequest?.bid_deadline) < 3600) return "closing"
+    if (status === "OPEN") return "active"
+    return "active"
+  }
+  const counts = { active: 0, closing: 0, deciding: 0, awarded: 0 }
+  rows.forEach((row) => {
+    const key = bucket(row) as keyof typeof counts
+    counts[key] = (counts[key] || 0) + 1
+  })
+  const filtered = tab === "all" ? rows : rows.filter((row) => bucket(row) === tab)
+
+  return (
+    <WorkspaceSurface eyebrow="Active Bids" title="Your sealed bids." intro="Every quote you have submitted as a forwarder, pulled live from Supabase — your price stays private until the bid window closes.">
+      <div className="flex flex-wrap gap-2">
+        {([
+          ["all", `${rows.length} all`],
+          ["active", `${counts.active} active`],
+          ["closing", `${counts.closing} closing soon`],
+          ["deciding", `${counts.deciding} awaiting decision`],
+          ["awarded", `${counts.awarded} awarded`],
+        ] as const).map(([value, label]) => (
+          <button key={value} onClick={() => setTab(value)} className={`rounded-xl border px-3.5 py-2 text-[12px] font-bold transition ${tab === value ? "border-navy bg-navy text-white" : "border-line bg-white text-ink-2 hover:border-navy/30 hover:bg-navy-soft"}`}>{label}</button>
+        ))}
+      </div>
+      {state === "loading" ? <StatePanel title="Loading your sealed bids" body="Reading bids and related shipment requests from Supabase." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Active bids could not load" body={error} /> : null}
+      {state === "ready" && filtered.length === 0 ? <StatePanel title="No sealed bids here" body="Submit a quote from the marketplace to see it tracked here." /> : null}
+      <div className="grid gap-3">
+        {filtered.map((row) => (
+          <Link key={row.id} href={`/${locale}/marketplace/${row.sr_id}`} className="group flex items-center justify-between gap-4 rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_14px_36px_rgba(15,23,42,0.09)]">
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-canvas text-navy group-hover:bg-navy group-hover:text-white"><Briefcase className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <p className="text-[15px] font-bold text-ink">{row.shipmentRequest ? routeText(row.shipmentRequest.route) : "Shipment request"}</p>
+                <p className="mt-1 text-[13px] text-ink-3">Your quote HKD {Number(row.price || 0).toLocaleString()} · Transit {row.transit_time || "Pending"}</p>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-ink-3">Submitted {formatDate(row.submitted_at)}</p>
+              </div>
+            </div>
+            <span className={`rounded-xl border px-3 py-2 text-[12px] font-bold capitalize ${statusTone(row.shipmentRequest?.status)}`}>{bucketLabel(bucket(row))}</span>
+          </Link>
+        ))}
+      </div>
+    </WorkspaceSurface>
+  )
+}
+
+export function LiveTokenWallet({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [wallet, setWallet] = useState<JsonRecord | null>(null)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    apiJson("/api/tokens").then(({ response, body }) => {
+      if (!active) return
+      if (!response.ok) {
+        setError(body.error || "WALLET_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      setWallet(body.wallet)
+      setState("ready")
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const transactions: JsonRecord[] = wallet?.transactions || []
+
+  return (
+    <WorkspaceSurface eyebrow="Token Wallet" title="Your token balance." intro="Free and paid token balances, plus every transaction, pulled live from Supabase.">
+      {state === "loading" ? <StatePanel title="Loading wallet" body="Reading your token balance and ledger." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Wallet could not load" body={error} /> : null}
+      {wallet ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Metric label="Total tokens" value={wallet.total ?? 0} helper="Free + paid balance" icon={Coins} />
+            <Metric label="Free tokens" value={wallet.free ?? 0} helper={wallet.freeTokenResetAt ? `Resets ${formatDate(wallet.freeTokenResetAt)}` : "Monthly allotment"} icon={Sparkles} />
+            <Metric label="Paid tokens" value={wallet.paid ?? 0} helper="Purchased credits" icon={Award} />
+          </div>
+          <section className="rounded-[22px] border border-line bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+            <h2 className="text-[15px] font-bold text-ink">Transaction ledger</h2>
+            <div className="mt-4 grid gap-2">
+              {transactions.length === 0 ? <p className="rounded-xl border border-line bg-canvas p-4 text-[13px] text-ink-3">No token transactions yet.</p> : null}
+              {transactions.map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-[14px] border border-line-light bg-canvas/60 p-3">
+                  <div>
+                    <p className="text-[13px] font-bold capitalize text-ink">{String(item.type || "").replace(/_/g, " ")}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-3">{item.source || "system"} · {formatDate(item.created_at)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-[14px] font-bold ${Number(item.amount || 0) < 0 ? "text-red-600" : "text-emerald"}`}>{Number(item.amount || 0) > 0 ? "+" : ""}{item.amount}</p>
+                    <p className="text-[11px] text-ink-3">Balance {item.balance_after}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : null}
+    </WorkspaceSurface>
+  )
+}
+
+export function LiveSubscription({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [subscription, setSubscription] = useState<JsonRecord | null>(null)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    apiJson("/api/subscriptions").then(({ response, body }) => {
+      if (!active) return
+      if (!response.ok) {
+        setError(body.error || "SUBSCRIPTION_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      setSubscription(body.subscription)
+      setState("ready")
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const isTrialActive = subscription?.status === "trial" && subscription.trial_ends_at && new Date(subscription.trial_ends_at) > new Date()
+  const isActive = subscription?.status === "active"
+
+  return (
+    <WorkspaceSurface eyebrow="Membership" title="Your plan." intro="Plan, status and renewal date, pulled live from Supabase — not a placeholder badge.">
+      {state === "loading" ? <StatePanel title="Loading membership" body="Reading your subscription from Supabase." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Membership could not load" body={error} /> : null}
+      {state === "ready" && !subscription ? <StatePanel title="No active subscription" body="You are on the free tier. Upgrade to unlock more monthly tokens and priority placement." /> : null}
+      {subscription ? (
+        <section className="rounded-[22px] border border-line bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-navy-soft text-navy"><Crown className="h-5 w-5" /></span>
+              <div>
+                <p className="text-[18px] font-bold capitalize text-ink">{subscription.plan || "Free"} plan</p>
+                <p className="text-[12.5px] text-ink-3">Status: {isTrialActive ? "Trial active" : isActive ? "Active" : String(subscription.status || "inactive")}</p>
+              </div>
+            </div>
+            {(isTrialActive || isActive) ? <span className="rounded-full border border-emerald/20 bg-emerald-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-emerald">Live</span> : null}
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {isTrialActive ? <InfoTile label="Trial ends" value={formatDate(subscription.trial_ends_at)} /> : null}
+            {subscription.current_period_end ? <InfoTile label="Renews" value={formatDate(subscription.current_period_end)} /> : null}
+            <InfoTile label="Member since" value={formatDate(subscription.created_at)} />
+          </div>
+        </section>
+      ) : null}
+    </WorkspaceSurface>
+  )
+}
+
+export function LiveNotifications({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [notifications, setNotifications] = useState<JsonRecord[]>([])
+  const [error, setError] = useState("")
+
+  async function load() {
+    setState("loading")
+    const { response, body } = await apiJson("/api/notifications")
+    if (!response.ok) {
+      setError(body.error || "NOTIFICATIONS_LOAD_FAILED")
+      setState("error")
+      return
+    }
+    setNotifications(body.notifications || [])
+    setState("ready")
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  async function markRead(item: JsonRecord) {
+    if (item.read_at) return
+    setNotifications((current) => current.map((entry) => (entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry)))
+    await apiJson("/api/notifications", { method: "PATCH", body: JSON.stringify({ id: item.id }) })
+  }
+
+  async function markAllRead() {
+    setNotifications((current) => current.map((entry) => ({ ...entry, read_at: entry.read_at || new Date().toISOString() })))
+    await apiJson("/api/notifications", { method: "PATCH", body: JSON.stringify({ all: true }) })
+  }
+
+  const unreadCount = notifications.filter((item) => !item.read_at).length
+
+  return (
+    <WorkspaceSurface eyebrow="Notifications" title="Your notifications." intro="Every account event — SR review, new bids, awards, order updates — pulled live from Supabase.">
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] text-ink-3">{unreadCount} unread</p>
+        {unreadCount > 0 ? <button onClick={markAllRead} className="rounded-xl border border-line bg-white px-3.5 py-2 text-[12px] font-bold text-ink-2 transition hover:border-navy/30 hover:bg-navy-soft">Mark all read</button> : null}
+      </div>
+      {state === "loading" ? <StatePanel title="Loading notifications" body="Reading your notifications from Supabase." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Notifications could not load" body={error} /> : null}
+      {state === "ready" && notifications.length === 0 ? <StatePanel title="No notifications yet" body="Activity on your requests, bids and orders will show up here." /> : null}
+      <div className="grid gap-2">
+        {notifications.map((item) => {
+          const content = (
+            <div className={`flex gap-3 rounded-[14px] border p-4 transition ${item.read_at ? "border-line-light bg-canvas/40" : "border-navy/15 bg-navy-soft/40"}`}>
+              <Bell className={`mt-0.5 h-4 w-4 flex-shrink-0 ${item.read_at ? "text-ink-3" : "text-navy"}`} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[13.5px] font-bold text-ink">{item.title}</p>
+                  {!item.read_at ? <span className="h-2 w-2 flex-shrink-0 rounded-full bg-gold" /> : null}
+                </div>
+                <p className="mt-1 text-[12.5px] text-ink-3">{item.body}</p>
+                <p className="mt-1 text-[11px] text-ink-3">{formatDate(item.created_at)}</p>
+              </div>
+            </div>
+          )
+          return item.href ? (
+            <Link key={item.id} href={item.href} onClick={() => void markRead(item)}>{content}</Link>
+          ) : (
+            <button key={item.id} onClick={() => void markRead(item)} className="text-left">{content}</button>
+          )
+        })}
+      </div>
+    </WorkspaceSurface>
+  )
+}
+
+function statusTone(status?: string) {
+  const value = String(status || "").toUpperCase()
+  if (value === "OPEN") return "border-emerald/20 bg-emerald-soft text-emerald"
+  if (value === "CLOSED") return "border-gold-border bg-gold-soft text-gold-dark"
+  if (value === "AWARDED") return "border-navy/20 bg-navy-soft text-navy"
+  if (value === "PENDING_REVIEW") return "border-amber-200 bg-amber-50 text-amber-700"
+  return "border-line bg-canvas text-ink-2"
+}
+
+function bucketLabel(bucket: string) {
+  if (bucket === "active") return "Active"
+  if (bucket === "closing") return "Closing soon"
+  if (bucket === "deciding") return "Awaiting decision"
+  if (bucket === "awarded") return "Awarded"
+  return bucket
 }

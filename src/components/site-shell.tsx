@@ -90,17 +90,23 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         role: null,
       })
       try {
-        const { response, body } = await apiJson("/api/company-profile")
-        if (!mounted || !response.ok) return
-        const profile = body.companyProfile || {}
+        const [profileResult, subscriptionResult] = await Promise.all([
+          apiJson("/api/company-profile"),
+          apiJson("/api/subscriptions"),
+        ])
+        if (!mounted || !profileResult.response.ok) return
+        const profile = profileResult.body.companyProfile || {}
+        const subscription = subscriptionResult.response.ok ? subscriptionResult.body.subscription : null
+        const isTrialActive = subscription?.status === "trial" && subscription.trial_ends_at && new Date(subscription.trial_ends_at) > new Date()
         setIdentity({
           companyName: profile.company_name_en || profile.company_name_zh || "LBID Company",
-          plan: body.subscription?.plan || "monthly",
+          plan: isTrialActive ? "trial" : subscription?.status === "active" ? subscription.plan : "free",
           tokens: Number(profile.token_balance_free || 0) + Number(profile.token_balance_paid || 0),
-          role: body.role || null,
+          role: profileResult.body.role || null,
         })
-      } catch {
-        // Keep the signed-in shell usable if profile hydration is temporarily unavailable.
+      } catch (err) {
+        // Surface the failure instead of silently freezing the shell on a stale placeholder forever.
+        console.error("Failed to hydrate workspace identity", err)
       }
     }
     client.auth.getSession().then(({ data }) => void loadIdentity(Boolean(data.session)))
@@ -320,6 +326,7 @@ function planLabel(plan?: string) {
   if (plan === "annual" || plan === "premium") return "Premium Member"
   if (plan === "monthly" || plan === "standard") return "Standard Member"
   if (plan === "partner") return "Partner"
+  if (plan === "trial") return "Trial Member"
   if (plan === "free") return "Free Member"
-  return "Standard Member"
+  return "Free Member"
 }
