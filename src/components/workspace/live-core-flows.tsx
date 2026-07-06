@@ -441,6 +441,77 @@ export function LiveQuoteComparison({ locale }: { locale: Locale }) {
   )
 }
 
+export function LiveOrders({ locale }: { locale: Locale }) {
+  const [state, setState] = useState<LoadState>("loading")
+  const [orders, setOrders] = useState<JsonRecord[]>([])
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    apiJson("/api/workspace").then(({ response, body }) => {
+      if (!active) return
+      if (!response.ok) {
+        setError(body.error || "WORKSPACE_LOAD_FAILED")
+        setState("error")
+        return
+      }
+      setOrders(body.orders || [])
+      setState("ready")
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const activeCount = orders.filter((order) => order.status !== "completed").length
+
+  return (
+    <WorkspaceSurface eyebrow="Orders" title="Orders" intro="Awarded shipments move here from confirmation through delivery.">
+      {state === "loading" ? <StatePanel title="Loading orders" body="Reading order and quotation records from Supabase." /> : null}
+      {state === "error" ? <StatePanel tone="error" title="Orders could not load" body={error} /> : null}
+      {state === "ready" ? (
+        <>
+          <p className="text-[13px] text-ink-3">{orders.length} order{orders.length === 1 ? "" : "s"} - {activeCount} active</p>
+          <div className="grid gap-3">
+            {orders.length === 0 ? <StatePanel title="No orders yet" body="Awarded shipment requests will appear here once a bid is accepted." /> : null}
+            {orders.map((order) => (
+              <LiveOrderRow key={order.id} locale={locale} order={order} />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </WorkspaceSurface>
+  )
+}
+
+function LiveOrderRow({ locale, order }: { locale: Locale; order: JsonRecord }) {
+  const quotation = Array.isArray(order.quotations) ? order.quotations[0] : order.quotations
+  const shipmentRequest = Array.isArray(quotation?.shipment_requests) ? quotation?.shipment_requests[0] : quotation?.shipment_requests
+  const forwarder = Array.isArray(quotation?.forwarder) ? quotation?.forwarder[0] : quotation?.forwarder
+  return (
+    <Link
+      href={`/${locale}/orders/${order.id}`}
+      className="group flex flex-col gap-3 rounded-[16px] border border-line bg-white px-6 py-5 transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_10px_30px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <p className="text-[13px] font-bold text-ink">Order {shortId(order.id)}</p>
+          <span className="rounded-full border border-line bg-canvas px-2.5 py-0.5 text-[10.5px] font-bold capitalize text-ink-2">{String(order.status || "").replace(/_/g, " ")}</span>
+        </div>
+        <p className="mt-1.5 text-[13px] text-ink-2">{routeText(shipmentRequest?.route)} - {cargoText(shipmentRequest?.cargo_details)}</p>
+        <p className="mt-1 text-[12px] text-ink-3">{forwarder?.company_name || "Forwarder pending"} - {formatDate(order.created_at)}</p>
+      </div>
+      <div className="flex flex-shrink-0 items-center gap-4">
+        <div className="text-right">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-ink-3">Quote</p>
+          <p className="text-[14px] font-bold text-ink">HKD {Number(quotation?.total_amount || 0).toLocaleString()}</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-ink-3 group-hover:text-navy" />
+      </div>
+    </Link>
+  )
+}
+
 export function LiveOrderWorkspace({ id }: { id?: string }) {
   const params = useParams()
   const orderId = id || String(params.id || "")

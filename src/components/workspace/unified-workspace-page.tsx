@@ -49,7 +49,6 @@ import { MyRequestsPage as FigmaMyRequestsPage } from "@/components/figma-25jun-
 import { CreateRequestPage as FigmaCreateRequestPage } from "@/components/figma-25jun-source/pages/CreateRequestPage"
 import { RequestDetailPage as FigmaRequestDetailPage } from "@/components/figma-25jun-source/pages/RequestDetailPage"
 import { QuoteComparisonPage as FigmaQuoteComparisonPage } from "@/components/figma-25jun-source/pages/QuoteComparisonPage"
-import { OrdersPage as FigmaOrdersPage } from "@/components/figma-25jun-source/pages/OrdersPage"
 import { OrderWorkspacePage as FigmaOrderWorkspacePage } from "@/components/figma-25jun-source/pages/OrderWorkspacePage"
 import { CompanyProfilePage as FigmaCompanyProfilePage } from "@/components/figma-25jun-source/pages/CompanyProfilePage"
 import { TokenWalletPage as FigmaTokenWalletPage } from "@/components/figma-25jun-source/pages/TokenWalletPage"
@@ -69,6 +68,7 @@ import {
   LiveDashboard,
   LiveMarketplace,
   LiveOrderWorkspace,
+  LiveOrders,
   LiveQuoteComparison,
   LiveQuoteConsole,
 } from "@/components/workspace/live-core-flows"
@@ -232,7 +232,7 @@ export function UnifiedWorkspacePage({
   if (kind === "create-request") return <FigmaCreateRequestPage />
   if (kind === "request-detail") return <FigmaRequestDetailPage />
   if (kind === "quote-compare") return <LiveQuoteComparison locale={locale} />
-  if (kind === "orders") return <FigmaOrdersPage />
+  if (kind === "orders") return <LiveOrders locale={locale} />
   if (kind === "order-detail" || kind === "documents" || kind === "messages" || kind === "tracking" || kind === "awb" || kind === "review") return <LiveOrderWorkspace id={id} />
   if (kind === "admin") return <FigmaAdminDashboardPage />
   if (kind === "admin-requests") return <FigmaAdminRequestsPage />
