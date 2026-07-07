@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         .from("company_profiles")
         .select("token_balance_free, token_balance_paid, token_free_reset_at, reputation_score")
         .eq("user_id", user.id)
-        .single(),
+        .maybeSingle(),
       supabase
         .from("token_transactions")
         .select("*")
@@ -22,17 +22,21 @@ export async function GET(request: Request) {
         .limit(50),
     ])
 
+    // maybeSingle() returns { data: null, error: null } when the account has no
+    // company_profiles row yet (e.g. onboarding never completed) instead of the
+    // PGRST116 "Cannot coerce the result to a single JSON object" error that
+    // .single() throws in that case - which was crashing the whole wallet page.
     if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 })
     if (transactionsError) return NextResponse.json({ error: transactionsError.message }, { status: 500 })
 
     return NextResponse.json({
       wallet: {
         userId: user.id,
-        free: profile.token_balance_free,
-        paid: profile.token_balance_paid,
-        total: profile.token_balance_free + profile.token_balance_paid,
-        freeTokenResetAt: profile.token_free_reset_at,
-        reputationScore: profile.reputation_score,
+        free: profile?.token_balance_free ?? 0,
+        paid: profile?.token_balance_paid ?? 0,
+        total: (profile?.token_balance_free ?? 0) + (profile?.token_balance_paid ?? 0),
+        freeTokenResetAt: profile?.token_free_reset_at ?? null,
+        reputationScore: profile?.reputation_score ?? 0,
         transactions,
       },
     })

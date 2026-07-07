@@ -73,6 +73,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   const pathname = usePathname()
   const prefix = `/${locale}`
   const [identity, setIdentity] = useState<Identity>(null)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   useEffect(() => {
     const client = getSupabaseBrowserClient()
@@ -81,6 +82,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     const loadIdentity = async (signedIn: boolean) => {
       if (!signedIn || !mounted) {
         setIdentity(null)
+        setUnreadNotifications(0)
         return
       }
       setIdentity((current) => current ?? {
@@ -90,9 +92,10 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
         role: null,
       })
       try {
-        const [profileResult, subscriptionResult] = await Promise.all([
+        const [profileResult, subscriptionResult, notificationsResult] = await Promise.all([
           apiJson("/api/company-profile"),
           apiJson("/api/subscriptions"),
+          apiJson("/api/notifications"),
         ])
         if (!mounted || !profileResult.response.ok) return
         const profile = profileResult.body.companyProfile || {}
@@ -104,6 +107,10 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
           tokens: Number(profile.token_balance_free || 0) + Number(profile.token_balance_paid || 0),
           role: profileResult.body.role || null,
         })
+        if (notificationsResult.response.ok) {
+          const notifications = notificationsResult.body.notifications || []
+          setUnreadNotifications(notifications.filter((item: { read_at?: string | null }) => !item.read_at).length)
+        }
       } catch (err) {
         // Surface the failure instead of silently freezing the shell on a stale placeholder forever.
         console.error("Failed to hydrate workspace identity", err)
@@ -126,7 +133,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     { href: `${prefix}/active-bids`, label: "Active Bids", icon: Briefcase },
     { href: `${prefix}/requests`, label: "My Requests", icon: FileText },
     { href: `${prefix}/orders`, label: "Orders", icon: Package },
-    { href: `${prefix}/notifications`, label: "Notifications", icon: Bell, badge: 2, badgeRed: true },
+    { href: `${prefix}/notifications`, label: "Notifications", icon: Bell, badge: unreadNotifications, badgeRed: true },
   ]
   const secondary: NavItem[] = [
     { href: `${prefix}/my-routes`, label: "My Routes", icon: Map },
