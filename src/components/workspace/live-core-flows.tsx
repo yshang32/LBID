@@ -27,6 +27,8 @@ import {
   Upload,
 } from "lucide-react"
 
+import { motion } from "motion/react"
+
 import { apiJson } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n"
 
@@ -209,7 +211,7 @@ export function LiveMarketplace({ locale }: { locale: Locale }) {
 
       {state === "loading" ? <StatePanel title="Loading live opportunities" body="Reading open shipment requests from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Marketplace could not load" body="Check Supabase connection and user session." /> : null}
-      {state === "ready" && opportunities.length === 0 ? <StatePanel title="No live SR available" body="Once Admin publishes shipment requests, forwarders will see bid opportunities here." /> : null}
+      {state === "ready" && opportunities.length === 0 ? <StatePanel title="No live SR available" body="Once Admin publishes shipment requests, forwarders will see bid opportunities here." icon={Plane} /> : null}
 
       <div className="grid gap-3">
         {opportunities.map((item, index) => (
@@ -616,14 +618,20 @@ export function LiveOrderWorkspace({ id }: { id?: string }) {
 
 function WorkspaceSurface({ eyebrow, title, intro, children }: { eyebrow: string; title: string; intro: string; children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#eef2f8] px-5 py-8 sm:px-8 lg:px-9">
-      <div className="mx-auto flex max-w-[1320px] flex-col gap-6">
-        <header>
-          <span className="inline-flex rounded-full border border-gold-border bg-gold-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-gold-dark">{eyebrow}</span>
+    <main className="relative min-h-screen overflow-hidden bg-[#eef2f8] px-5 py-8 sm:px-8 lg:px-9">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-72" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, transparent 100%)" }} />
+      <div className="relative mx-auto flex max-w-[1320px] flex-col gap-6">
+        <motion.header initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-border bg-gold-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-gold-dark">
+            <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold" />
+            {eyebrow}
+          </span>
           <h1 className="mt-4 max-w-4xl text-[32px] font-bold leading-[1.06] tracking-[-1px] text-ink sm:text-[44px]">{title}</h1>
           <p className="mt-3 max-w-3xl text-[14px] leading-6 text-ink-3">{intro}</p>
-        </header>
-        {children}
+        </motion.header>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col gap-6">
+          {children}
+        </motion.div>
       </div>
     </main>
   )
@@ -631,12 +639,12 @@ function WorkspaceSurface({ eyebrow, title, intro, children }: { eyebrow: string
 
 function Metric({ label, value, helper, icon: Icon }: { label: string; value: number | string; helper: string; icon: typeof Plane }) {
   return (
-    <div className="rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+    <div className="group rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-navy/15 hover:shadow-[0_14px_34px_rgba(15,23,42,0.09)]">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy-soft text-navy"><Icon className="h-4 w-4" /></span>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy-soft text-navy transition-colors duration-200 group-hover:bg-navy group-hover:text-white"><Icon className="h-4 w-4" /></span>
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-ink-3">{label}</p>
-          <p className="mt-0.5 text-[24px] font-bold text-ink">{value}</p>
+          <p className="mt-0.5 text-[24px] font-bold tracking-[-0.4px] text-ink">{value}</p>
         </div>
       </div>
       <p className="mt-3 text-[12px] text-ink-3">{helper}</p>
@@ -725,12 +733,27 @@ function Countdown({ deadline }: { deadline?: string }) {
   )
 }
 
-function StatePanel({ title, body, tone = "neutral" }: { title: string; body: string; tone?: "neutral" | "error" }) {
+function StatePanel({ title, body, tone = "neutral", icon: Icon }: { title: string; body: string; tone?: "neutral" | "error"; icon?: typeof Plane }) {
+  const ResolvedIcon = Icon || (tone === "error" ? AlertTriangle : Sparkles)
   return (
-    <div className={`rounded-[18px] border p-6 ${tone === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-line bg-white text-ink-2"}`}>
-      <p className="text-[14px] font-bold">{title}</p>
-      <p className="mt-1 text-[13px]">{body}</p>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className={`relative overflow-hidden rounded-[18px] border p-6 ${tone === "error" ? "border-red-200 bg-red-50" : "border-line bg-white"}`}
+      style={{ boxShadow: tone === "error" ? "0 10px 28px rgba(220,38,38,0.07)" : "0 10px 32px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.03)" }}
+    >
+      <div aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: tone === "error" ? "#dc2626" : "linear-gradient(90deg, #0C1A3E 0%, #1E3A7A 55%, #C49A3C 100%)" }} />
+      <div className="flex items-start gap-3.5">
+        <span className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl ${tone === "error" ? "bg-red-100 text-red-600" : "bg-navy-soft text-navy"}`}>
+          <ResolvedIcon className="h-[18px] w-[18px]" />
+        </span>
+        <div>
+          <p className={`text-[14px] font-bold ${tone === "error" ? "text-red-700" : "text-ink"}`}>{title}</p>
+          <p className={`mt-1 text-[13px] ${tone === "error" ? "text-red-600" : "text-ink-2"}`}>{body}</p>
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
@@ -831,7 +854,7 @@ export function LiveOrders({ locale }: { locale: Locale }) {
     <WorkspaceSurface eyebrow="Orders" title="Order workspaces." intro="Awarded shipments, pulled live from Supabase — documents, messages and tracking live inside each one.">
       {state === "loading" ? <StatePanel title="Loading orders" body="Reading awarded orders from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Orders could not load" body={error} /> : null}
-      {state === "ready" && orders.length === 0 ? <StatePanel title="No orders yet" body="Once a sealed bid is accepted, the resulting order workspace will appear here." /> : null}
+      {state === "ready" && orders.length === 0 ? <StatePanel title="No orders yet" body="Once a sealed bid is accepted, the resulting order workspace will appear here." icon={Truck} /> : null}
       <div className="grid gap-3">
         {orders.map((order) => (
           <LiveOrderRow key={order.id} locale={locale} order={order} />
@@ -894,7 +917,7 @@ export function LiveMyRequests({ locale }: { locale: Locale }) {
     <WorkspaceSurface eyebrow="My Requests" title="Your shipment requests." intro="Every SR you have created, pulled live from Supabase — from admin review through sealed bidding to award.">
       {state === "loading" ? <StatePanel title="Loading requests" body="Reading your shipment requests from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Requests could not load" body={error} /> : null}
-      {state === "ready" && requests.length === 0 ? <StatePanel title="No shipment requests yet" body="Create your first SR to start receiving sealed bids from forwarders." /> : null}
+      {state === "ready" && requests.length === 0 ? <StatePanel title="No shipment requests yet" body="Create your first SR to start receiving sealed bids from forwarders." icon={FileText} /> : null}
       <div className="grid gap-3">
         {requests.map((item) => (
           <Link key={item.id} href={`/${locale}/requests/${item.id}`} className="group flex items-center justify-between gap-4 rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_14px_36px_rgba(15,23,42,0.09)]">
@@ -1057,7 +1080,7 @@ export function LiveActiveBids({ locale }: { locale: Locale }) {
       </div>
       {state === "loading" ? <StatePanel title="Loading your sealed bids" body="Reading bids and related shipment requests from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Active bids could not load" body={error} /> : null}
-      {state === "ready" && filtered.length === 0 ? <StatePanel title="No sealed bids here" body="Submit a quote from the marketplace to see it tracked here." /> : null}
+      {state === "ready" && filtered.length === 0 ? <StatePanel title="No sealed bids here" body="Submit a quote from the marketplace to see it tracked here." icon={Briefcase} /> : null}
       <div className="grid gap-3">
         {filtered.map((row) => (
           <Link key={row.id} href={`/${locale}/marketplace/${row.sr_id}`} className="group flex items-center justify-between gap-4 rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_14px_36px_rgba(15,23,42,0.09)]">
@@ -1165,7 +1188,7 @@ export function LiveSubscription({ locale }: { locale: Locale }) {
     <WorkspaceSurface eyebrow="Membership" title="Your plan." intro="Plan, status and renewal date, pulled live from Supabase — not a placeholder badge.">
       {state === "loading" ? <StatePanel title="Loading membership" body="Reading your subscription from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Membership could not load" body={error} /> : null}
-      {state === "ready" && !subscription ? <StatePanel title="No active subscription" body="You are on the free tier. Upgrade to unlock more monthly tokens and priority placement." /> : null}
+      {state === "ready" && !subscription ? <StatePanel title="No active subscription" body="You are on the free tier. Upgrade to unlock more monthly tokens and priority placement." icon={Crown} /> : null}
       {subscription ? (
         <section className="rounded-[22px] border border-line bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
           <div className="flex items-center justify-between gap-4">
@@ -1231,7 +1254,7 @@ export function LiveNotifications({ locale }: { locale: Locale }) {
       </div>
       {state === "loading" ? <StatePanel title="Loading notifications" body="Reading your notifications from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Notifications could not load" body={error} /> : null}
-      {state === "ready" && notifications.length === 0 ? <StatePanel title="No notifications yet" body="Activity on your requests, bids and orders will show up here." /> : null}
+      {state === "ready" && notifications.length === 0 ? <StatePanel title="No notifications yet" body="Activity on your requests, bids and orders will show up here." icon={Bell} /> : null}
       <div className="grid gap-2">
         {notifications.map((item) => {
           const content = (
