@@ -1,286 +1,253 @@
-import { useState } from "react";
-import { Plane, Ship, Plus, CheckCircle2, Clock, AlertCircle, ChevronRight, X } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+"use client"
 
-type RouteStatus = "verified" | "pending" | "incomplete";
+import { useMemo, useState } from "react"
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Filter,
+  Gauge,
+  Layers3,
+  LocateFixed,
+  MapPin,
+  Navigation,
+  Plane,
+  Plus,
+  Route as RouteIcon,
+  Search,
+  Ship,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
 
-interface Route {
-  id: string; origin: string; originCode: string;
-  modes: ("Air" | "Sea")[]; capacityKg: number;
-  services: string[]; status: RouteStatus;
-  jobs: number; winRate: number; certified: boolean;
+type RouteStatus = "verified" | "pending" | "incomplete"
+type FreightMode = "Air" | "Sea"
+
+interface ServiceRoute {
+  id: string
+  origin: string
+  originCode: string
+  airport: string
+  modes: FreightMode[]
+  capacityKg: number
+  services: string[]
+  status: RouteStatus
+  jobs: number
+  winRate: number
+  certified: boolean
+  mapX: number
+  mapY: number
 }
 
-const ROUTES: Route[] = [
-  {
-    id: "R-001", origin: "Vietnam (SGN / HAN)", originCode: "VN",
-    modes: ["Air"], capacityKg: 2000,
-    services: ["Customs clearance", "Commercial invoice", "Packing list", "Insurance"],
-    status: "verified", jobs: 32, winRate: 78, certified: true,
-  },
-  {
-    id: "R-002", origin: "China Mainland (PVG / CAN / PEK)", originCode: "CN",
-    modes: ["Air", "Sea"], capacityKg: 8000,
-    services: ["Customs clearance", "B/L preparation", "COO", "Insurance"],
-    status: "verified", jobs: 89, winRate: 71, certified: true,
-  },
-  {
-    id: "R-003", origin: "Taiwan (TPE)", originCode: "TW",
-    modes: ["Air"], capacityKg: 1200,
-    services: ["Customs clearance", "Commercial invoice"],
-    status: "pending", jobs: 11, winRate: 64, certified: false,
-  },
-  {
-    id: "R-004", origin: "Thailand (BKK)", originCode: "TH",
-    modes: ["Air"], capacityKg: 800,
-    services: [],
-    status: "incomplete", jobs: 0, winRate: 0, certified: false,
-  },
-];
+const ROUTES: ServiceRoute[] = [
+  { id: "R-001", origin: "Vietnam", originCode: "VN", airport: "SGN / HAN", modes: ["Air"], capacityKg: 2000, services: ["Customs clearance", "Commercial invoice", "Packing list", "Insurance"], status: "verified", jobs: 32, winRate: 78, certified: true, mapX: 47, mapY: 69 },
+  { id: "R-002", origin: "China Mainland", originCode: "CN", airport: "PVG / CAN / PEK", modes: ["Air", "Sea"], capacityKg: 8000, services: ["Customs clearance", "B/L preparation", "COO", "Insurance"], status: "verified", jobs: 89, winRate: 71, certified: true, mapX: 50, mapY: 28 },
+  { id: "R-003", origin: "Taiwan", originCode: "TW", airport: "TPE", modes: ["Air"], capacityKg: 1200, services: ["Customs clearance", "Commercial invoice"], status: "pending", jobs: 11, winRate: 64, certified: false, mapX: 72, mapY: 38 },
+  { id: "R-004", origin: "Thailand", originCode: "TH", airport: "BKK", modes: ["Air"], capacityKg: 800, services: [], status: "incomplete", jobs: 0, winRate: 0, certified: false, mapX: 34, mapY: 66 },
+]
 
-const STATUS_CFG: Record<RouteStatus, { label: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
-  verified:   { label: "Verified",             color: "text-emerald",   bg: "bg-emerald-soft", border: "border-emerald/20", icon: CheckCircle2 },
-  pending:    { label: "Pending Verification", color: "text-amber-700", bg: "bg-amber-50",     border: "border-amber-200", icon: Clock        },
-  incomplete: { label: "Incomplete",           color: "text-red-600",   bg: "bg-red-50",       border: "border-red-200",   icon: AlertCircle  },
-};
-
-const CORRIDOR_COLORS = [
-  "#0C1A3E", "#1A3575", "#2850A8", "#3D68C8",
-  "#5280D8", "#6898E0", "#7EB0E8", "#94C8F0",
-];
-
-function RouteVisual({ routes }: { routes: Route[] }) {
-  const hkgX = 320, hkgY = 150;
-  const origins = [
-    { label: "VN", x: 60,  y: 200, color: "#0C1A3E", active: routes.some(r => r.originCode === "VN" && r.status === "verified") },
-    { label: "CN", x: 200, y: 60,  color: "#1A3575", active: routes.some(r => r.originCode === "CN" && r.status === "verified") },
-    { label: "TW", x: 280, y: 40,  color: "#C49A3C", active: routes.some(r => r.originCode === "TW") },
-    { label: "TH", x: 40,  y: 130, color: "#9099A8", active: routes.some(r => r.originCode === "TH") },
-  ];
-  return (
-    <div className="bg-white rounded-[16px] border border-line p-5" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-[13px] font-semibold text-ink">Route Coverage Overview</p>
-        <span className="text-[12px] text-ink-3">{routes.filter(r => r.status === "verified").length} active routes → HKG</span>
-      </div>
-      <svg viewBox="0 0 380 240" className="w-full" style={{ height: "180px" }}>
-        {/* HKG hub */}
-        <circle cx={hkgX} cy={hkgY} r="20" fill="#0C1A3E" opacity="0.9" />
-        <text x={hkgX} y={hkgY + 4} textAnchor="middle" fill="white" fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">HKG</text>
-
-        {/* Route lines */}
-        {origins.map((o, i) => (
-          <g key={o.label}>
-            <line
-              x1={o.x} y1={o.y} x2={hkgX} y2={hkgY}
-              stroke={o.active ? o.color : "#E2E6EE"}
-              strokeWidth={o.active ? "2" : "1"}
-              strokeDasharray={o.active ? "none" : "4 4"}
-              opacity={o.active ? "0.85" : "0.5"}
-            />
-            <circle cx={o.x} cy={o.y} r="14" fill={o.active ? o.color : "#F4F5F9"} stroke={o.active ? "none" : "#E2E6EE"} strokeWidth="1.5" />
-            <text x={o.x} y={o.y + 4} textAnchor="middle" fill={o.active ? "white" : "#9099A8"} fontSize="8.5" fontWeight="600" fontFamily="Inter, sans-serif">{o.label}</text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
-}
+const STATUS = {
+  verified: { label: "Verified", dot: "bg-emerald", badge: "border-emerald/20 bg-emerald-soft text-emerald", icon: CheckCircle2 },
+  pending: { label: "Pending review", dot: "bg-amber-500", badge: "border-amber-200 bg-amber-50 text-amber-700", icon: Clock3 },
+  incomplete: { label: "Action required", dot: "bg-red-500", badge: "border-red-200 bg-red-50 text-red-600", icon: AlertCircle },
+} as const
 
 export function MyRoutesPage() {
-  const [showAdd, setShowAdd] = useState(false);
+  const [selectedId, setSelectedId] = useState(ROUTES[0].id)
+  const [mode, setMode] = useState<"All" | FreightMode>("All")
+  const [query, setQuery] = useState("")
+  const [zoom, setZoom] = useState(1)
+  const [showAdd, setShowAdd] = useState(false)
+  const selected = ROUTES.find((route) => route.id === selectedId) ?? ROUTES[0]
+  const filteredRoutes = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return ROUTES.filter((route) => {
+      const matchesMode = mode === "All" || route.modes.includes(mode)
+      const matchesQuery = !normalized || `${route.origin} ${route.airport} ${route.originCode}`.toLowerCase().includes(normalized)
+      return matchesMode && matchesQuery
+    })
+  }, [mode, query])
+
+  const verified = ROUTES.filter((route) => route.status === "verified").length
+  const completedJobs = ROUTES.reduce((total, route) => total + route.jobs, 0)
+  const activeRoutes = ROUTES.filter((route) => route.jobs > 0)
+  const averageWinRate = Math.round(activeRoutes.reduce((total, route) => total + route.winRate, 0) / activeRoutes.length)
 
   return (
-    <>
-      <div className="px-9 pt-8 pb-14 flex flex-col gap-6">
-        {/* Header */}
-        <div className="flex items-end justify-between">
-          <div>
-            <h1 className="text-[28px] font-bold text-ink tracking-[-0.7px] leading-[1.1] mb-1.5 m-0">My Routes</h1>
-            <p className="text-[14px] text-ink-3">Manage the routes and capabilities that power your bid recommendations.</p>
+    <main className="mx-auto w-full max-w-[1500px] px-5 pb-16 pt-7 sm:px-8 lg:px-10">
+      <header className="flex flex-col gap-5 border-b border-line/80 pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-gold-dark">
+            <RouteIcon className="h-3.5 w-3.5" /> Network coverage
           </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-navy text-white text-[13.5px] font-semibold
-                       hover:bg-navy-hover hover:-translate-y-[1px] hover:shadow-[0_6px_20px_rgba(12,26,62,0.26)]
-                       transition-all duration-200 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" strokeWidth={2.2} /> Add Route
-          </button>
+          <h1 className="text-[30px] font-bold leading-none tracking-[-0.8px] text-ink sm:text-[36px]">My Routes</h1>
+          <p className="mt-3 max-w-2xl text-[14px] leading-6 text-ink-2">Define where you operate. Verified routes improve recommendation quality and determine bid eligibility.</p>
         </div>
+        <button onClick={() => setShowAdd(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-navy px-5 text-[13px] font-semibold text-white shadow-[0_8px_22px_rgba(12,26,62,.18)] transition hover:-translate-y-px hover:bg-[#17316b] hover:shadow-[0_12px_28px_rgba(12,26,62,.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/30">
+          <Plus className="h-4 w-4" /> Add route
+        </button>
+      </header>
 
-        {/* Visual map */}
-        <RouteVisual routes={ROUTES} />
-
-        {/* Stats strip */}
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: "Total Routes",    value: ROUTES.length.toString()                                               },
-            { label: "Verified",        value: ROUTES.filter(r => r.status === "verified").length.toString()          },
-            { label: "Completed Jobs",  value: ROUTES.reduce((a, r) => a + r.jobs, 0).toString()                      },
-            { label: "Avg Win Rate",    value: Math.round(ROUTES.filter(r => r.jobs > 0).reduce((a, r) => a + r.winRate, 0) / ROUTES.filter(r => r.jobs > 0).length) + "%" },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-[14px] border border-line p-4">
-              <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-[0.07em]">{s.label}</span>
-              <p className="text-[22px] font-bold text-ink tracking-[-0.5px] leading-none mt-1">{s.value}</p>
+      <section className="mt-5 grid grid-cols-2 overflow-hidden rounded-[14px] border border-line/90 bg-white/82 shadow-[0_12px_36px_rgba(20,52,98,.06)] backdrop-blur lg:grid-cols-4">
+        {[
+          { label: "Route inventory", value: ROUTES.length, note: "Configured lanes", icon: Layers3, tone: "text-blue-600 bg-blue-50" },
+          { label: "Verified", value: verified, note: "Eligible for matching", icon: CheckCircle2, tone: "text-emerald bg-emerald-soft" },
+          { label: "Completed jobs", value: completedJobs, note: "Across active routes", icon: Navigation, tone: "text-violet-600 bg-violet-50" },
+          { label: "Average win rate", value: `${averageWinRate}%`, note: "+4.2% this quarter", icon: Gauge, tone: "text-gold-dark bg-gold-soft" },
+        ].map(({ label, value, note, icon: Icon, tone }, index) => (
+          <div key={label} className={`flex min-w-0 items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5 ${index < 2 ? "border-b border-line-light lg:border-b-0" : ""} ${index % 2 === 0 ? "border-r border-line-light" : ""} ${index === 1 ? "lg:border-r" : ""} ${index === 2 ? "lg:border-r" : ""}`}>
+            <span className={`grid h-10 w-10 place-items-center rounded-xl ${tone}`}><Icon className="h-[18px] w-[18px]" /></span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-3">{label}</p>
+              <p className="mt-0.5 text-[22px] font-bold leading-none tracking-[-0.5px] text-ink">{value}</p>
+              <p className="mt-1 text-[11px] text-ink-3">{note}</p>
             </div>
-          ))}
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-5 grid overflow-hidden rounded-[16px] border border-[#cdd8e8] bg-[#0d1d3f] shadow-[0_24px_60px_rgba(12,26,62,.16)] xl:grid-cols-[minmax(0,1fr)_330px]">
+        <div className="relative min-h-[360px] overflow-hidden border-b border-white/10 sm:min-h-[430px] xl:border-b-0 xl:border-r">
+          <div className="absolute left-5 top-5 z-20 flex items-center gap-2 rounded-lg border border-white/15 bg-[#0a1733]/80 px-3 py-2 text-white shadow-lg backdrop-blur-md">
+            <LocateFixed className="h-4 w-4 text-[#78b7ff]" />
+            <div><p className="text-[11px] font-semibold">Asia coverage map</p><p className="text-[9.5px] text-white/55">Destination hub: Hong Kong</p></div>
+          </div>
+          <div className="absolute right-4 top-4 z-20 flex flex-col overflow-hidden rounded-lg border border-white/15 bg-[#0a1733]/80 shadow-lg backdrop-blur-md">
+            <MapControl label="Zoom in" onClick={() => setZoom((value) => Math.min(1.18, value + .06))}><ZoomIn className="h-4 w-4" /></MapControl>
+            <MapControl label="Zoom out" onClick={() => setZoom((value) => Math.max(1, value - .06))}><ZoomOut className="h-4 w-4" /></MapControl>
+            <MapControl label="Reset map" onClick={() => setZoom(1)}><LocateFixed className="h-4 w-4" /></MapControl>
+          </div>
+
+          <div className="absolute inset-0 origin-center transition-transform duration-500 ease-out" style={{ transform: `scale(${zoom})` }}>
+            <svg viewBox="0 0 900 480" className="h-full w-full" role="img" aria-label="Service routes from Asia to Hong Kong">
+              <defs>
+                <linearGradient id="ocean" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#0d234d" /><stop offset="1" stopColor="#091731" /></linearGradient>
+                <pattern id="map-grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#8bb7ed" strokeOpacity=".07" /></pattern>
+                <filter id="hub-glow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+              </defs>
+              <rect width="900" height="480" fill="url(#ocean)" />
+              <rect width="900" height="480" fill="url(#map-grid)" />
+              <path d="M210 35L365 22L472 55L545 95L620 102L650 143L619 171L574 168L548 214L500 228L473 272L429 293L390 278L371 231L324 211L290 165L240 137Z" fill="#7690b3" fillOpacity=".17" stroke="#9eb7d7" strokeOpacity=".20" />
+              <path d="M330 232L385 248L420 298L445 338L430 412L398 438L372 392L355 346L316 315Z" fill="#7690b3" fillOpacity=".13" stroke="#9eb7d7" strokeOpacity=".16" />
+              <path d="M468 286L515 304L547 341L575 381L552 427L520 397L495 351L454 327Z" fill="#7690b3" fillOpacity=".15" stroke="#9eb7d7" strokeOpacity=".18" />
+              <path d="M650 171L674 190L665 225L645 213Z" fill="#7690b3" fillOpacity=".28" />
+              <path d="M682 244L706 263L713 311L696 342L678 299Z" fill="#7690b3" fillOpacity=".17" />
+              <text x="420" y="125" fill="#c8d8ed" fillOpacity=".35" fontSize="12" fontWeight="600">CHINA</text>
+              <text x="368" y="346" fill="#c8d8ed" fillOpacity=".28" fontSize="11" fontWeight="600">THAILAND</text>
+              <text x="480" y="382" fill="#c8d8ed" fillOpacity=".28" fontSize="11" fontWeight="600">VIETNAM</text>
+              {ROUTES.map((route) => {
+                const startX = route.mapX * 9
+                const startY = route.mapY * 4.8
+                const selectedRoute = route.id === selectedId
+                const stroke = route.status === "verified" ? "#65a9ff" : route.status === "pending" ? "#e0b94f" : "#7d8ba3"
+                return <path key={route.id} d={`M ${startX} ${startY} Q ${(startX + 700) / 2} ${Math.min(startY, 210) - 65} 700 238`} fill="none" stroke={stroke} strokeWidth={selectedRoute ? 3 : 1.6} strokeOpacity={selectedRoute ? .95 : .5} strokeDasharray={route.status === "verified" ? undefined : "7 7"} />
+              })}
+              <circle cx="700" cy="238" r="24" fill="#58a4ff" fillOpacity=".12" filter="url(#hub-glow)" />
+              <circle cx="700" cy="238" r="8" fill="#f2cf68" />
+              <circle cx="700" cy="238" r="3" fill="#fff" />
+              <text x="716" y="232" fill="#fff" fontSize="12" fontWeight="700">HKG</text>
+              <text x="716" y="248" fill="#9fb5d4" fontSize="9.5">Hong Kong hub</text>
+            </svg>
+
+            {ROUTES.map((route) => {
+              const config = STATUS[route.status]
+              const selectedRoute = route.id === selectedId
+              return (
+                <button key={route.id} onClick={() => setSelectedId(route.id)} aria-label={`Select ${route.origin} route`} className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-lg border px-2.5 py-1.5 text-left shadow-lg backdrop-blur-md transition ${selectedRoute ? "scale-105 border-[#80baff] bg-[#173a72] text-white" : "border-white/15 bg-[#0b1b3a]/78 text-white/75 hover:border-white/35 hover:text-white"}`} style={{ left: `${route.mapX}%`, top: `${route.mapY}%` }}>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold"><span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />{route.originCode}</span>
+                  <span className="mt-0.5 block text-[8.5px] text-white/45">{route.airport}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="absolute bottom-4 left-5 z-20 flex flex-wrap gap-3 rounded-lg border border-white/10 bg-[#08152e]/72 px-3 py-2 text-[9.5px] text-white/65 backdrop-blur-md">
+            {Object.entries(STATUS).map(([key, config]) => <span key={key} className="flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />{config.label}</span>)}
+          </div>
         </div>
 
-        {/* Route cards */}
-        <div className="flex flex-col gap-4">
-          {ROUTES.map((route, i) => {
-            const cfg = STATUS_CFG[route.status];
-            const StatusIcon = cfg.icon;
-            return (
-              <motion.div
-                key={route.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.04 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                className="bg-white rounded-[16px] border border-line p-6 transition-all duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <p className="text-[16px] font-semibold text-ink">{route.origin}</p>
-                      <span className="text-ink-3 font-normal">→</span>
-                      <p className="text-[16px] font-semibold text-ink">Hong Kong (HKG)</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {route.modes.map(m => (
-                        <div key={m} className="flex items-center gap-1.5">
-                          {m === "Air" ? <Plane className="w-3.5 h-3.5 text-navy" strokeWidth={1.75} /> : <Ship className="w-3.5 h-3.5 text-navy" strokeWidth={1.75} />}
-                          <span className="text-[12.5px] font-medium text-navy">{m}</span>
-                        </div>
-                      ))}
-                      <span className="text-line">·</span>
-                      <span className="text-[12.5px] text-ink-2">Max {route.capacityKg.toLocaleString()} kg</span>
-                      {route.certified && (
-                        <>
-                          <span className="text-line">·</span>
-                          <div className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald" strokeWidth={2.2} />
-                            <span className="text-[12px] text-emerald font-medium">IATA Certified</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
-                      <StatusIcon className="w-3.5 h-3.5" strokeWidth={2} />
-                      <span className="text-[11px] font-semibold">{cfg.label}</span>
-                    </div>
-                    <button className="px-3.5 py-1.5 rounded-lg border border-line text-[12px] font-medium text-ink-2 hover:bg-canvas hover:text-ink transition-all duration-200 cursor-pointer">
-                      Edit
-                    </button>
-                  </div>
-                </div>
+        <RouteInspector route={selected} onEdit={() => setShowAdd(true)} />
+      </section>
 
-                {route.status === "incomplete" ? (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200">
-                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
-                    <div>
-                      <p className="text-[12.5px] font-semibold text-red-700">Route is incomplete</p>
-                      <p className="text-[12px] text-red-600 mt-0.5">Add at least one service and upload your credentials to activate this route for bid eligibility.</p>
-                    </div>
-                  </div>
-                ) : route.status === "pending" ? (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                    <Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
-                    <p className="text-[12.5px] text-amber-700">Pending LBID verification. You can bid on open requests during verification. Verification typically takes 2 business days.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 gap-4 pt-4 border-t border-line-light">
-                    <div>
-                      <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-[0.07em]">Jobs Completed</span>
-                      <p className="text-[18px] font-bold text-ink mt-0.5">{route.jobs}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-[0.07em]">Win Rate</span>
-                      <p className="text-[18px] font-bold text-emerald mt-0.5">{route.winRate}%</p>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-[0.07em]">Services</span>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {route.services.map(s => (
-                          <span key={s} className="text-[11px] text-ink-2 bg-canvas border border-line px-2 py-0.5 rounded-full">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+      <section className="mt-5 overflow-hidden rounded-[14px] border border-line/90 bg-white/90 shadow-[0_10px_30px_rgba(20,52,98,.05)]">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div><h2 className="text-[14px] font-bold text-ink">Route inventory</h2><p className="mt-1 text-[11.5px] text-ink-3">Review capacity, verification and performance without leaving the map.</p></div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <label className="relative min-w-[240px]"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-3" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search region or airport" className="h-9 w-full rounded-lg border border-line bg-canvas/60 pl-9 pr-3 text-[12px] outline-none transition focus:border-navy/35 focus:bg-white focus:ring-2 focus:ring-navy/10" /></label>
+            <div className="flex rounded-lg border border-line bg-canvas/60 p-1" aria-label="Filter by freight mode">
+              {(["All", "Air", "Sea"] as const).map((item) => <button key={item} onClick={() => setMode(item)} className={`min-w-12 rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${mode === item ? "bg-white text-navy shadow-sm" : "text-ink-3 hover:text-ink"}`}>{item}</button>)}
+            </div>
+          </div>
         </div>
+        <div className="divide-y divide-line-light">
+          {filteredRoutes.map((route) => <RouteRow key={route.id} route={route} active={route.id === selectedId} onSelect={() => setSelectedId(route.id)} />)}
+          {!filteredRoutes.length ? <div className="grid min-h-32 place-items-center px-5 text-center"><div><Filter className="mx-auto h-5 w-5 text-ink-3" /><p className="mt-2 text-[13px] font-semibold text-ink">No routes match this filter</p><button onClick={() => { setMode("All"); setQuery("") }} className="mt-1 text-[11.5px] font-medium text-navy hover:underline">Clear filters</button></div></div> : null}
+        </div>
+      </section>
+
+      <AddRouteDialog open={showAdd} onClose={() => setShowAdd(false)} />
+    </main>
+  )
+}
+
+function RouteInspector({ route, onEdit }: { route: ServiceRoute; onEdit: () => void }) {
+  const config = STATUS[route.status]
+  const StatusIcon = config.icon
+  return (
+    <aside className="flex min-h-[430px] flex-col bg-[#0b1935] p-6 text-white">
+      <div className="flex items-start justify-between"><div><p className="text-[9.5px] font-bold uppercase tracking-[.12em] text-[#78b7ff]">Selected route</p><h2 className="mt-2 text-[21px] font-bold tracking-[-.4px]">{route.origin} to HKG</h2><p className="mt-1 text-[11.5px] text-white/45">{route.airport} / Hong Kong</p></div><span className={`grid h-9 w-9 place-items-center rounded-xl ${route.status === "verified" ? "bg-emerald/15 text-[#70d0a8]" : "bg-white/10 text-white/70"}`}><MapPin className="h-4 w-4" /></span></div>
+      <div className={`mt-5 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${config.badge}`}><StatusIcon className="h-3 w-3" />{config.label}</div>
+      <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/10">
+        <Metric label="Capacity" value={`${route.capacityKg.toLocaleString()} kg`} />
+        <Metric label="Win rate" value={`${route.winRate}%`} />
+        <Metric label="Jobs" value={route.jobs.toString()} />
+        <Metric label="Modes" value={route.modes.join(" + ")} />
       </div>
+      <div className="mt-6"><p className="text-[9.5px] font-bold uppercase tracking-[.11em] text-white/40">Enabled services</p><div className="mt-3 flex flex-wrap gap-2">{route.services.length ? route.services.map((service) => <span key={service} className="rounded-full border border-white/10 bg-white/[.06] px-2.5 py-1 text-[9.5px] text-white/65">{service}</span>) : <p className="text-[11.5px] leading-5 text-amber-300/80">Add at least one service to activate this route.</p>}</div></div>
+      <div className="mt-auto pt-6"><button onClick={onEdit} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[.07] text-[12px] font-semibold text-white transition hover:border-white/30 hover:bg-white/10">Edit route details <ChevronRight className="h-3.5 w-3.5" /></button></div>
+    </aside>
+  )
+}
 
-      {/* Add Route modal */}
-      <AnimatePresence>
-        {showAdd && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: "rgba(8,18,42,0.45)", backdropFilter: "blur(4px)" }}
-            onClick={e => { if (e.target === e.currentTarget) setShowAdd(false); }}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white rounded-2xl border border-line w-[440px] p-7"
-              style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.18)" }}
-            >
-              <div className="flex items-start justify-between mb-5">
-                <p className="text-[17px] font-bold text-ink">Add New Route</p>
-                <button onClick={() => setShowAdd(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-3 hover:bg-canvas cursor-pointer transition-all">
-                  <X className="w-4 h-4" strokeWidth={2} />
-                </button>
-              </div>
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12.5px] font-semibold text-ink-2">Origin Region</label>
-                  <select className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line text-[13.5px] text-ink outline-none focus:border-navy transition-all appearance-none cursor-pointer">
-                    <option value="">Select origin…</option>
-                    <option>Vietnam (SGN / HAN)</option>
-                    <option>Thailand (BKK)</option>
-                    <option>Malaysia (KUL)</option>
-                    <option>Philippines (MNL)</option>
-                    <option>Indonesia (CGK)</option>
-                    <option>South Korea (ICN)</option>
-                    <option>Japan (NRT / KIX)</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12.5px] font-semibold text-ink-2">Freight Mode</label>
-                  <div className="flex gap-2">
-                    {["Air","Sea"].map(m => (
-                      <label key={m} className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-line hover:border-navy/30 cursor-pointer transition-all duration-200">
-                        <input type="checkbox" className="accent-navy" />
-                        {m === "Air" ? <Plane className="w-3.5 h-3.5 text-navy" strokeWidth={1.75} /> : <Ship className="w-3.5 h-3.5 text-navy" strokeWidth={1.75} />}
-                        <span className="text-[13px] font-medium text-ink">{m}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12.5px] font-semibold text-ink-2">Max Capacity (kg)</label>
-                  <input type="number" placeholder="e.g. 2000" className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line text-[13.5px] text-ink outline-none focus:border-navy transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
-                </div>
-                <button
-                  onClick={() => setShowAdd(false)}
-                  className="w-full py-3 rounded-xl bg-navy text-white text-[13.5px] font-semibold hover:bg-navy-hover hover:-translate-y-[1px] hover:shadow-[0_6px_20px_rgba(12,26,62,0.26)] transition-all duration-200 cursor-pointer"
-                >
-                  Add Route
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="bg-[#102243] px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.08em] text-white/35">{label}</p><p className="mt-1 text-[13px] font-semibold text-white/90">{value}</p></div>
+}
+
+function RouteRow({ route, active, onSelect }: { route: ServiceRoute; active: boolean; onSelect: () => void }) {
+  const config = STATUS[route.status]
+  const StatusIcon = config.icon
+  return (
+    <button onClick={onSelect} className={`grid w-full gap-4 px-5 py-4 text-left transition hover:bg-[#f7f9fc] md:grid-cols-[minmax(240px,1.4fr)_130px_130px_150px_auto] md:items-center ${active ? "bg-blue-50/45 shadow-[inset_3px_0_#2f78d3]" : ""}`}>
+      <span className="flex min-w-0 items-center gap-3"><span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl ${route.modes.includes("Air") ? "bg-blue-50 text-blue-600" : "bg-cyan-50 text-cyan-700"}`}>{route.modes.includes("Air") ? <Plane className="h-4 w-4" /> : <Ship className="h-4 w-4" />}</span><span className="min-w-0"><strong className="block truncate text-[13px] font-semibold text-ink">{route.origin} <span className="font-normal text-ink-3">to</span> Hong Kong</strong><small className="mt-1 block text-[10.5px] text-ink-3">{route.airport} / HKG / {route.id}</small></span></span>
+      <span><small className="block text-[9px] font-bold uppercase tracking-[.08em] text-ink-3">Capacity</small><strong className="mt-1 block text-[12px] font-semibold text-ink-2">{route.capacityKg.toLocaleString()} kg</strong></span>
+      <span><small className="block text-[9px] font-bold uppercase tracking-[.08em] text-ink-3">Performance</small><strong className="mt-1 block text-[12px] font-semibold text-ink-2">{route.jobs} jobs / {route.winRate}%</strong></span>
+      <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9.5px] font-semibold ${config.badge}`}><StatusIcon className="h-3 w-3" />{config.label}</span>
+      <ChevronRight className="hidden h-4 w-4 justify-self-end text-ink-3 md:block" />
+    </button>
+  )
+}
+
+function MapControl({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+  return <button aria-label={label} title={label} onClick={onClick} className="grid h-9 w-9 place-items-center border-b border-white/10 text-white/65 transition last:border-b-0 hover:bg-white/10 hover:text-white">{children}</button>
+}
+
+function AddRouteDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {open ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 grid place-items-center bg-[#08122a]/50 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+        <motion.div role="dialog" aria-modal="true" aria-labelledby="add-route-title" initial={{ opacity: 0, y: 14, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: .98 }} transition={{ duration: .22 }} className="w-full max-w-[460px] rounded-[14px] border border-line bg-white p-6 shadow-[0_28px_90px_rgba(0,0,0,.22)]">
+          <div className="flex items-start justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.1em] text-gold-dark">Network coverage</p><h2 id="add-route-title" className="mt-1 text-[20px] font-bold text-ink">Add a service route</h2></div><button onClick={onClose} aria-label="Close add route dialog" className="grid h-8 w-8 place-items-center rounded-lg text-ink-3 transition hover:bg-canvas hover:text-ink"><X className="h-4 w-4" /></button></div>
+          <div className="mt-5 space-y-4">
+            <label className="block text-[12px] font-semibold text-ink-2">Origin region<select className="mt-1.5 h-11 w-full rounded-lg border border-line bg-white px-3 text-[13px] outline-none transition focus:border-navy/35 focus:ring-2 focus:ring-navy/10"><option value="">Select an origin</option><option>Vietnam (SGN / HAN)</option><option>Malaysia (KUL)</option><option>Philippines (MNL)</option><option>Indonesia (CGK)</option><option>Japan (NRT / KIX)</option></select></label>
+            <fieldset><legend className="text-[12px] font-semibold text-ink-2">Freight mode</legend><div className="mt-1.5 grid grid-cols-2 gap-2">{(["Air", "Sea"] as const).map((item) => <label key={item} className="flex h-11 items-center gap-2 rounded-lg border border-line px-3 text-[13px] font-medium text-ink transition hover:border-navy/25"><input type="checkbox" className="accent-navy" />{item === "Air" ? <Plane className="h-4 w-4 text-blue-600" /> : <Ship className="h-4 w-4 text-cyan-700" />}{item}</label>)}</div></fieldset>
+            <label className="block text-[12px] font-semibold text-ink-2">Maximum capacity (kg)<input type="number" placeholder="e.g. 2000" className="mt-1.5 h-11 w-full rounded-lg border border-line px-3 text-[13px] outline-none transition focus:border-navy/35 focus:ring-2 focus:ring-navy/10" /></label>
+            <button onClick={onClose} className="h-11 w-full rounded-lg bg-navy text-[13px] font-semibold text-white transition hover:bg-[#17316b]">Save route draft</button>
+          </div>
+        </motion.div>
+      </motion.div> : null}
+    </AnimatePresence>
+  )
 }

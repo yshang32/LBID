@@ -37,24 +37,41 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
 
   if (session) {
-    const deadline = body.deadline ?? body.shipDate ?? new Date(Date.now() + 48 * 3600000).toISOString()
+    const rawDeadline = body.deadline ?? body.shipDate ?? new Date(Date.now() + 48 * 3600000).toISOString()
+    const deadlineDate = new Date(rawDeadline)
+    if (Number.isNaN(deadlineDate.getTime())) {
+      return NextResponse.json({ error: "INVALID_SHIPMENT_DATE" }, { status: 400 })
+    }
+    const deadline = deadlineDate.toISOString()
     // The bid window starts only after an Admin publishes this request.
     const bidDeadline = new Date(Date.now() + 3 * 3600000).toISOString()
-    const cargoDetails = body.cargo_details ?? body.cargoDetails ?? {
-      cargo: body.cargo ?? body.commodity ?? "General cargo",
-      cargo_type: body.cargoType ?? body.cargo_type ?? "general",
-      weight_kg: Number(body.weightKg ?? body.grossWeight ?? 0),
-      cbm: Number(body.cbm ?? body.volume ?? 0),
-      pieces: Number(body.pieces ?? 0),
-      mode: body.mode ?? "air",
-      incoterm: body.incoterm ?? body.incoterms ?? null,
-      budget: body.budget ?? null,
-      notes: body.notes ?? null,
+    const suppliedCargo = body.cargo_details ?? body.cargoDetails ?? {}
+    const suppliedRoute = body.route && typeof body.route === "object" ? body.route : {}
+    const cargoDetails = {
+      ...suppliedCargo,
+      cargo: suppliedCargo.cargo ?? body.cargo ?? body.commodity ?? body.cargoType ?? "General cargo",
+      cargo_type: suppliedCargo.cargo_type ?? body.cargoType ?? body.cargo_type ?? "general",
+      weight_kg: Number(suppliedCargo.weight_kg ?? body.weightKg ?? body.grossWeight ?? 0),
+      cbm: Number(suppliedCargo.cbm ?? body.cbm ?? body.volume ?? 0),
+      pieces: Number(suppliedCargo.pieces ?? body.pieces ?? 0),
+      mode: suppliedCargo.mode ?? body.mode ?? "air",
+      incoterm: suppliedCargo.incoterm ?? body.incoterm ?? body.incoterms ?? null,
+      budget: suppliedCargo.budget ?? body.budget ?? null,
+      notes: suppliedCargo.notes ?? body.notes ?? null,
     }
-    const route = body.route ?? {
-      origin: body.origin ?? "Origin pending",
-      destination: body.destination ?? "Hong Kong",
+    const route = {
+      ...suppliedRoute,
+      origin: String(suppliedRoute.origin ?? body.origin ?? "").trim(),
+      destination: String(suppliedRoute.destination ?? body.destination ?? "Hong Kong (HKG)").trim(),
     }
+    const servicesNeeded = body.services_needed ?? body.servicesNeeded ?? body.services ?? []
+
+    if (!route.origin) return NextResponse.json({ error: "ORIGIN_REQUIRED" }, { status: 400 })
+    if (!route.destination) return NextResponse.json({ error: "DESTINATION_REQUIRED" }, { status: 400 })
+    if (!String(cargoDetails.cargo_type || "").trim()) return NextResponse.json({ error: "CARGO_TYPE_REQUIRED" }, { status: 400 })
+    if (!Number.isFinite(cargoDetails.weight_kg) || cargoDetails.weight_kg <= 0) return NextResponse.json({ error: "VALID_WEIGHT_REQUIRED" }, { status: 400 })
+    if (!Number.isFinite(cargoDetails.cbm) || cargoDetails.cbm <= 0) return NextResponse.json({ error: "VALID_VOLUME_REQUIRED" }, { status: 400 })
+    if (!Array.isArray(servicesNeeded) || servicesNeeded.length === 0) return NextResponse.json({ error: "SERVICE_REQUIRED" }, { status: 400 })
 
     const { data, error } = await session.supabase
       .from("shipment_requests")
@@ -62,7 +79,7 @@ export async function POST(request: Request) {
         agent_id: session.user.id,
         cargo_details: cargoDetails,
         route,
-        services_needed: body.services_needed ?? body.servicesNeeded ?? body.services ?? [],
+        services_needed: servicesNeeded,
         deadline,
         bid_deadline: bidDeadline,
         is_anonymous: body.isAnonymous ?? body.is_anonymous ?? true,
@@ -71,6 +88,7 @@ export async function POST(request: Request) {
       .select("id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at")
       .single()
 
+    if (error?.code === "42501") return NextResponse.json({ error: "CLIENT_CAPABILITY_REQUIRED" }, { status: 403 })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true, shipmentRequest: data }, { status: 201 })
   }

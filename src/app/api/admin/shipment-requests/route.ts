@@ -12,15 +12,36 @@ export async function GET(request: Request) {
   const admin = await getAdminApiContext(request)
   if (!admin) return NextResponse.json({ error: "ADMIN_REQUIRED" }, { status: 403 })
 
-  const { data, error } = await admin.service
+  const status = new URL(request.url).searchParams.get("status")?.toLowerCase() || "pending"
+  let query = admin.service
     .from("shipment_requests")
     .select(fields)
-    .eq("status", "PENDING_REVIEW")
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(100)
 
+  if (status === "pending") query = query.eq("status", "PENDING_REVIEW")
+  if (status === "approved") query = query.in("status", ["OPEN", "CLOSED", "AWARDED"])
+  if (status === "rejected") query = query.eq("status", "REJECTED")
+
+  const { data, error } = await query
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ shipmentRequests: data || [] })
+  const agentIds = Array.from(new Set((data || []).map((item) => item.agent_id).filter(Boolean)))
+  const { data: profiles, error: profilesError } = agentIds.length
+    ? await admin.service.from("company_profiles").select("user_id, company_name_en, company_name_zh").in("user_id", agentIds)
+    : { data: [], error: null }
+  if (profilesError) return NextResponse.json({ error: profilesError.message }, { status: 500 })
+
+  const profileByUser = new Map((profiles || []).map((profile) => [profile.user_id, profile]))
+  const shipmentRequests = (data || []).map((item) => {
+    const profile = profileByUser.get(item.agent_id)
+    return {
+      ...item,
+      company_name_en: profile?.company_name_en || null,
+      company_name_zh: profile?.company_name_zh || null,
+    }
+  })
+  return NextResponse.json({ shipmentRequests })
 }
 
 export async function PATCH(request: Request) {

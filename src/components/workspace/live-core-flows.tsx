@@ -4,25 +4,31 @@ import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   Award,
   BadgeCheck,
   Bell,
   Briefcase,
+  CalendarDays,
   CheckCircle2,
+  ChevronRight,
   Clock3,
   Coins,
   Crown,
   FileText,
   Inbox,
   Lock,
+  Network,
   MessageSquare,
   Package,
   Plane,
   Send,
   Ship,
+  ShieldCheck,
   Sparkles,
+  TrendingUp,
   Truck,
   Upload,
 } from "lucide-react"
@@ -61,6 +67,7 @@ export function LiveDashboard({ locale }: { locale: Locale }) {
   const [state, setState] = useState<LoadState>("loading")
   const [workspace, setWorkspace] = useState<LiveWorkspace>({})
   const [error, setError] = useState("")
+  const [viewMode, setViewMode] = useState<"overview" | "client" | "forwarder">("overview")
 
   useEffect(() => {
     let active = true
@@ -91,73 +98,298 @@ export function LiveDashboard({ locale }: { locale: Locale }) {
     return !["awb", "invoice", "packing_list", "packing-list"].every((type) => docs.includes(type))
   }).length
   const nextOpportunity = [...opportunities].sort((a, b) => secondsLeft(a.bid_deadline) - secondsLeft(b.bid_deadline))[0]
+  const priorityHref = nextOpportunity ? `/${locale}/marketplace/${nextOpportunity.id}` : quoteReady ? `/${locale}/quotations/compare` : `/${locale}/inquiries/new`
+  const priorityTitle = nextOpportunity ? routeText(nextOpportunity.route) : quoteReady ? "Award your next logistics partner" : "Create your next shipment request"
+  const todayLabel = new Intl.DateTimeFormat(locale === "zh" ? "zh-HK" : "en-HK", { weekday: "long", day: "numeric", month: "long" }).format(new Date())
+  const isZh = locale === "zh"
+  const focusHref = viewMode === "client"
+    ? `/${locale}/inquiries/new`
+    : nextOpportunity
+      ? `/${locale}/marketplace/${nextOpportunity.id}`
+      : viewMode === "forwarder"
+        ? `/${locale}/marketplace`
+        : quoteReady
+          ? `/${locale}/quotations/compare`
+          : `/${locale}/inquiries/new`
+  const focusTitle = viewMode === "client"
+    ? (isZh ? "建立需求，讓合適嘅 Forwarder 回應" : "Create demand and let qualified forwarders respond")
+    : nextOpportunity
+      ? routeText(nextOpportunity.route)
+      : viewMode === "forwarder"
+        ? (isZh ? "配對網絡正在尋找下一個機會" : "Your matching network is scanning for the next opportunity")
+        : quoteReady
+          ? (isZh ? "有報價等待你作出決定" : "Quotations are ready for your decision")
+          : (isZh ? "你嘅物流網絡已經準備好" : "Your logistics network is ready")
 
   return (
-    <WorkspaceSurface
-      eyebrow="Today"
-      title={`Good morning, ${firstName(companyName)}.`}
-      intro={state === "loading" ? "Loading your live workspace..." : "Your next actions are pulled from live shipment, bid and order data."}
-    >
-      {state === "error" ? <StatePanel tone="error" title="Workspace could not load" body={error} /> : null}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Metric label="Waiting review" value={waitingReview} helper="SR pending LBID admin" icon={FileText} />
-        <Metric label="Open opportunities" value={opportunities.length} helper="Live SR available to bid" icon={Plane} />
-        <Metric label="Quotes to decide" value={quoteReady} helper="Closed SR awaiting award" icon={Award} />
-        <Metric label="Missing docs" value={missingDocs} helper="Orders needing documents" icon={Upload} />
-      </div>
+    <TodayDashboardView
+      locale={locale}
+      state={state}
+      error={error}
+      workspace={workspace}
+      companyName={companyName}
+      todayLabel={todayLabel}
+      viewMode={viewMode}
+      setViewMode={setViewMode}
+      focusHref={focusHref}
+      focusTitle={focusTitle}
+      nextOpportunity={nextOpportunity}
+      waitingReview={waitingReview}
+      opportunities={opportunities}
+      quoteReady={quoteReady}
+      missingDocs={missingDocs}
+      orders={orders}
+    />
+  )
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
-        <section className="rounded-[22px] border border-line bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.11em] text-gold-dark">Next best action</p>
-              <h2 className="mt-2 text-[24px] font-bold tracking-[-0.6px] text-ink">
-                {nextOpportunity ? `${routeText(nextOpportunity.route)}` : quoteReady ? "Review closed bids and award a partner" : "Create or review your next shipment request"}
-              </h2>
-              <p className="mt-2 max-w-2xl text-[13.5px] leading-6 text-ink-3">
-                {nextOpportunity
-                  ? `${cargoText(nextOpportunity.cargo_details)}. Bid window closes in ${timeLeft(nextOpportunity.bid_deadline)}.`
-                  : quoteReady
-                  ? "You have sealed bids ready for comparison. Lowest price will be highlighted, but you can choose by service fit."
-                  : "Your dashboard is clean. Start by creating an SR or checking the marketplace."}
-              </p>
-            </div>
-            <Link
-              href={nextOpportunity ? `/${locale}/marketplace/${nextOpportunity.id}` : quoteReady ? `/${locale}/quotations/compare` : `/${locale}/inquiries/new`}
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-navy px-4 text-[13px] font-bold text-white shadow-[0_10px_25px_rgba(12,26,62,0.22)] transition hover:-translate-y-px hover:bg-navy-hover"
-            >
-              Continue <ArrowRight className="h-4 w-4" />
-            </Link>
+  /* Legacy Today layout retained temporarily while the new live canvas is validated. */
+  return (
+    <section className="min-h-screen bg-[#f5f7fa] px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+      <div className="mx-auto max-w-[1380px]">
+        <header className="flex flex-col gap-5 border-b border-[#dfe4ec] pb-7 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-[12px] font-medium text-[#64748b]"><CalendarDays className="h-3.5 w-3.5" />{todayLabel}</div>
+            <h1 className="mt-2 text-[30px] font-semibold leading-tight tracking-[-0.8px] text-[#0b1736] sm:text-[36px]">Good morning, {firstName(companyName)}.</h1>
+            <p className="mt-2 text-[13px] text-[#64748b]">Here is what changed, what needs attention, and where to act next.</p>
           </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/${locale}/marketplace`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#cfd6e2] bg-white px-4 text-[12px] font-semibold text-[#26344f] transition hover:border-[#9aa7ba] hover:bg-[#f8fafc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b2a64]"><Briefcase className="h-3.5 w-3.5" />Browse opportunities</Link>
+            <Link href={`/${locale}/inquiries/new`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0b2a64] px-4 text-[12px] font-semibold text-white shadow-[0_5px_14px_rgba(11,42,100,0.16)] transition hover:bg-[#10377d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b2a64]"><Package className="h-3.5 w-3.5" />New request</Link>
+          </div>
+        </header>
 
-          <div className="mt-6 grid gap-3">
-            <TaskRow href={`/${locale}/requests`} icon={FileText} title={`${waitingReview} SR waiting review`} meta="Admin must approve before bidding opens." />
-            <TaskRow href={`/${locale}/marketplace`} icon={Lock} title={`${opportunities.length} open sealed-bid opportunities`} meta="Forwarders can submit exactly one private quote." />
-            <TaskRow href={`/${locale}/quotations/compare`} icon={Award} title={`${quoteReady} bid comparison queue`} meta="Agency can award lowest or choose better-fit partner with confirmation." />
-            <TaskRow href={`/${locale}/orders`} icon={Truck} title={`${orders.length} active order workspaces`} meta={`${missingDocs} order(s) may need document action.`} />
-          </div>
+        {state === "error" ? <div className="mt-6"><StatePanel tone="error" title="Workspace could not load" body={error} /></div> : null}
+
+        <section aria-label="Company status" className="mt-6 grid grid-cols-2 overflow-hidden rounded-xl border border-[#dfe4ec] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(odd)]:border-r lg:grid-cols-4 lg:[&>*]:border-b-0 lg:[&>*]:border-r lg:[&>*:last-child]:border-r-0">
+          <DashboardStat label="Waiting review" value={waitingReview} helper="Shipment requests" icon={FileText} tone="blue" />
+          <DashboardStat label="Bid windows" value={opportunities.length} helper="Open now" icon={Clock3} tone="green" />
+          <DashboardStat label="Award decisions" value={quoteReady} helper="Quotes ready" icon={Award} tone="gold" />
+          <DashboardStat label="Document gaps" value={missingDocs} helper="Orders affected" icon={Upload} tone="red" />
         </section>
 
-        <section className="rounded-[22px] border border-line bg-white p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-bold text-ink">Live activity</h2>
-            <span className="rounded-full border border-emerald/20 bg-emerald-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-emerald">API connected</span>
-          </div>
-          <div className="mt-4 space-y-3">
-            {activityItems(workspace).map((item) => (
-              <div key={item.title} className="flex gap-3 rounded-[14px] border border-line-light bg-canvas/60 p-3">
-                <item.icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-navy" />
-                <div>
-                  <p className="text-[13px] font-semibold text-ink">{item.title}</p>
-                  <p className="mt-0.5 text-[12px] text-ink-3">{item.meta}</p>
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+          <section className="overflow-hidden rounded-xl border border-[#dfe4ec] bg-white shadow-[0_5px_22px_rgba(15,23,42,0.045)]">
+            <div className="flex items-center justify-between border-b border-[#e5e9f0] px-5 py-4 sm:px-6">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[#0b1736]">Priority queue</h2>
+                <p className="mt-1 text-[12px] text-[#758196]">Ordered by deadline and business impact</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#16825d]"><span className="h-1.5 w-1.5 rounded-full bg-[#20a676]" />Live</span>
+            </div>
+            <div className="divide-y divide-[#edf0f4]">
+              <DashboardActionRow href={priorityHref} icon={nextOpportunity ? Plane : quoteReady ? Award : Package} title={priorityTitle} meta={nextOpportunity ? `${cargoText(nextOpportunity.cargo_details)} · ${timeLeft(nextOpportunity.bid_deadline)}` : quoteReady ? "Compare valid bids and select a logistics partner" : "Publish demand and start a sealed bid window"} action={nextOpportunity ? "Review" : quoteReady ? "Compare" : "Create"} priority />
+              <DashboardActionRow href={`/${locale}/requests`} icon={FileText} title={`${waitingReview} request${waitingReview === 1 ? "" : "s"} waiting for review`} meta="Track approval and publishing status" action="View requests" />
+              <DashboardActionRow href={`/${locale}/quotations/compare`} icon={Award} title={`${quoteReady} award decision${quoteReady === 1 ? "" : "s"} pending`} meta="Lowest valid quote is highlighted; final choice remains yours" action="Review quotes" />
+              <DashboardActionRow href={`/${locale}/orders`} icon={Truck} title={`${missingDocs} order${missingDocs === 1 ? "" : "s"} with document gaps`} meta="Complete AWB, invoice and packing list requirements" action="Open orders" />
+            </div>
+          </section>
+
+          <aside className="overflow-hidden rounded-xl border border-[#19345f] bg-[#0b2148] text-white shadow-[0_10px_30px_rgba(11,33,72,0.14)]">
+            <div className="border-b border-white/10 px-5 py-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#e1bd64]">Bid window</p>
+              <h2 className="mt-1 text-[16px] font-semibold">{nextOpportunity ? "Next matched opportunity" : "No active match right now"}</h2>
+            </div>
+            {nextOpportunity ? (
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-md bg-white/[0.07] px-2.5 py-1.5 font-mono text-[11px]"><Clock3 className="h-3 w-3 text-[#e1bd64]" />{timeLeft(nextOpportunity.bid_deadline)}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Sealed</span>
                 </div>
+                <div className="mt-7 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <div><p className="text-[9px] uppercase tracking-[0.1em] text-white/40">From</p><p className="mt-1 text-[16px] font-semibold">{nextOpportunity.route?.origin || "Pending"}</p></div>
+                  <ArrowRight className="h-4 w-4 text-[#e1bd64]" />
+                  <div className="text-right"><p className="text-[9px] uppercase tracking-[0.1em] text-white/40">To</p><p className="mt-1 text-[16px] font-semibold">{nextOpportunity.route?.destination || nextOpportunity.route?.dest || "Hong Kong"}</p></div>
+                </div>
+                <p className="mt-6 border-t border-white/10 pt-4 text-[12px] leading-5 text-white/55">{cargoText(nextOpportunity.cargo_details)}</p>
+                <Link href={priorityHref} className="mt-5 flex h-10 items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-[#0b2148] transition hover:bg-[#f4e5bd]">Open opportunity <ArrowRight className="h-3.5 w-3.5" /></Link>
+              </div>
+            ) : (
+              <div className="p-5">
+                <div className="border-l-2 border-[#e1bd64] pl-4">
+                  <p className="text-[13px] font-medium">Your matching queue is clear.</p>
+                  <p className="mt-2 text-[12px] leading-5 text-white/55">LBID will surface a route here when it matches your certified coverage and capacity.</p>
+                </div>
+                <Link href={`/${locale}/profile`} className="mt-6 flex h-10 items-center justify-center gap-2 rounded-lg border border-white/15 text-[12px] font-semibold transition hover:border-white/30 hover:bg-white/[0.06]">Review matching profile <ArrowRight className="h-3.5 w-3.5" /></Link>
+              </div>
+            )}
+          </aside>
+        </div>
+
+        <section className="mt-6 overflow-hidden rounded-xl border border-[#dfe4ec] bg-white">
+          <div className="flex items-center justify-between border-b border-[#e5e9f0] px-5 py-4 sm:px-6">
+            <div><h2 className="text-[16px] font-semibold text-[#0b1736]">Company activity</h2><p className="mt-1 text-[12px] text-[#758196]">Current records from your LBID workspace</p></div>
+            <Link href={`/${locale}/notifications`} className="text-[11px] font-semibold text-[#0b2a64] hover:underline">View notifications</Link>
+          </div>
+          <div className="grid divide-y divide-[#edf0f4] md:grid-cols-3 md:divide-x md:divide-y-0">
+            {activityItems(workspace).map((item) => (
+              <div key={item.title} className="flex gap-3 px-5 py-4 sm:px-6">
+                <item.icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#53627a]" />
+                <div><p className="text-[13px] font-medium text-[#17213a]">{item.title}</p><p className="mt-1 text-[11px] leading-5 text-[#758196]">{item.meta}</p></div>
               </div>
             ))}
           </div>
         </section>
       </div>
-    </WorkspaceSurface>
+    </section>
   )
+}
+
+function DashboardStat({ label, value, helper, icon: Icon, tone }: { label: string; value: number; helper: string; icon: typeof Plane; tone: "blue" | "green" | "gold" | "red" }) {
+  const tones = {
+    blue: "bg-[#edf3fb] text-[#285a9f]",
+    green: "bg-[#edf8f3] text-[#16825d]",
+    gold: "bg-[#fbf5e8] text-[#9a6b13]",
+    red: "bg-[#fbefef] text-[#b54a4a]",
+  }
+  return (
+    <div className="flex min-h-[96px] items-center gap-3 border-[#e5e9f0] px-4 py-3 sm:min-h-[104px] sm:gap-4 sm:px-5 sm:py-4">
+      <span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg ${tones[tone]}`}><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-[#64748b]">{label}</p>
+        <div className="mt-1 flex items-baseline gap-2"><span className="text-[23px] font-semibold leading-none tracking-[-0.4px] text-[#0b1736]">{value}</span><span className="truncate text-[10px] text-[#8a95a7]">{helper}</span></div>
+      </div>
+    </div>
+  )
+}
+
+function DashboardActionRow({ href, icon: Icon, title, meta, action, priority = false }: { href: string; icon: typeof Plane; title: string; meta: string; action: string; priority?: boolean }) {
+  return (
+    <Link href={href} className={`group relative flex items-center gap-4 px-5 py-4 transition hover:bg-[#f8fafc] sm:px-6 ${priority ? "bg-[#fbfcfe]" : ""}`}>
+      {priority ? <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-[#c49a3c]" /> : null}
+      <span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg ${priority ? "bg-[#0b2a64] text-white" : "bg-[#eef2f7] text-[#53627a] group-hover:text-[#0b2a64]"}`}><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-[#17213a]">{title}</p>
+        <p className="mt-1 truncate text-[11px] text-[#758196]">{meta}</p>
+      </div>
+      <span className="hidden flex-shrink-0 text-[11px] font-semibold text-[#0b2a64] sm:inline">{action}</span>
+      <ChevronRight className="h-4 w-4 flex-shrink-0 text-[#9aa5b5] transition group-hover:translate-x-0.5 group-hover:text-[#0b2a64]" />
+    </Link>
+  )
+}
+
+type TodayViewMode = "overview" | "client" | "forwarder"
+
+function TodayDashboardView({ locale, state, error, workspace, companyName, todayLabel, viewMode, setViewMode, focusHref, focusTitle, nextOpportunity, waitingReview, opportunities, quoteReady, missingDocs, orders }: {
+  locale: Locale
+  state: LoadState
+  error: string
+  workspace: LiveWorkspace
+  companyName: string
+  todayLabel: string
+  viewMode: TodayViewMode
+  setViewMode: (mode: TodayViewMode) => void
+  focusHref: string
+  focusTitle: string
+  nextOpportunity?: JsonRecord
+  waitingReview: number
+  opportunities: JsonRecord[]
+  quoteReady: number
+  missingDocs: number
+  orders: JsonRecord[]
+}) {
+  const isZh = locale === "zh"
+
+  return (
+    <section className="relative min-h-screen overflow-hidden bg-[#f7f8f6] px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-50 [background-image:linear-gradient(115deg,transparent_0%,transparent_49.7%,rgba(24,115,84,0.05)_50%,transparent_50.3%)] [background-size:92px_92px]" />
+      <div className="relative mx-auto max-w-[1420px]">
+        <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+              <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#15946b] opacity-30" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#15946b]" /></span>
+              {isZh ? "LBID 即時網絡" : "LBID live network"}<span className="text-[#b4bcb6]">/</span>{todayLabel}
+            </div>
+            <h1 className="mt-3 max-w-[760px] font-serif text-[38px] font-normal leading-[1.03] text-[#101a2d] sm:text-[50px]">
+              {isZh ? `${firstName(companyName)}，今日先處理最重要嘅一件事。` : `Good morning, ${firstName(companyName)}. Start with what matters.`}
+            </h1>
+            <p className="mt-4 max-w-2xl text-[14px] leading-6 text-[#66716b]">{isZh ? "LBID 將需求、配對、密封報價同交付狀態整合成一個即時工作面。" : "Demand, matching, sealed quotes and delivery status are now one live operating surface."}</p>
+          </div>
+          <div className="flex w-full max-w-[455px] rounded-md border border-[#d9dfda] bg-white p-1 shadow-[0_8px_24px_rgba(28,45,38,0.06)]" role="group" aria-label={isZh ? "工作視圖" : "Workspace view"}>
+            {(["overview", "client", "forwarder"] as const).map((mode) => {
+              const labels = { overview: isZh ? "公司總覽" : "Overview", client: isZh ? "發出需求" : "Send cargo", forwarder: isZh ? "承接生意" : "Win business" }
+              return <button key={mode} type="button" aria-pressed={viewMode === mode} onClick={() => setViewMode(mode)} className={`h-9 flex-1 rounded-[3px] px-3 text-[11px] font-semibold transition ${viewMode === mode ? "bg-[#10254d] text-white shadow-sm" : "text-[#6b756f] hover:bg-[#f2f4f1] hover:text-[#10254d]"}`}>{labels[mode]}</button>
+            })}
+          </div>
+        </header>
+
+        {state === "error" ? <div className="mt-6"><StatePanel tone="error" title={isZh ? "無法載入公司工作台" : "Workspace could not load"} body={error} /></div> : null}
+
+        <div className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.75fr)]">
+          <LiveNetworkCanvas locale={locale} mode={viewMode} opportunity={nextOpportunity} title={focusTitle} href={focusHref} quoteReady={quoteReady} />
+          <div className="grid gap-5">
+            <section className="grid grid-cols-2 gap-3" aria-label={isZh ? "工作狀態" : "Work status"}>
+              <PulseMetric label={isZh ? "等待審核" : "Waiting review"} value={waitingReview} helper={isZh ? "需求" : "requests"} icon={FileText} tone="mint" />
+              <PulseMetric label={isZh ? "競價窗口" : "Bid windows"} value={opportunities.length} helper={isZh ? "進行中" : "open now"} icon={Clock3} tone="gold" />
+              <PulseMetric label={isZh ? "待選報價" : "Award decisions"} value={quoteReady} helper={isZh ? "等待決定" : "quotes ready"} icon={Award} tone="blue" />
+              <PulseMetric label={isZh ? "文件缺口" : "Document gaps"} value={missingDocs} helper={isZh ? "訂單" : "orders"} icon={Upload} tone="coral" />
+            </section>
+            <section className="overflow-hidden rounded-md bg-[#111a19] text-white shadow-[0_18px_45px_rgba(17,26,25,0.16)]">
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7fd0af]">{isZh ? "今日流程" : "Today's flow"}</p><h2 className="mt-1 text-[18px] font-medium">{isZh ? "下一步，已經排好。" : "Your next moves, ordered."}</h2></div>
+                <Activity className="h-4 w-4 text-white/40" />
+              </div>
+              <div className="divide-y divide-white/10">
+                <FlowRow href={`/${locale}/requests`} label={isZh ? "需求審核" : "Request review"} value={waitingReview} active={waitingReview > 0} />
+                <FlowRow href={`/${locale}/marketplace`} label={isZh ? "配對及競價" : "Match and bid"} value={opportunities.length} active={opportunities.length > 0} />
+                <FlowRow href={`/${locale}/quotations/compare`} label={isZh ? "選擇合作夥伴" : "Select partner"} value={quoteReady} active={quoteReady > 0} />
+                <FlowRow href={`/${locale}/orders`} label={isZh ? "交付及文件" : "Delivery and documents"} value={orders.length} active={orders.length > 0} />
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <section className="mt-5 grid overflow-hidden rounded-md border border-[#dce2dd] bg-white md:grid-cols-3 md:divide-x md:divide-[#e4e8e5]">
+          {activityItems(workspace).map((item) => (
+            <div key={item.title} className="flex gap-3 border-b border-[#e4e8e5] px-5 py-4 last:border-b-0 md:border-b-0">
+              <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-[#f0f4f1] text-[#416659]"><item.icon className="h-3.5 w-3.5" /></span>
+              <div><p className="text-[12px] font-semibold text-[#17231f]">{item.title}</p><p className="mt-1 text-[11px] leading-5 text-[#7b8580]">{item.meta}</p></div>
+            </div>
+          ))}
+        </section>
+      </div>
+    </section>
+  )
+}
+
+function LiveNetworkCanvas({ locale, mode, opportunity, title, href, quoteReady }: { locale: Locale; mode: TodayViewMode; opportunity?: JsonRecord; title: string; href: string; quoteReady: number }) {
+  const isZh = locale === "zh"
+  const origin = opportunity?.route?.origin || (mode === "client" ? (isZh ? "你嘅需求" : "Your demand") : (isZh ? "配對來源" : "Match origin"))
+  const destination = opportunity?.route?.destination || opportunity?.route?.dest || "Hong Kong"
+  const hasMatch = Boolean(opportunity)
+  const cta = mode === "client" ? (isZh ? "建立 Shipment Request" : "Create shipment request") : hasMatch ? (isZh ? "查看推薦機會" : "Open matched opportunity") : quoteReady ? (isZh ? "比較密封報價" : "Compare sealed quotes") : mode === "overview" ? (isZh ? "建立第一個需求" : "Create your first request") : (isZh ? "瀏覽接單市場" : "Browse opportunities")
+
+  return (
+    <section className="group relative min-h-[460px] overflow-hidden rounded-md border border-[#cad7cf] bg-[#e8efeb] p-6 shadow-[0_22px_55px_rgba(36,65,51,0.11)] sm:p-8">
+      <div aria-hidden className="absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(43,84,64,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(43,84,64,0.08)_1px,transparent_1px)] [background-size:44px_44px]" />
+      <div aria-hidden className="absolute -left-[5%] top-[38%] h-px w-[115%] rotate-[-7deg] bg-[#4fb58c]/45 shadow-[0_0_0_8px_rgba(79,181,140,0.025)]" />
+      <div aria-hidden className="absolute -left-[8%] top-[55%] h-px w-[118%] rotate-[5deg] bg-[#c7a243]/45" />
+      <div aria-hidden className="absolute left-[12%] top-[72%] h-px w-full rotate-[-2deg] bg-[#7398c9]/35" />
+      <div className="relative flex h-full min-h-[400px] flex-col">
+        <div className="flex items-start justify-between gap-5">
+          <div><span className="inline-flex items-center gap-2 rounded-full border border-[#b9c9c0] bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#386957]"><Network className="h-3 w-3" />{hasMatch ? (isZh ? "已找到配對" : "Match found") : (isZh ? "網絡掃描中" : "Network scanning")}</span><h2 className="mt-5 max-w-[700px] font-serif text-[31px] font-normal leading-[1.08] text-[#11221c] sm:text-[40px]">{title}</h2></div>
+          <span className="hidden rounded-full border border-[#bcc9c1] bg-white/55 px-3 py-1.5 font-mono text-[10px] text-[#50645a] sm:inline-flex">{hasMatch ? timeLeft(opportunity?.bid_deadline) : "LIVE"}</span>
+        </div>
+        <div className="my-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-8 sm:gap-7">
+          <div><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#718078]">{isZh ? "來源" : "Origin"}</p><p className="mt-2 text-[18px] font-semibold text-[#13241e] sm:text-[24px]">{origin}</p></div>
+          <div className="flex items-center gap-2 sm:gap-4"><span className="hidden h-px w-12 bg-[#789187] sm:block" /><span className="grid h-12 w-12 place-items-center rounded-full bg-[#10254d] text-white shadow-[0_8px_25px_rgba(16,37,77,0.25)] transition duration-300 group-hover:-translate-y-1 group-hover:rotate-3">{opportunity?.mode === "sea" ? <Ship className="h-5 w-5" /> : <Plane className="h-5 w-5" />}</span><span className="hidden h-px w-12 bg-[#789187] sm:block" /></div>
+          <div className="text-right"><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#718078]">{isZh ? "目的地" : "Destination"}</p><p className="mt-2 text-[18px] font-semibold text-[#13241e] sm:text-[24px]">{destination}</p></div>
+        </div>
+        <div className="grid gap-4 border-t border-[#bdcbc3] pt-5 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div><div className="flex flex-wrap gap-x-5 gap-y-2 text-[10px] font-semibold text-[#4b6459]"><span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#18835f]" />{isZh ? "密封及保密" : "Sealed and private"}</span><span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-[#a0771d]" />{hasMatch ? timeLeft(opportunity?.bid_deadline) : quoteReady ? `${quoteReady} ${isZh ? "份報價待選" : "awards pending"}` : (isZh ? "等待合適配對" : "Awaiting qualified match")}</span></div><p className="mt-3 max-w-2xl text-[12px] leading-5 text-[#637168]">{hasMatch ? cargoText(opportunity?.cargo_details) : isZh ? "系統會按照路線、能力、認證同過往表現推薦最相關嘅工作，唔會用假數據填滿畫面。" : "LBID ranks real work by route, capability, certification and track record instead of filling the screen with fake data."}</p></div>
+          <Link href={href} className="inline-flex h-11 items-center justify-center gap-2 rounded-[4px] bg-[#10254d] px-5 text-[12px] font-semibold text-white shadow-[0_8px_22px_rgba(16,37,77,0.2)] transition hover:-translate-y-0.5 hover:bg-[#173464] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10254d]">{cta}<ArrowRight className="h-3.5 w-3.5" /></Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PulseMetric({ label, value, helper, icon: Icon, tone }: { label: string; value: number; helper: string; icon: typeof Plane; tone: "mint" | "gold" | "blue" | "coral" }) {
+  const tones = { mint: "bg-[#dff3e9] text-[#147451]", gold: "bg-[#f5eaca] text-[#936b0f]", blue: "bg-[#e2ebf6] text-[#315f94]", coral: "bg-[#f6e4df] text-[#a94f3d]" }
+  return <div className="min-h-[125px] rounded-md border border-[#dde3de] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#c7d1ca] hover:shadow-[0_12px_28px_rgba(31,55,43,0.07)]"><div className={`grid h-8 w-8 place-items-center rounded-[4px] ${tones[tone]}`}><Icon className="h-3.5 w-3.5" /></div><div className="mt-4 flex items-end justify-between gap-2"><div><p className="text-[11px] font-semibold text-[#59655f]">{label}</p><p className="mt-1 text-[10px] text-[#9aa39e]">{helper}</p></div><span className="font-serif text-[30px] leading-none text-[#15231d]">{value}</span></div></div>
+}
+
+function FlowRow({ href, label, value, active }: { href: string; label: string; value: number; active: boolean }) {
+  return <Link href={href} className="group flex items-center gap-3 px-5 py-3.5 transition hover:bg-white/[0.055]"><span className={`h-2 w-2 rounded-full ${active ? "bg-[#66c7a3] shadow-[0_0_0_4px_rgba(102,199,163,0.12)]" : "bg-white/20"}`} /><span className="flex-1 text-[12px] font-medium text-white/80">{label}</span><span className="font-mono text-[11px] text-white/45">{value}</span><ChevronRight className="h-3.5 w-3.5 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-white/70" /></Link>
 }
 
 export function LiveMarketplace({ locale }: { locale: Locale }) {

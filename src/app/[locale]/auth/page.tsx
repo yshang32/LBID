@@ -2,75 +2,298 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import gsap from "gsap"
+import { ScrollTrigger } from "gsap/ScrollTrigger"
 import {
   AlertCircle,
   ArrowRight,
-  BadgeCheck,
   CheckCircle2,
+  ChevronDown,
   Eye,
   EyeOff,
-  Globe2,
-  LockKeyhole,
-  Plane,
-  Radio,
-  ShieldCheck,
-  Timer,
-  WalletCards,
+  MailCheck,
+  Play,
+  RotateCcw,
+  SkipForward,
 } from "lucide-react"
 
 import { apiJson } from "@/lib/api-client"
 import { isLocale, type Locale } from "@/lib/i18n"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { JourneyCanvas, type JourneyCanvasHandle } from "@/components/auth/journey/journey-canvas"
+import { JourneyHud, type JourneyHudHandle } from "@/components/auth/journey/journey-hud"
+import { journeyPoster, journeyShipmentId } from "@/components/auth/journey/journey-data"
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger)
+}
 
 type Mode = "login" | "register" | "reset" | "update"
+type JourneyMode = "full" | "ambient" | "static"
 
-const text = {
-  login: "Sign In",
-  register: "Create Account",
-  reset: "Reset password",
-  update: "Set new password",
-  company: "Company name",
-  contact: "Contact name",
-  email: "Work email",
-  password: "Password",
-  confirm: "Confirm password",
-  enter: "Enter workspace",
-  create: "Create company account",
-  sendReset: "Send reset link",
-  updatePassword: "Update password",
-  forgot: "Forgot password?",
-  back: "Back to sign in",
-  secure: "Authentication is handled by Supabase Auth. LBID never stores plaintext passwords.",
-  intro: "A sealed-bid logistics workspace for companies that can create requests, submit quotes, or do both.",
-  needFields: "Please complete the required fields. Password must be at least 8 characters.",
-  mismatch: "Passwords do not match.",
-  resetBody: "Enter your work email and we will send a secure reset link.",
-  updateBody: "Choose a new password, then sign in again.",
-  resetSent: "If the account exists, a reset link has been sent.",
-  updated: "Password updated. Please sign in again.",
-  confirmSent: "Account created. Complete email verification before signing in.",
+const SEEN_KEY = "lbid.journey.seen.v1"
+const PROGRESS_KEY = "lbid.journey.progress.v1"
+const REMEMBER_KEY = "lbid.auth.remember-email"
+
+const copy = {
+  en: {
+    welcome: "Welcome to LBID",
+    support: "Manage demand, sealed bids and delivery from one logistics workspace.",
+    positioning: "Fair prices. Real capability. No connections needed.",
+    positioningSub: "Sealed bidding for fair logistics partnerships.",
+    signIn: "Sign in",
+    createAccount: "Create account",
+    email: "Work email",
+    password: "Password",
+    confirmPassword: "Confirm password",
+    company: "Company name",
+    country: "Country or region",
+    remember: "Remember me",
+    forgot: "Forgot password?",
+    signInAction: "Sign in",
+    createAction: "Create account",
+    terms: "I accept the LBID Terms of Service and Privacy Policy.",
+    dualNote: "One company account can create shipment requests, submit bids, or both. Capabilities are set during onboarding.",
+    reset: "Reset password",
+    resetBody: "Enter your work email and we will send a secure reset link.",
+    sendReset: "Send reset link",
+    update: "Set new password",
+    updateBody: "Choose a new password, then sign in again.",
+    updateAction: "Update password",
+    back: "Back to sign in",
+    working: "Working…",
+    needFields: "Please complete the required fields. Password must be at least 8 characters.",
+    mismatch: "Passwords do not match.",
+    needTerms: "Please accept the terms to continue.",
+    invalidCredentials: "Email or password is incorrect.",
+    networkError: "Network error. Check your connection and try again.",
+    resetSent: "If the account exists, a reset link has been sent.",
+    updated: "Password updated. Please sign in again.",
+    confirmTitle: "Confirm your email",
+    confirmBody: "We sent a verification link to",
+    confirmHint: "Open it to activate your company account, then sign in.",
+    backToSignIn: "Back to sign in",
+    connected: "You’re connected.",
+    connectedSub: "Delivered · entering your workspace",
+    skip: "Skip journey",
+    replay: "Replay journey",
+    scrollHint: "Scroll to follow the shipment",
+    expand: "Experience the shipment journey",
+    collapse: "Hide journey",
+    secure: "Authentication is handled by Supabase Auth. LBID never stores plaintext passwords.",
+    language: "繁體中文",
+  },
+  zh: {
+    welcome: "歡迎回到 LBID",
+    support: "在同一個工作台管理需求、密封競價及物流交付。",
+    positioning: "讓價格回到公平，讓實力取代關係。",
+    positioningSub: "以密封競價建立公平的物流合作。",
+    signIn: "登入",
+    createAccount: "建立帳戶",
+    email: "工作電郵",
+    password: "密碼",
+    confirmPassword: "確認密碼",
+    company: "公司名稱",
+    country: "國家或地區",
+    remember: "記住我",
+    forgot: "忘記密碼？",
+    signInAction: "登入",
+    createAction: "建立帳戶",
+    terms: "我接受 LBID 服務條款及私隱政策。",
+    dualNote: "同一公司帳戶可建立貨運需求、提交報價，或同時啟用兩者。能力設定於登入後的引導流程完成。",
+    reset: "重設密碼",
+    resetBody: "輸入工作電郵，我們會傳送安全重設連結。",
+    sendReset: "傳送重設連結",
+    update: "設定新密碼",
+    updateBody: "設定新密碼後請重新登入。",
+    updateAction: "更新密碼",
+    back: "返回登入",
+    working: "處理中…",
+    needFields: "請完成必填欄位，密碼至少 8 個字元。",
+    mismatch: "兩次輸入的密碼不一致。",
+    needTerms: "請先接受條款再繼續。",
+    invalidCredentials: "電郵或密碼不正確。",
+    networkError: "網絡錯誤，請檢查連線後再試。",
+    resetSent: "如帳戶存在，重設連結已發送。",
+    updated: "密碼已更新，請重新登入。",
+    confirmTitle: "請確認你的電郵",
+    confirmBody: "驗證連結已發送至",
+    confirmHint: "開啟連結啟用公司帳戶後即可登入。",
+    backToSignIn: "返回登入",
+    connected: "你已連接 LBID 物流網絡。",
+    connectedSub: "已送達・正在進入工作台",
+    skip: "跳過旅程",
+    replay: "重播旅程",
+    scrollHint: "捲動跟隨貨件",
+    expand: "體驗貨運旅程",
+    collapse: "收起旅程",
+    secure: "身份驗證由 Supabase Auth 處理，LBID 絕不儲存明文密碼。",
+    language: "English",
+  },
 }
+
+const countries = [
+  "Hong Kong",
+  "Mainland China",
+  "Taiwan",
+  "Vietnam",
+  "Thailand",
+  "Indonesia",
+  "Malaysia",
+  "Philippines",
+  "Singapore",
+  "Cambodia",
+  "Other",
+]
 
 export default function AuthPage({ params }: { params: { locale: string } }) {
   const locale: Locale = isLocale(params.locale) ? params.locale : "en"
+  const t = copy[locale]
   const router = useRouter()
+
   const [mode, setMode] = useState<Mode>("login")
+  const [view, setView] = useState<"form" | "confirmEmail">("form")
   const [company, setCompany] = useState("")
-  const [name, setName] = useState("")
+  const [country, setCountry] = useState("Hong Kong")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
+  const [remember, setRemember] = useState(false)
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
 
+  const [journeyMode, setJourneyMode] = useState<JourneyMode>("full")
+  const [mobileExpanded, setMobileExpanded] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  const trackRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const hintRef = useRef<HTMLDivElement>(null)
+  const veilRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<JourneyCanvasHandle>(null)
+  const hudRef = useRef<JourneyHudHandle>(null)
+  const progressProxy = useRef({ p: 0 })
+  const departingRef = useRef(false)
+
+  const applyProgress = useCallback((p: number) => {
+    progressProxy.current.p = p
+    canvasRef.current?.setProgress(p)
+    hudRef.current?.update(p)
+    if (hintRef.current) hintRef.current.style.opacity = p < 0.04 ? "1" : "0"
+  }, [])
+
+  const markSeen = useCallback(() => {
+    try {
+      localStorage.setItem(SEEN_KEY, "1")
+    } catch {}
+  }, [])
+
+  // Restore querystring modes + remembered email + returning-user journey mode.
   useEffect(() => {
     const query = window.location.search
     if (query.includes("mode=register")) setMode("register")
     if (query.includes("mode=update") || query.includes("type=recovery")) setMode("update")
+
+    try {
+      const saved = localStorage.getItem(REMEMBER_KEY)
+      if (saved) {
+        setEmail(saved)
+        setRemember(true)
+      }
+    } catch {}
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    let seen = false
+    try {
+      seen = localStorage.getItem(SEEN_KEY) === "1"
+    } catch {}
+    setJourneyMode(reduced ? "static" : seen ? "ambient" : "full")
+    setMounted(true)
   }, [])
+
+  // Persist cinematic progress so returning visitors resume where they left off.
+  useEffect(() => {
+    const save = () => {
+      try {
+        localStorage.setItem(PROGRESS_KEY, String(progressProxy.current.p))
+      } catch {}
+    }
+    window.addEventListener("pagehide", save)
+    document.addEventListener("visibilitychange", save)
+    return () => {
+      window.removeEventListener("pagehide", save)
+      document.removeEventListener("visibilitychange", save)
+    }
+  }, [])
+
+  // Scroll-scrubbed journey (desktop always; mobile once expanded).
+  useEffect(() => {
+    if (!mounted || journeyMode !== "full") return
+    const track = trackRef.current
+    if (!track) return
+
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches
+    if (!isDesktop && !mobileExpanded) return
+
+    canvasRef.current?.warm()
+    const trigger = ScrollTrigger.create({
+      trigger: track,
+      start: "top top",
+      end: "bottom bottom",
+      scrub: 0.7,
+      onUpdate(self) {
+        applyProgress(self.progress)
+        if (self.progress > 0.985) markSeen()
+      },
+    })
+    applyProgress(trigger.progress)
+    return () => trigger.kill()
+  }, [mounted, journeyMode, mobileExpanded, applyProgress, markSeen])
+
+  // Ambient mode: short drift to the delivered frame instead of a full replay.
+  useEffect(() => {
+    if (!mounted || journeyMode !== "ambient") return
+    let from = 0.78
+    try {
+      const saved = parseFloat(localStorage.getItem(PROGRESS_KEY) || "")
+      if (!Number.isNaN(saved)) from = Math.max(0.72, Math.min(saved, 0.95))
+    } catch {}
+    applyProgress(from)
+    const tween = gsap.to(progressProxy.current, {
+      p: 1,
+      duration: 1.7,
+      ease: "power2.out",
+      delay: 0.35,
+      onUpdate: () => applyProgress(progressProxy.current.p),
+    })
+    return () => {
+      tween.kill()
+    }
+  }, [mounted, journeyMode, applyProgress])
+
+  function skipJourney() {
+    markSeen()
+    gsap.to(progressProxy.current, {
+      p: 1,
+      duration: 0.8,
+      ease: "power2.inOut",
+      onUpdate: () => applyProgress(progressProxy.current.p),
+    })
+    window.scrollTo({ top: 0, behavior: "auto" })
+    setJourneyMode("ambient")
+  }
+
+  function replayJourney() {
+    window.scrollTo({ top: 0, behavior: "auto" })
+    applyProgress(0)
+    setJourneyMode("full")
+    setMobileExpanded(true)
+    requestAnimationFrame(() => ScrollTrigger.refresh())
+  }
 
   function resetMessages() {
     setError("")
@@ -81,13 +304,18 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
     resetMessages()
     setPassword("")
     setConfirm("")
+    setView("form")
     setMode(next)
   }
 
   async function workspaceHref() {
-    const { response, body } = await apiJson("/api/company-profile")
-    if (!response.ok || !body.companyProfile?.onboarding_completed) return `/${locale}/onboarding`
-    return body.role === "admin" ? `/${locale}/dashboard?mode=admin` : `/${locale}/dashboard`
+    try {
+      const { response, body } = await apiJson("/api/company-profile")
+      if (!response.ok || !body.companyProfile?.onboarding_completed) return `/${locale}/onboarding`
+      return body.role === "admin" ? `/${locale}/dashboard?mode=admin` : `/${locale}/dashboard`
+    } catch {
+      return `/${locale}/onboarding`
+    }
   }
 
   function authRedirectUrl(next = `/${locale}/auth`) {
@@ -95,6 +323,35 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
     const browserOrigin = window.location.origin
     const origin = configuredOrigin || browserOrigin
     return `${origin}${next.startsWith("/") ? next : `/${next}`}`
+  }
+
+  function departToWorkspace(href: string) {
+    if (departingRef.current) return
+    departingRef.current = true
+    markSeen()
+    if (veilRef.current) veilRef.current.style.pointerEvents = "auto"
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduced || journeyMode === "static") {
+      if (veilRef.current) gsap.set(veilRef.current, { autoAlpha: 1 })
+      window.setTimeout(() => router.push(href), 650)
+      return
+    }
+
+    const tl = gsap.timeline()
+    tl.to(progressProxy.current, {
+      p: 1,
+      duration: 1.25,
+      ease: "power2.inOut",
+      onUpdate: () => applyProgress(progressProxy.current.p),
+    })
+    if (stageRef.current) {
+      tl.fromTo(stageRef.current, { scale: 1 }, { scale: 1.012, duration: 1.1, ease: "power2.inOut" }, 0)
+    }
+    if (veilRef.current) {
+      tl.to(veilRef.current, { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, "-=0.55")
+    }
+    tl.call(() => router.push(href), [], "+=0.7")
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -107,283 +364,424 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
       return
     }
 
-    if (mode === "register" && (!company.trim() || !name.trim() || !email || password.length < 8)) {
-      setError(text.needFields)
-      return
-    }
-    if (mode === "register" && password !== confirm) {
-      setError(text.mismatch)
-      return
+    if (mode === "register") {
+      if (!company.trim() || !email || password.length < 8) {
+        setError(t.needFields)
+        return
+      }
+      if (password !== confirm) {
+        setError(t.mismatch)
+        return
+      }
+      if (!acceptTerms) {
+        setError(t.needTerms)
+        return
+      }
     }
     if (mode === "login" && (!email || !password)) {
-      setError(text.needFields)
+      setError(t.needFields)
       return
     }
     if (mode === "reset" && !email) {
-      setError(text.needFields)
+      setError(t.needFields)
       return
     }
     if (mode === "update" && password.length < 8) {
-      setError(text.needFields)
+      setError(t.needFields)
       return
     }
 
     setLoading(true)
 
-    if (mode === "reset") {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: authRedirectUrl(`/${locale}/auth?mode=update`),
-      })
-      setLoading(false)
-      if (resetError) setError(resetError.message)
-      else setNotice(text.resetSent)
-      return
-    }
-
-    if (mode === "update") {
-      const { error: updateError } = await supabase.auth.updateUser({ password })
-      setLoading(false)
-      if (updateError) setError(updateError.message)
-      else {
-        setNotice(text.updated)
-        setMode("login")
-      }
-      return
-    }
-
-    if (mode === "login") {
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginError) {
+    try {
+      if (mode === "reset") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: authRedirectUrl(`/${locale}/auth?mode=update`),
+        })
         setLoading(false)
-        setError(loginError.message)
+        if (resetError) setError(resetError.message)
+        else setNotice(t.resetSent)
         return
       }
-      const href = await workspaceHref()
-      setLoading(false)
-      router.push(href)
-      return
-    }
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: authRedirectUrl(`/${locale}/auth`),
-        data: { company_name: company, full_name: name },
-      },
-    })
-    if (signUpError) {
-      setLoading(false)
-      setError(signUpError.message)
-      return
-    }
-    if (!data.session) {
-      setLoading(false)
-      setNotice(text.confirmSent)
-      return
-    }
+      if (mode === "update") {
+        const { error: updateError } = await supabase.auth.updateUser({ password })
+        setLoading(false)
+        if (updateError) setError(updateError.message)
+        else {
+          setNotice(t.updated)
+          setMode("login")
+        }
+        return
+      }
 
-    const bootstrap = await apiJson("/api/auth/bootstrap", {
-      method: "POST",
-      body: JSON.stringify({ companyName: company, fullName: name }),
-    })
-    setLoading(false)
-    if (!bootstrap.response.ok) {
-      setError(bootstrap.body.error || "Account bootstrap failed.")
-      return
+      if (mode === "login") {
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+        if (loginError) {
+          setLoading(false)
+          setError(/invalid/i.test(loginError.message) ? t.invalidCredentials : loginError.message)
+          return
+        }
+        try {
+          if (remember) localStorage.setItem(REMEMBER_KEY, email)
+          else localStorage.removeItem(REMEMBER_KEY)
+        } catch {}
+        const href = await workspaceHref()
+        setLoading(false)
+        departToWorkspace(href)
+        return
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: authRedirectUrl(`/${locale}/auth`),
+          data: { company_name: company, country },
+        },
+      })
+      if (signUpError) {
+        setLoading(false)
+        setError(signUpError.message)
+        return
+      }
+      if (!data.session) {
+        setLoading(false)
+        setView("confirmEmail")
+        return
+      }
+
+      const bootstrap = await apiJson("/api/auth/bootstrap", {
+        method: "POST",
+        body: JSON.stringify({ companyName: company, country }),
+      })
+      setLoading(false)
+      if (!bootstrap.response.ok) {
+        setError(bootstrap.body.error || "Account bootstrap failed.")
+        return
+      }
+      departToWorkspace(`/${locale}/onboarding`)
+    } catch {
+      setLoading(false)
+      setError(t.networkError)
     }
-    router.push(`/${locale}/onboarding`)
   }
 
-  const title = mode === "login" ? text.login : mode === "register" ? text.register : mode === "reset" ? text.reset : text.update
-  const passwordMode = mode === "login" || mode === "register" || mode === "update"
+  const showJourneyMotion = journeyMode !== "static"
+  const fullJourney = journeyMode === "full"
+  const passwordField = mode === "login" || mode === "register" || mode === "update"
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f5f7fb] px-5 py-6 text-ink sm:px-6">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(201,168,76,.22),transparent_24%),radial-gradient(circle_at_82%_12%,rgba(74,118,194,.18),transparent_26%),linear-gradient(135deg,#f8fafc_0%,#eef2f8_48%,#f7f0df_100%)]" />
-        <div className="absolute inset-0 opacity-[.32] [background-image:linear-gradient(rgba(27,43,94,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(27,43,94,.055)_1px,transparent_1px)] [background-size:64px_64px]" />
-        <div className="absolute left-[-10rem] top-[14%] h-[32rem] w-[72rem] rotate-[-17deg] rounded-full border border-navy/10" />
-        <div className="absolute right-[-18rem] top-[18%] h-[30rem] w-[68rem] rotate-[19deg] rounded-full border border-gold/25" />
-        <div className="absolute left-[18%] top-[24%] h-2.5 w-2.5 animate-[lbid-route_8s_ease-in-out_infinite] rounded-full bg-gold shadow-[0_0_0_7px_rgba(201,168,76,.12),0_0_28px_rgba(201,168,76,.55)]" />
-        <div className="absolute right-[28%] top-[14%] h-2 w-2 animate-pulse rounded-full bg-[#3768a5] shadow-[0_0_0_7px_rgba(55,104,165,.10),0_0_24px_rgba(55,104,165,.42)]" />
-        <div className="absolute bottom-[-10rem] left-[10%] h-[22rem] w-[22rem] rounded-full bg-white/40 blur-3xl" />
-      </div>
+    <main className="relative min-h-screen bg-[#f7f8fa] text-ink">
+      <div className="mx-auto grid w-full max-w-[1720px] gap-5 px-4 pb-10 pt-4 sm:px-6 lg:grid-cols-[minmax(0,1.62fr)_minmax(392px,1fr)] lg:gap-6">
+        {/* ——— Cinematic journey column ——— */}
+        <section className="order-2 min-w-0 lg:order-1">
+          <div className="mb-3 flex items-center justify-between lg:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileExpanded((value) => !value)
+                requestAnimationFrame(() => ScrollTrigger.refresh())
+              }}
+              className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-[12.5px] font-semibold text-navy shadow-sm transition hover:border-[#b7c8e4]"
+            >
+              {mobileExpanded ? <ChevronDown className="h-4 w-4 rotate-180 transition" /> : <Play className="h-4 w-4" />}
+              {mobileExpanded ? t.collapse : t.expand}
+            </button>
+            <span className="font-mono text-[11px] font-semibold text-ink-3">{journeyShipmentId}</span>
+          </div>
 
-      <div className="relative mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-[1240px] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_430px] xl:gap-14">
-        <section className="hidden min-w-0 lg:block">
-          <div className="flex items-center justify-between">
-            <div className="h-[108px] w-[360px] overflow-hidden">
-              <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-ml-10 -mt-10 block w-[390px] mix-blend-multiply" draggable={false} />
-            </div>
-            <div className="rounded-full border border-emerald/20 bg-white/70 px-3 py-1.5 text-[11.5px] font-semibold text-emerald shadow-[0_10px_28px_rgba(12,26,62,.05)] backdrop-blur">
-              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald" />
-              Bidding infrastructure online
+          <div
+            ref={trackRef}
+            className={
+              fullJourney
+                ? `relative ${mobileExpanded ? "h-[320vh]" : "h-auto"} lg:h-[460vh]`
+                : "relative h-auto"
+            }
+          >
+            <div
+              className={
+                fullJourney
+                  ? `${mobileExpanded ? "sticky top-[4vh] h-[66vh]" : "relative h-[52vw] max-h-[420px]"} lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:max-h-none`
+                  : "relative h-[52vw] max-h-[420px] lg:h-[calc(100vh-2rem)] lg:max-h-none"
+              }
+            >
+              <div ref={stageRef} className="journey-stage h-full w-full">
+                {mounted && showJourneyMotion ? (
+                  <JourneyCanvas ref={canvasRef} className="journey-canvas" />
+                ) : (
+                  <img
+                    src={journeyPoster}
+                    alt="LBID shipment journey — sealed cargo leaving a Southeast Asian facility at dawn"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
+
+                {/* Logo chip over the stage */}
+                <div className="pointer-events-none absolute left-4 top-4 z-10 sm:left-6 sm:top-6">
+                  <div className="rounded-md border border-white/40 bg-white/88 px-3 py-2 shadow-[0_8px_24px_rgba(8,21,47,.2)] backdrop-blur">
+                    <img src="/assets/lbid-web-logo-clean.png" alt="LBID" className="h-6 w-auto mix-blend-multiply sm:h-7" draggable={false} />
+                  </div>
+                </div>
+
+                {/* Journey controls */}
+                <div className="absolute left-4 top-[7.1rem] z-10 sm:left-6 sm:top-[7.9rem]">
+                  {mounted && showJourneyMotion && (
+                    fullJourney ? (
+                      <button type="button" onClick={skipJourney} className="journey-skip">
+                        <SkipForward className="h-3.5 w-3.5" /> {t.skip}
+                      </button>
+                    ) : (
+                      <button type="button" onClick={replayJourney} className="journey-skip">
+                        <RotateCcw className="h-3.5 w-3.5" /> {t.replay}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {mounted && showJourneyMotion && <JourneyHud ref={hudRef} locale={locale} />}
+
+                {mounted && fullJourney && (
+                  <div ref={hintRef} className={`journey-scroll-hint transition-opacity duration-500 ${mobileExpanded ? "" : "!hidden lg:!flex"}`}>
+                    {t.scrollHint}
+                  </div>
+                )}
+              </div>
+
+              {/* Positioning statement below stage on desktop start */}
             </div>
           </div>
 
-          <div className="mt-10 grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
-            <div>
-              <BadgePill>Sealed bid logistics platform</BadgePill>
-              <h1 className="mt-5 max-w-3xl text-[58px] font-bold leading-[.98] tracking-[-2.2px] text-ink xl:text-[66px]">
-                Fair prices. Real capability. No connections needed.
-              </h1>
-              <p className="mt-6 max-w-2xl text-[16px] leading-8 text-ink-2">{text.intro}</p>
-            </div>
-
-            <div className="relative self-end rounded-[26px] border border-white/70 bg-white/55 p-4 shadow-[0_24px_70px_rgba(12,26,62,.12)] backdrop-blur-xl">
-              <div className="absolute -right-3 -top-3 grid h-11 w-11 place-items-center rounded-2xl bg-navy text-white shadow-[0_16px_34px_rgba(12,26,62,.25)]">
-                <Plane className="h-5 w-5" />
-              </div>
-              <p className="text-[11px] font-bold uppercase tracking-[.12em] text-gold-dark">Today&apos;s bid window</p>
-              <div className="mt-4 rounded-2xl border border-line bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-ink-3">HCM → HKG</span>
-                  <span className="font-mono text-[13px] font-bold text-navy">02:48:13</span>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-canvas">
-                  <div className="h-full w-[72%] rounded-full bg-[linear-gradient(90deg,#0c1a3e,#c49a3c)]" />
-                </div>
-                <p className="mt-3 text-[12px] leading-5 text-ink-3">3 qualified forwarders invited. Prices remain sealed until close.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-9 grid gap-3 xl:grid-cols-4">
-            <FeatureCard icon={<LockKeyhole className="h-4 w-4" />} title="Sealed bids" body="Forwarders submit once. Competitor pricing stays hidden." />
-            <FeatureCard icon={<WalletCards className="h-4 w-4" />} title="Token ledger" body="Each bid records token movement and transaction history." />
-            <FeatureCard icon={<BadgeCheck className="h-4 w-4" />} title="Smart matching" body="Recommended bids are pushed by route and profile fit." />
-            <FeatureCard icon={<ShieldCheck className="h-4 w-4" />} title="Order workspace" body="Documents, messages and audit trail stay in one place." />
-          </div>
-
-          <div className="mt-6 grid gap-3 xl:grid-cols-[1fr_1fr_1fr]">
-            {[
-              { title: "3-hour window", body: "Fixed urgency after admin approval", icon: Timer },
-              { title: "Hybrid award", body: "Lowest quote highlighted, agency still chooses fit", icon: CheckCircle2 },
-              { title: "SEA -> Hong Kong", body: "Built for regional agency demand", icon: Globe2 },
-            ].map(({ title, body, icon: Icon }) => (
-              <div key={title} className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/50 p-4 shadow-[0_12px_32px_rgba(12,26,62,.06)] backdrop-blur">
-                <Icon className="h-5 w-5 flex-shrink-0 text-gold" />
-                <div>
-                  <p className="text-[13px] font-bold text-ink">{title}</p>
-                  <p className="mt-0.5 text-[12px] leading-5 text-ink-3">{body}</p>
-                </div>
-              </div>
-            ))}
+          <div className="mt-4 hidden items-baseline justify-between gap-6 lg:flex">
+            <p className="text-[15px] font-semibold tracking-[-.2px] text-ink">
+              {t.positioning}
+              <span className="ml-3 text-[13px] font-normal text-ink-3">{t.positioningSub}</span>
+            </p>
+            <p className="font-mono text-[11.5px] text-ink-3">{journeyShipmentId} · SEA → HKG</p>
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-[430px]">
-          <div className="mb-5 flex h-[104px] justify-center overflow-hidden lg:hidden">
-            <img src="/assets/lbid-figma-25jun-logo.png?v=20260625" alt="LBID" className="-mt-10 block w-[330px] mix-blend-multiply" draggable={false} />
-          </div>
+        {/* ——— Authentication column ——— */}
+        <section className="order-1 min-w-0 lg:order-2">
+          <div className="lg:sticky lg:top-4">
+            <div className="relative">
+              <div className="journey-auth-card relative overflow-hidden">
+                <div className="h-[3px] bg-[linear-gradient(90deg,#10254d_0%,#1e3a7a_55%,#c9a84c_100%)]" />
 
-          <div className="mb-4 hidden items-center justify-between rounded-2xl border border-white/70 bg-white/55 px-4 py-3 shadow-[0_14px_34px_rgba(12,26,62,.07)] backdrop-blur lg:flex">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[.12em] text-gold-dark">Secure access</p>
-              <p className="mt-0.5 text-[12px] text-ink-3">Sign in to your company workspace</p>
-            </div>
-            <Radio className="h-5 w-5 animate-pulse text-emerald" />
-          </div>
-
-          <div className="overflow-hidden rounded-[26px] border border-white/70 bg-white/82 shadow-[0_26px_80px_rgba(12,26,62,.16),0_2px_8px_rgba(12,26,62,.05)] backdrop-blur-xl">
-            <div className="h-[3px] bg-[linear-gradient(90deg,#0c1a3e_0%,#1e3a7a_55%,#c49a3c_100%)]" />
-            {mode === "login" || mode === "register" ? (
-              <div className="flex border-b border-line">
-                <Tab active={mode === "login"} onClick={() => switchMode("login")}>{text.login}</Tab>
-                <Tab active={mode === "register"} onClick={() => switchMode("register")}>{text.register}</Tab>
-              </div>
-            ) : null}
-
-            <form onSubmit={submit} className="flex flex-col gap-4 p-7">
-              {mode === "login" || mode === "register" ? (
-                <div className="mb-1">
-                  <h2 className="text-[22px] font-bold tracking-[-.5px] text-ink">{mode === "login" ? "Welcome back." : "Build your LBID company account."}</h2>
-                  <p className="mt-1.5 text-[13px] leading-6 text-ink-3">
-                    {mode === "login" ? "Continue to live requests, sealed bids and order workspaces." : "One account can create shipment requests and submit forwarder bids."}
-                  </p>
+                <div className="px-6 pb-6 pt-6 sm:px-7">
+                  <img src="/assets/lbid-web-logo-clean.png" alt="LBID" className="h-8 w-auto mix-blend-multiply" draggable={false} />
+                  <h1 className="mt-4 text-[24px] font-bold tracking-[-.4px] text-[#10254d]">{t.welcome}</h1>
+                  <p className="mt-1.5 text-[13px] leading-6 text-ink-2">{t.support}</p>
                 </div>
-              ) : null}
 
-              {mode === "reset" || mode === "update" ? (
-                <div>
-                  <h2 className="text-[16px] font-semibold text-ink">{title}</h2>
-                  <p className="mt-1 text-[13px] text-ink-3">{mode === "reset" ? text.resetBody : text.updateBody}</p>
-                </div>
-              ) : null}
-
-              {mode === "register" ? (
-                <>
-                  <Field label={text.company}><input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Pacific Forward Ltd." className="auth-input" autoFocus /></Field>
-                  <Field label={text.contact}><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Kenny Lam" className="auth-input" /></Field>
-                </>
-              ) : null}
-
-              {mode !== "update" ? (
-                <Field label={text.email}><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" type="email" className="auth-input" autoFocus={mode !== "register"} required /></Field>
-              ) : null}
-
-              {passwordMode ? (
-                <Field label={text.password}>
-                  <div className="relative">
-                    <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "register" ? "At least 8 characters" : "Your password"} type={showPassword ? "text" : "password"} className="auth-input pr-10" required />
-                    <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 transition hover:text-ink" aria-label="Toggle password visibility">
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {view === "confirmEmail" ? (
+                  <div className="flex flex-col items-center gap-3 px-7 pb-9 pt-2 text-center">
+                    <span className="grid h-14 w-14 place-items-center rounded-full bg-emerald-soft text-emerald">
+                      <MailCheck className="h-7 w-7" />
+                    </span>
+                    <h2 className="text-[17px] font-bold text-ink">{t.confirmTitle}</h2>
+                    <p className="text-[13px] leading-6 text-ink-2">
+                      {t.confirmBody} <span className="font-semibold text-ink">{email}</span>
+                    </p>
+                    <p className="text-[12.5px] leading-5 text-ink-3">{t.confirmHint}</p>
+                    <button type="button" onClick={() => switchMode("login")} className="mt-2 text-[13px] font-semibold text-navy underline-offset-2 hover:underline">
+                      {t.backToSignIn}
                     </button>
                   </div>
-                </Field>
-              ) : null}
+                ) : (
+                  <>
+                    {(mode === "login" || mode === "register") && (
+                      <div className="flex border-b border-t border-line">
+                        <Tab active={mode === "login"} onClick={() => switchMode("login")}>{t.signIn}</Tab>
+                        <Tab active={mode === "register"} onClick={() => switchMode("register")}>{t.createAccount}</Tab>
+                      </div>
+                    )}
 
-              {mode === "register" ? <Field label={text.confirm}><input value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Repeat password" type="password" className="auth-input" required /></Field> : null}
-              {mode === "login" ? <div className="-mt-1 flex justify-end"><button type="button" onClick={() => switchMode("reset")} className="text-[12px] font-medium text-navy underline-offset-2 transition hover:underline">{text.forgot}</button></div> : null}
+                    <form onSubmit={submit} className="flex flex-col gap-4 px-6 py-6 sm:px-7">
+                      {(mode === "reset" || mode === "update") && (
+                        <div>
+                          <h2 className="text-[16px] font-bold text-ink">{mode === "reset" ? t.reset : t.update}</h2>
+                          <p className="mt-1 text-[13px] leading-6 text-ink-3">{mode === "reset" ? t.resetBody : t.updateBody}</p>
+                        </div>
+                      )}
 
-              <button disabled={loading} type="submit" className="group mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-navy py-3.5 text-[13.5px] font-semibold tracking-[.01em] text-white transition duration-200 hover:-translate-y-px hover:bg-[#172d63] hover:shadow-[0_10px_24px_rgba(12,26,62,.28)] disabled:cursor-not-allowed disabled:opacity-60">
-                {loading ? "Working..." : mode === "login" ? text.enter : mode === "register" ? text.create : mode === "reset" ? text.sendReset : text.updatePassword}
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-              </button>
+                      {mode !== "update" && (
+                        <Field label={t.email}>
+                          <input
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            placeholder="you@company.com"
+                            type="email"
+                            autoComplete="email"
+                            className="journey-input"
+                            required
+                          />
+                        </Field>
+                      )}
 
-              {mode === "reset" || mode === "update" ? <button type="button" onClick={() => switchMode("login")} className="text-center text-[12.5px] font-medium text-ink-3 transition hover:text-ink">{text.back}</button> : null}
-              {mode === "register" ? <p className="text-center text-[11.5px] leading-relaxed text-ink-3">By registering you agree to LBID's Terms of Service and Privacy Policy.</p> : null}
-              {error ? <Feedback error>{error}</Feedback> : null}
-              {notice ? <Feedback>{notice}</Feedback> : null}
-            </form>
+                      {passwordField && (
+                        <Field label={t.password}>
+                          <div className="relative">
+                            <input
+                              value={password}
+                              onChange={(event) => setPassword(event.target.value)}
+                              placeholder={mode === "register" ? "••••••••  (8+)" : "••••••••"}
+                              type={showPassword ? "text" : "password"}
+                              autoComplete={mode === "login" ? "current-password" : "new-password"}
+                              className="journey-input pr-10"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((value) => !value)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 transition hover:text-ink"
+                              aria-label="Toggle password visibility"
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </Field>
+                      )}
+
+                      {mode === "register" && (
+                        <>
+                          <Field label={t.confirmPassword}>
+                            <input
+                              value={confirm}
+                              onChange={(event) => setConfirm(event.target.value)}
+                              type="password"
+                              autoComplete="new-password"
+                              className="journey-input"
+                              required
+                            />
+                          </Field>
+                          <Field label={t.company}>
+                            <input
+                              value={company}
+                              onChange={(event) => setCompany(event.target.value)}
+                              placeholder="Pacific Forward Ltd."
+                              className="journey-input"
+                              required
+                            />
+                          </Field>
+                          <Field label={t.country}>
+                            <select value={country} onChange={(event) => setCountry(event.target.value)} className="journey-input">
+                              {countries.map((item) => (
+                                <option key={item} value={item}>{item}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <label className="flex items-start gap-2.5 text-[12.5px] leading-5 text-ink-2">
+                            <input
+                              type="checkbox"
+                              checked={acceptTerms}
+                              onChange={(event) => setAcceptTerms(event.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-[#cdd6e4] accent-[#10254d]"
+                            />
+                            {t.terms}
+                          </label>
+                          <p className="rounded-md border border-line bg-canvas px-3 py-2.5 text-[12px] leading-5 text-ink-3">{t.dualNote}</p>
+                        </>
+                      )}
+
+                      {mode === "login" && (
+                        <div className="-mt-1 flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-[12.5px] text-ink-2">
+                            <input
+                              type="checkbox"
+                              checked={remember}
+                              onChange={(event) => setRemember(event.target.checked)}
+                              className="h-4 w-4 rounded border-[#cdd6e4] accent-[#10254d]"
+                            />
+                            {t.remember}
+                          </label>
+                          <button type="button" onClick={() => switchMode("reset")} className="text-[12.5px] font-medium text-navy underline-offset-2 transition hover:underline">
+                            {t.forgot}
+                          </button>
+                        </div>
+                      )}
+
+                      <button disabled={loading} type="submit" className="journey-primary-button group mt-1">
+                        {loading
+                          ? t.working
+                          : mode === "login"
+                            ? t.signInAction
+                            : mode === "register"
+                              ? t.createAction
+                              : mode === "reset"
+                                ? t.sendReset
+                                : t.updateAction}
+                        {!loading && <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />}
+                      </button>
+
+                      {(mode === "reset" || mode === "update") && (
+                        <button type="button" onClick={() => switchMode("login")} className="text-center text-[12.5px] font-medium text-ink-3 transition hover:text-ink">
+                          {t.back}
+                        </button>
+                      )}
+
+                      {error ? <Feedback error>{error}</Feedback> : null}
+                      {notice ? <Feedback>{notice}</Feedback> : null}
+                    </form>
+                  </>
+                )}
+
+                {/* Success veil — refined completion moment */}
+                <div ref={veilRef} className="journey-success-veil">
+                  <span className="grid h-16 w-16 place-items-center rounded-full bg-emerald-soft text-emerald">
+                    <CheckCircle2 className="h-9 w-9" />
+                  </span>
+                  <p className="text-[19px] font-bold tracking-[-.3px] text-[#10254d]">{t.connected}</p>
+                  <p className="font-mono text-[12px] font-semibold text-emerald">
+                    {journeyShipmentId} · {t.connectedSub}
+                  </p>
+                  <span className="mt-1 h-[2px] w-24 overflow-hidden rounded-full bg-line">
+                    <span className="block h-full w-full origin-left animate-[journey-line_1.2s_ease-out_forwards] bg-gold" />
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start justify-center gap-2 text-center text-[11.5px] leading-5 text-ink-3">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald" />
+                {t.secure}
+              </div>
+              <Link href={`/${locale === "zh" ? "en" : "zh"}/auth`} className="mt-3 block text-center text-[12px] font-medium text-navy hover:underline">
+                {t.language}
+              </Link>
+            </div>
           </div>
-
-          <div className="mt-5 flex items-start justify-center gap-2 text-center text-[11.5px] text-ink-3">
-            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald" />
-            {text.secure}
-          </div>
-          <Link href={`/${locale === "zh" ? "en" : "zh"}/auth`} className="mt-4 block text-center text-[12px] font-medium text-navy hover:underline">
-            {locale === "zh" ? "English" : "Chinese"}
-          </Link>
         </section>
       </div>
     </main>
   )
 }
 
-function BadgePill({ children }: { children: React.ReactNode }) {
-  return <span className="inline-flex rounded-full border border-gold-border bg-gold-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-gold-dark">{children}</span>
-}
-
-function FeatureCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+function Tab({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
-    <div className="group rounded-2xl border border-white/70 bg-white/62 p-4 shadow-[0_16px_36px_rgba(12,26,62,.07)] backdrop-blur transition duration-200 hover:-translate-y-1 hover:bg-white/82 hover:shadow-[0_22px_48px_rgba(12,26,62,.11)]">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy-soft text-navy transition duration-200 group-hover:bg-navy group-hover:text-white">{icon}</span>
-      <p className="mt-4 text-[13px] font-bold text-ink">{title}</p>
-      <p className="mt-1 text-[12px] leading-5 text-ink-3">{body}</p>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 border-b-2 py-3.5 text-[13.5px] font-semibold transition ${active ? "-mb-px border-[#10254d] text-[#10254d]" : "border-transparent text-ink-3 hover:text-ink"}`}
+    >
+      {children}
+    </button>
   )
 }
 
-function Tab({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={`flex-1 border-b-2 py-4 text-[13.5px] font-medium transition ${active ? "-mb-px border-navy text-navy" : "border-transparent text-ink-3 hover:text-ink"}`}>{children}</button>
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="flex flex-col gap-1.5 text-[12.5px] font-semibold tracking-[.02em] text-ink-2">{label}{children}</label>
+  return (
+    <label className="flex flex-col gap-1.5 text-[12.5px] font-semibold tracking-[.02em] text-ink-2">
+      {label}
+      {children}
+    </label>
+  )
 }
 
 function Feedback({ children, error = false }: { children: React.ReactNode; error?: boolean }) {
-  return <p className={`flex items-start gap-2 rounded-xl border p-3 text-[12px] leading-5 ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>{error ? <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />}{children}</p>
+  return (
+    <p className={`flex items-start gap-2 rounded-md border p-3 text-[12px] leading-5 ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`} role="alert">
+      {error ? <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+      {children}
+    </p>
+  )
 }

@@ -42,6 +42,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { BusinessIntelligenceDashboard } from "@/components/dashboard/business-intelligence-dashboard"
 import { TodayPage as FigmaTodayPage } from "@/components/figma-25jun-source/pages/TodayPage"
 import { OpportunitiesPage as FigmaOpportunitiesPage } from "@/components/figma-25jun-source/pages/OpportunitiesPage"
 import { QuoteConsolePage as FigmaQuoteConsolePage } from "@/components/figma-25jun-source/pages/QuoteConsolePage"
@@ -60,7 +61,6 @@ import { ForwarderProfilePage as FigmaForwarderProfilePage } from "@/components/
 import { MyRoutesPage as FigmaMyRoutesPage } from "@/components/figma-25jun-source/pages/MyRoutesPage"
 import {
   LiveActiveBids,
-  LiveDashboard,
   LiveMarketplace,
   LiveMyRequests,
   LiveNotifications,
@@ -222,7 +222,7 @@ export function UnifiedWorkspacePage({
   kind: UnifiedPageKind
   id?: string
 }) {
-  if (kind === "dashboard") return <LiveDashboard locale={locale} />
+  if (kind === "dashboard") return <BusinessIntelligenceDashboard locale={locale} />
   if (kind === "marketplace") return <LiveMarketplace locale={locale} />
   if (kind === "quote-console") return <LiveQuoteConsole locale={locale} id={id} />
   if (kind === "active-bids") return <LiveActiveBids locale={locale} />
