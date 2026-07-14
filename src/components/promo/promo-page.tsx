@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/i18n"
 import { PromoAuthPanel } from "./promo-auth-panel"
 import { PromoCanvas, type PromoCanvasHandle } from "./promo-canvas"
 import { PROMO_FRAME_COUNT, promoStageFrames } from "./promo-manifest"
+import { PromoStory, type PromoAudience } from "./promo-story"
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger)
@@ -84,6 +85,7 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
   const copy = promoCopy[locale]
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<"login" | "register">("login")
+  const [audience, setAudience] = useState<PromoAudience>("client")
   const canvasRef = useRef<PromoCanvasHandle>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
@@ -193,10 +195,11 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
     }
   }, [])
 
-  function scrollToStage(index: number) {
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight
-    const fraction = toScroll(index / stageMeta.length)
-    window.scrollTo({ top: maxScroll * fraction, behavior: "smooth" })
+  function scrollToStory(id: string, nextAudience?: PromoAudience) {
+    if (nextAudience) setAudience(nextAudience)
+    document.getElementById(id)?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    })
   }
 
   return (
@@ -225,9 +228,9 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
           />
         </Link>
         <nav aria-label="Homepage sections" className="pointer-events-auto hidden items-center gap-7 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#52617a] lg:flex">
-          <button type="button" onClick={() => scrollToStage(0)} className="transition hover:text-[#10254d]">{copy.how}</button>
-          <button type="button" onClick={() => scrollToStage(1)} className="transition hover:text-[#10254d]">{copy.clients}</button>
-          <button type="button" onClick={() => scrollToStage(3)} className="transition hover:text-[#10254d]">{copy.forwarders}</button>
+          <button type="button" onClick={() => scrollToStory("how-lbid")} className="transition hover:text-[#10254d]">{copy.how}</button>
+          <button type="button" onClick={() => scrollToStory("for-both", "client")} className="transition hover:text-[#10254d]">{copy.clients}</button>
+          <button type="button" onClick={() => scrollToStory("for-both", "forwarder")} className="transition hover:text-[#10254d]">{copy.forwarders}</button>
         </nav>
         <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
           <Link href={`/${otherLocale}`} className="hidden px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#52617a] transition hover:text-[#10254d] sm:inline-flex">{locale === "zh" ? "EN" : "中文"}</Link>
@@ -318,6 +321,13 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
 
       {/* Scroll track — scrolling down IS moving the cargo through the network */}
       <div ref={trackRef} style={{ height: TRACK_HEIGHT }} aria-hidden="true" />
+
+      <PromoStory
+        locale={locale}
+        audience={audience}
+        onAudienceChange={setAudience}
+        onOpenAuth={openAuth}
+      />
 
       {/* Real content for crawlers / no-JS */}
       <noscript>
