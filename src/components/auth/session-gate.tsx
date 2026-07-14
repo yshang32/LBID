@@ -12,12 +12,12 @@ export function SessionGate({ locale, children }: { locale: Locale; children: Re
   const router = useRouter()
   const authPath = `/${locale}/auth`
   const isPublicPreview = pathname === `/${locale}/bid-demo` || pathname === `/${locale}/product-preview` || pathname === `/${locale}/demo-cases`
-  const isAuthPage = pathname === authPath || isPublicPreview
-  const [ready, setReady] = useState(isAuthPage)
+  const isPublicPage = pathname === `/${locale}` || pathname === authPath || isPublicPreview
+  const [ready, setReady] = useState(isPublicPage)
   const [authenticated, setAuthenticated] = useState(false)
 
   useEffect(() => {
-    if (isAuthPage) {
+    if (isPublicPage) {
       setReady(true)
       return
     }
@@ -47,9 +47,9 @@ export function SessionGate({ locale, children }: { locale: Locale; children: Re
       active = false
       listener.subscription.unsubscribe()
     }
-  }, [authPath, isAuthPage, router])
+  }, [authPath, isPublicPage, router])
 
-  if (isAuthPage || (ready && authenticated)) return <>{children}</>
+  if (isPublicPage || (ready && authenticated)) return <>{children}</>
 
   return <main className="grid min-h-screen place-items-center bg-white"><div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />Checking your secure session</div></main>
 }

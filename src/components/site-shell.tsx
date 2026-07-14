@@ -124,7 +124,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     }
   }, [])
 
-  const standalone = pathname === `${prefix}/auth`
+  const standalone = pathname === prefix || pathname === `${prefix}/auth`
   if (standalone) return <>{children}</>
 
   const primary: NavItem[] = [
