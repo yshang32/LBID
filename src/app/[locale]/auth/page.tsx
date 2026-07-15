@@ -311,10 +311,10 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
   async function workspaceHref() {
     try {
       const { response, body } = await apiJson("/api/company-profile")
-      if (!response.ok || !body.companyProfile?.onboarding_completed) return `/${locale}/onboarding`
+      if (!response.ok) return `/${locale}/dashboard`
       return body.role === "admin" ? `/${locale}/dashboard?mode=admin` : `/${locale}/dashboard`
     } catch {
-      return `/${locale}/onboarding`
+      return `/${locale}/dashboard`
     }
   }
 
