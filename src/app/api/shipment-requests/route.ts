@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const route = {
       ...suppliedRoute,
       origin: String(suppliedRoute.origin ?? body.origin ?? "").trim(),
-      destination: String(suppliedRoute.destination ?? body.destination ?? "Hong Kong (HKG)").trim(),
+      destination: String(suppliedRoute.destination ?? body.destination ?? "").trim(),
     }
     const servicesNeeded = body.services_needed ?? body.servicesNeeded ?? body.services ?? []
 

@@ -198,7 +198,7 @@ export function LiveDashboard({ locale }: { locale: Locale }) {
                 <div className="mt-7 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                   <div><p className="text-[9px] uppercase tracking-[0.1em] text-white/40">From</p><p className="mt-1 text-[16px] font-semibold">{nextOpportunity.route?.origin || "Pending"}</p></div>
                   <ArrowRight className="h-4 w-4 text-[#e1bd64]" />
-                  <div className="text-right"><p className="text-[9px] uppercase tracking-[0.1em] text-white/40">To</p><p className="mt-1 text-[16px] font-semibold">{nextOpportunity.route?.destination || nextOpportunity.route?.dest || "Hong Kong"}</p></div>
+                  <div className="text-right"><p className="text-[9px] uppercase tracking-[0.1em] text-white/40">To</p><p className="mt-1 text-[16px] font-semibold">{nextOpportunity.route?.destination || nextOpportunity.route?.dest || "Destination pending"}</p></div>
                 </div>
                 <p className="mt-6 border-t border-white/10 pt-4 text-[12px] leading-5 text-white/55">{cargoText(nextOpportunity.cargo_details)}</p>
                 <Link href={priorityHref} className="mt-5 flex h-10 items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-[#0b2148] transition hover:bg-[#f4e5bd]">Open opportunity <ArrowRight className="h-3.5 w-3.5" /></Link>
@@ -354,7 +354,7 @@ function TodayDashboardView({ locale, state, error, workspace, companyName, toda
 function LiveNetworkCanvas({ locale, mode, opportunity, title, href, quoteReady }: { locale: Locale; mode: TodayViewMode; opportunity?: JsonRecord; title: string; href: string; quoteReady: number }) {
   const isZh = locale === "zh"
   const origin = opportunity?.route?.origin || (mode === "client" ? (isZh ? "你嘅需求" : "Your demand") : (isZh ? "配對來源" : "Match origin"))
-  const destination = opportunity?.route?.destination || opportunity?.route?.dest || "Hong Kong"
+  const destination = opportunity?.route?.destination || opportunity?.route?.dest || (isZh ? "目的地待定" : "Destination pending")
   const hasMatch = Boolean(opportunity)
   const cta = mode === "client" ? (isZh ? "建立 Shipment Request" : "Create shipment request") : hasMatch ? (isZh ? "查看推薦機會" : "Open matched opportunity") : quoteReady ? (isZh ? "比較密封報價" : "Compare sealed quotes") : mode === "overview" ? (isZh ? "建立第一個需求" : "Create your first request") : (isZh ? "瀏覽接單市場" : "Browse opportunities")
 
@@ -938,7 +938,7 @@ function RouteBlock({ route, cargo }: { route: JsonRecord; cargo: JsonRecord }) 
         <span className="grid h-11 w-11 place-items-center rounded-full bg-navy text-white shadow-[0_8px_20px_rgba(12,26,62,0.25)]"><Plane className="h-5 w-5" /></span>
         <div className="sm:text-right">
           <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">Destination</p>
-          <p className="mt-1 text-[24px] font-bold text-ink">{route?.destination || route?.dest || "Hong Kong"}</p>
+          <p className="mt-1 text-[24px] font-bold text-ink">{route?.destination || route?.dest || "Destination pending"}</p>
         </div>
       </div>
       <p className="text-[13px] text-ink-3">{cargoText(cargo)}</p>
@@ -996,7 +996,7 @@ function InlineNotice({ text, tone }: { text: string; tone: "success" | "error" 
 
 function routeText(route?: JsonRecord) {
   if (!route) return "Route pending"
-  return `${route.origin || "Origin pending"} -> ${route.destination || route.dest || "Hong Kong"}`
+  return `${route.origin || "Origin pending"} -> ${route.destination || route.dest || "Destination pending"}`
 }
 
 function cargoText(cargo?: JsonRecord) {

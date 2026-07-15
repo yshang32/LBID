@@ -41,7 +41,7 @@ export function RequestWorkflowPanel({ locale, requestId }: { locale: Locale; re
 
   const request = state.request
   const owner = request.agent_id === state.userId
-  const route = `${request.route?.origin || (locale === "zh" ? "出發地待定" : "Origin pending")} ${locale === "zh" ? "至" : "to"} ${request.route?.destination || "Hong Kong"}`
+  const route = `${request.route?.origin || (locale === "zh" ? "出發地待定" : "Origin pending")} ${locale === "zh" ? "至" : "to"} ${request.route?.destination || (locale === "zh" ? "目的地待定" : "Destination pending")}`
   const progress = workflowProgress(request.status)
 
   return <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10"><Button asChild variant="ghost"><Link href={`/${locale}/requests`}><ArrowLeft className="h-4 w-4" />{t.back}</Link></Button>

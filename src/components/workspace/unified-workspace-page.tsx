@@ -1449,7 +1449,7 @@ function adminRowTitle(kind: UnifiedPageKind, row: any) {
   if (kind === "admin-payments") return `${row.company_name || row.email || row.user_id || "Payment"} - ${row.currency || "HKD"} ${Number(row.amount || 0).toLocaleString("en-HK")}`
   if (kind === "admin-accounts") return row.companyName || row.company_name_en || row.company_name_zh || row.id || "Company profile"
   const route = row.route || {}
-  return `${row.id || "SR"} - ${route.origin || "Origin"} to ${route.destination || "Hong Kong"}`
+  return `${row.id || "SR"} - ${route.origin || "Origin"} to ${route.destination || "Destination"}`
 }
 
 function adminRowMeta(kind: UnifiedPageKind, row: any) {

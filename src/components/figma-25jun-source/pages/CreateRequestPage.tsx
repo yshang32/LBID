@@ -51,7 +51,7 @@ type Step = 0 | 1 | 2 | 3
 type FreightMode = "Air" | "Sea"
 type ShipmentUnit = "cartons" | "pallets" | "crates" | "loose"
 
-type OriginLocation = {
+type LogisticsLocation = {
   id: string
   city: string
   country: string
@@ -71,6 +71,7 @@ type AttachmentDraft = {
 
 type FormData = {
   originId: string
+  destinationId: string
   freight: FreightMode
   pickupDate: string
   flexibleDays: boolean
@@ -100,7 +101,7 @@ type ServiceOption = {
   recommended?: boolean
 }
 
-const ORIGIN_LOCATIONS: OriginLocation[] = [
+const LOGISTICS_LOCATIONS: LogisticsLocation[] = [
   { id: "sgn", city: "Ho Chi Minh City", country: "Vietnam", code: "SGN", facility: "Tan Son Nhat International Airport", modes: ["Air"], coordinates: [106.6602, 10.8188], estimatedForwarders: "8-12" },
   { id: "vnsgn", city: "Ho Chi Minh City", country: "Vietnam", code: "VNSGN", facility: "Cat Lai Port", modes: ["Sea"], coordinates: [106.775, 10.75], estimatedForwarders: "7-10" },
   { id: "han", city: "Hanoi", country: "Vietnam", code: "HAN", facility: "Noi Bai International Airport", modes: ["Air"], coordinates: [105.8072, 21.2187], estimatedForwarders: "6-9" },
@@ -119,6 +120,30 @@ const ORIGIN_LOCATIONS: OriginLocation[] = [
   { id: "pnh", city: "Phnom Penh", country: "Cambodia", code: "PNH", facility: "Phnom Penh International Airport", modes: ["Air"], coordinates: [104.8441, 11.5466], estimatedForwarders: "4-7" },
   { id: "pvg", city: "Shanghai", country: "China", code: "PVG", facility: "Shanghai Pudong International Airport", modes: ["Air"], coordinates: [121.7998, 31.1443], estimatedForwarders: "14-20" },
   { id: "cnsgh", city: "Shanghai", country: "China", code: "CNSGH", facility: "Port of Shanghai", modes: ["Sea"], coordinates: [121.705, 31.303], estimatedForwarders: "15-22" },
+  { id: "hkg", city: "Hong Kong", country: "Hong Kong", code: "HKG", facility: "Hong Kong International Airport", modes: ["Air"], coordinates: [113.9185, 22.308], estimatedForwarders: "14-20" },
+  { id: "hkhkg", city: "Hong Kong", country: "Hong Kong", code: "HKHKG", facility: "Port of Hong Kong", modes: ["Sea"], coordinates: [114.145, 22.285], estimatedForwarders: "14-20" },
+  { id: "szx", city: "Shenzhen", country: "China", code: "SZX", facility: "Shenzhen Bao'an International Airport", modes: ["Air"], coordinates: [113.811, 22.639], estimatedForwarders: "12-18" },
+  { id: "cnszx", city: "Shenzhen", country: "China", code: "CNSZX", facility: "Yantian Port", modes: ["Sea"], coordinates: [114.27, 22.58], estimatedForwarders: "13-19" },
+  { id: "tpe", city: "Taipei", country: "Taiwan", code: "TPE", facility: "Taiwan Taoyuan International Airport", modes: ["Air"], coordinates: [121.233, 25.077], estimatedForwarders: "10-15" },
+  { id: "twkel", city: "Keelung", country: "Taiwan", code: "TWKEL", facility: "Port of Keelung", modes: ["Sea"], coordinates: [121.75, 25.14], estimatedForwarders: "8-13" },
+  { id: "nrt", city: "Tokyo", country: "Japan", code: "NRT", facility: "Narita International Airport", modes: ["Air"], coordinates: [140.3929, 35.772], estimatedForwarders: "12-18" },
+  { id: "jptyo", city: "Tokyo", country: "Japan", code: "JPTYO", facility: "Port of Tokyo", modes: ["Sea"], coordinates: [139.77, 35.62], estimatedForwarders: "11-17" },
+  { id: "icn", city: "Seoul", country: "South Korea", code: "ICN", facility: "Incheon International Airport", modes: ["Air"], coordinates: [126.451, 37.46], estimatedForwarders: "11-17" },
+  { id: "krpus", city: "Busan", country: "South Korea", code: "KRPUS", facility: "Port of Busan", modes: ["Sea"], coordinates: [129.04, 35.1], estimatedForwarders: "12-18" },
+  { id: "del", city: "Delhi", country: "India", code: "DEL", facility: "Indira Gandhi International Airport", modes: ["Air"], coordinates: [77.103, 28.556], estimatedForwarders: "8-13" },
+  { id: "inmaa", city: "Chennai", country: "India", code: "INMAA", facility: "Port of Chennai", modes: ["Sea"], coordinates: [80.3, 13.08], estimatedForwarders: "8-13" },
+  { id: "dxb", city: "Dubai", country: "United Arab Emirates", code: "DXB", facility: "Dubai International Airport", modes: ["Air"], coordinates: [55.364, 25.253], estimatedForwarders: "10-16" },
+  { id: "aejea", city: "Dubai", country: "United Arab Emirates", code: "AEJEA", facility: "Jebel Ali Port", modes: ["Sea"], coordinates: [55.06, 24.99], estimatedForwarders: "11-17" },
+  { id: "lhr", city: "London", country: "United Kingdom", code: "LHR", facility: "Heathrow Airport", modes: ["Air"], coordinates: [-0.4543, 51.47], estimatedForwarders: "9-15" },
+  { id: "gbsou", city: "Southampton", country: "United Kingdom", code: "GBSOU", facility: "Port of Southampton", modes: ["Sea"], coordinates: [-1.4, 50.9], estimatedForwarders: "8-14" },
+  { id: "fra", city: "Frankfurt", country: "Germany", code: "FRA", facility: "Frankfurt Airport", modes: ["Air"], coordinates: [8.57, 50.033], estimatedForwarders: "10-16" },
+  { id: "nlrtm", city: "Rotterdam", country: "Netherlands", code: "NLRTM", facility: "Port of Rotterdam", modes: ["Sea"], coordinates: [4.05, 51.95], estimatedForwarders: "13-20" },
+  { id: "lax", city: "Los Angeles", country: "United States", code: "LAX", facility: "Los Angeles International Airport", modes: ["Air"], coordinates: [-118.4085, 33.9416], estimatedForwarders: "10-16" },
+  { id: "uslax", city: "Los Angeles", country: "United States", code: "USLAX", facility: "Port of Los Angeles", modes: ["Sea"], coordinates: [-118.264, 33.74], estimatedForwarders: "12-19" },
+  { id: "jfk", city: "New York", country: "United States", code: "JFK", facility: "John F. Kennedy International Airport", modes: ["Air"], coordinates: [-73.7781, 40.6413], estimatedForwarders: "11-17" },
+  { id: "usnyc", city: "New York", country: "United States", code: "USNYC", facility: "Port of New York and New Jersey", modes: ["Sea"], coordinates: [-74.05, 40.68], estimatedForwarders: "11-18" },
+  { id: "syd", city: "Sydney", country: "Australia", code: "SYD", facility: "Sydney Kingsford Smith Airport", modes: ["Air"], coordinates: [151.1772, -33.9461], estimatedForwarders: "9-14" },
+  { id: "ausyd", city: "Sydney", country: "Australia", code: "AUSYD", facility: "Port Botany", modes: ["Sea"], coordinates: [151.23, -33.97], estimatedForwarders: "9-15" },
 ]
 
 const CARGO_TYPES = ["General Goods", "Electronics", "Perishable / Cold Chain", "Machinery / Industrial", "Textiles / Garments", "Documents / Samples", "Chemical (Non-Hazardous)", "Other"]
@@ -139,7 +164,7 @@ const SERVICES: ServiceOption[] = [
   { id: "priority", group: "main", label: "Priority Uplift", note: "Priority space allocation" },
   { id: "insurance", group: "main", label: "Cargo Insurance", note: "Protect cargo against loss or damage", recommended: true },
   { id: "tracking", group: "main", label: "Real-time Tracking", note: "Track shipment milestones in LBID", recommended: true },
-  { id: "import-customs", group: "destination", label: "Hong Kong Customs Clearance", note: "Import clearance handled by forwarder", recommended: true },
+  { id: "import-customs", group: "destination", label: "Import Customs Clearance", note: "Destination import clearance handled by forwarder", recommended: true },
   { id: "delivery", group: "destination", label: "Door Delivery", note: "Deliver cargo to consignee address", recommended: true },
   { id: "storage", group: "destination", label: "Temporary Storage", note: "Short-term storage at warehouse" },
   { id: "unload", group: "destination", label: "Unload / Deboard", note: "Unloading service at destination" },
@@ -151,6 +176,7 @@ const SERVICES: ServiceOption[] = [
 
 const INIT: FormData = {
   originId: "",
+  destinationId: "",
   freight: "Air",
   pickupDate: "",
   flexibleDays: true,
@@ -182,6 +208,8 @@ export function CreateRequestPage() {
   const [form, setForm] = useState<FormData>(INIT)
   const [originQuery, setOriginQuery] = useState("")
   const [originOpen, setOriginOpen] = useState(false)
+  const [destinationQuery, setDestinationQuery] = useState("")
+  const [destinationOpen, setDestinationOpen] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -190,29 +218,39 @@ export function CreateRequestPage() {
   const [attachmentError, setAttachmentError] = useState("")
   const saveTimer = useRef<number | null>(null)
 
-  const selectedOrigin = ORIGIN_LOCATIONS.find((location) => location.id === form.originId) || null
-  const availableLocations = useMemo(() => ORIGIN_LOCATIONS.filter((location) => location.modes.includes(form.freight)), [form.freight])
-  const matchingLocations = useMemo(() => {
+  const selectedOrigin = LOGISTICS_LOCATIONS.find((location) => location.id === form.originId) || null
+  const selectedDestination = LOGISTICS_LOCATIONS.find((location) => location.id === form.destinationId) || null
+  const availableLocations = useMemo(() => LOGISTICS_LOCATIONS.filter((location) => location.modes.includes(form.freight)), [form.freight])
+  const matchingOrigins = useMemo(() => {
     const term = originQuery.trim().toLowerCase()
-    if (!term) return availableLocations.slice(0, 8)
-    return availableLocations.filter((location) => [location.city, location.country, location.code, location.facility].some((value) => value.toLowerCase().includes(term))).slice(0, 8)
-  }, [availableLocations, originQuery])
+    const locations = availableLocations.filter((location) => location.id !== form.destinationId)
+    if (!term) return locations.slice(0, 8)
+    return locations.filter((location) => [location.city, location.country, location.code, location.facility].some((value) => value.toLowerCase().includes(term))).slice(0, 8)
+  }, [availableLocations, form.destinationId, originQuery])
+  const matchingDestinations = useMemo(() => {
+    const term = destinationQuery.trim().toLowerCase()
+    const locations = availableLocations.filter((location) => location.id !== form.originId)
+    if (!term) return locations.slice(0, 8)
+    return locations.filter((location) => [location.city, location.country, location.code, location.facility].some((value) => value.toLowerCase().includes(term))).slice(0, 8)
+  }, [availableLocations, destinationQuery, form.originId])
 
   const calculations = useMemo(() => calculateCargo(form), [form])
   const readinessItems = useMemo(() => [
-    { label: "Route information", complete: Boolean(selectedOrigin) },
+    { label: "Route information", complete: Boolean(selectedOrigin && selectedDestination) },
     { label: "Pickup schedule", complete: Boolean(form.pickupDate) },
     { label: "Cargo details", complete: Boolean(form.cargoType && calculations.totalGross > 0 && calculations.totalVolume > 0) },
     { label: "Services & documents", complete: form.services.length > 0 },
-  ], [calculations.totalGross, calculations.totalVolume, form.cargoType, form.pickupDate, form.services.length, selectedOrigin])
+  ], [calculations.totalGross, calculations.totalVolume, form.cargoType, form.pickupDate, form.services.length, selectedDestination, selectedOrigin])
   const readiness = readinessItems.filter((item) => item.complete).length * 25
   const selectedServices = SERVICES.filter((service) => form.services.includes(service.id))
 
   useEffect(() => {
     const draft = readDraft()
-    const origin = ORIGIN_LOCATIONS.find((location) => location.id === draft.originId)
+    const origin = LOGISTICS_LOCATIONS.find((location) => location.id === draft.originId)
+    const destination = LOGISTICS_LOCATIONS.find((location) => location.id === draft.destinationId)
     setForm(draft)
     setOriginQuery(origin ? locationLabel(origin) : "")
+    setDestinationQuery(destination ? locationLabel(destination) : "")
     setDraftLoaded(true)
   }, [])
 
@@ -243,18 +281,28 @@ export function CreateRequestPage() {
 
   function selectFreight(freight: FreightMode) {
     setForm((current) => {
-      const origin = ORIGIN_LOCATIONS.find((location) => location.id === current.originId)
+      const origin = LOGISTICS_LOCATIONS.find((location) => location.id === current.originId)
+      const destination = LOGISTICS_LOCATIONS.find((location) => location.id === current.destinationId)
       const originStillValid = origin?.modes.includes(freight)
-      return { ...current, freight, originId: originStillValid ? current.originId : "" }
+      const destinationStillValid = destination?.modes.includes(freight)
+      return { ...current, freight, originId: originStillValid ? current.originId : "", destinationId: destinationStillValid ? current.destinationId : "" }
     })
     if (selectedOrigin && !selectedOrigin.modes.includes(freight)) setOriginQuery("")
+    if (selectedDestination && !selectedDestination.modes.includes(freight)) setDestinationQuery("")
     setOriginOpen(false)
+    setDestinationOpen(false)
   }
 
-  function selectOrigin(location: OriginLocation) {
+  function selectOrigin(location: LogisticsLocation) {
     set("originId", location.id)
     setOriginQuery(locationLabel(location))
     setOriginOpen(false)
+  }
+
+  function selectDestination(location: LogisticsLocation) {
+    set("destinationId", location.id)
+    setDestinationQuery(locationLabel(location))
+    setDestinationOpen(false)
   }
 
   function toggleCharacteristic(value: string) {
@@ -285,7 +333,7 @@ export function CreateRequestPage() {
   }
 
   function canAdvance(targetStep = step) {
-    if (targetStep === 0) return Boolean(selectedOrigin && form.pickupDate)
+    if (targetStep === 0) return Boolean(selectedOrigin && selectedDestination && selectedOrigin.id !== selectedDestination.id && form.pickupDate)
     if (targetStep === 1) return Boolean(form.cargoType && calculations.totalGross > 0 && calculations.totalVolume > 0)
     if (targetStep === 2) return form.services.length > 0
     return readiness === 100
@@ -303,7 +351,7 @@ export function CreateRequestPage() {
   }
 
   async function handleSubmit() {
-    if (!selectedOrigin || submitting || !canAdvance(3)) return
+    if (!selectedOrigin || !selectedDestination || submitting || !canAdvance(3)) return
     setSubmitting(true)
     setSubmitError("")
 
@@ -317,11 +365,13 @@ export function CreateRequestPage() {
           origin_code: selectedOrigin.code,
           origin_facility: selectedOrigin.facility,
           origin_coordinates: selectedOrigin.coordinates,
-          destination: "Hong Kong (HKG)",
-          destination_city: "Hong Kong",
-          destination_code: "HKG",
-          destination_coordinates: [113.9185, 22.308],
-          distance_km: distanceKm(selectedOrigin.coordinates, [113.9185, 22.308]),
+          destination: locationLabel(selectedDestination),
+          destination_city: selectedDestination.city,
+          destination_country: selectedDestination.country,
+          destination_code: selectedDestination.code,
+          destination_facility: selectedDestination.facility,
+          destination_coordinates: selectedDestination.coordinates,
+          distance_km: distanceKm(selectedOrigin.coordinates, selectedDestination.coordinates),
         },
         cargo_details: {
           cargo: form.cargoType,
@@ -373,10 +423,10 @@ export function CreateRequestPage() {
           <div className="min-h-[620px] p-5 sm:p-6 lg:p-7">
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
-                {step === 0 ? <RouteStep form={form} origin={selectedOrigin} originQuery={originQuery} originOpen={originOpen} matchingLocations={matchingLocations} onSet={set} onFreightChange={selectFreight} onOriginQuery={(value) => { setOriginQuery(value); set("originId", ""); setOriginOpen(true) }} onOriginSelect={selectOrigin} onOriginOpen={setOriginOpen} /> : null}
+                {step === 0 ? <RouteStep form={form} origin={selectedOrigin} destination={selectedDestination} originQuery={originQuery} destinationQuery={destinationQuery} originOpen={originOpen} destinationOpen={destinationOpen} matchingOrigins={matchingOrigins} matchingDestinations={matchingDestinations} onSet={set} onFreightChange={selectFreight} onOriginQuery={(value) => { setOriginQuery(value); set("originId", ""); setOriginOpen(true) }} onDestinationQuery={(value) => { setDestinationQuery(value); set("destinationId", ""); setDestinationOpen(true) }} onOriginSelect={selectOrigin} onDestinationSelect={selectDestination} onOriginOpen={setOriginOpen} onDestinationOpen={setDestinationOpen} /> : null}
                 {step === 1 ? <CargoStep form={form} calculations={calculations} onSet={set} onCharacteristic={toggleCharacteristic} onUnit={selectUnit} onFiles={(files) => addFiles(files, "cargo")} onRemoveFile={(id) => set("attachments", form.attachments.filter((file) => file.id !== id))} /> : null}
-                {step === 2 ? <ServicesStep form={form} onSet={set} onToggle={toggleService} onFiles={(files) => addFiles(files, "document")} onRemoveFile={(id) => set("attachments", form.attachments.filter((file) => file.id !== id))} /> : null}
-                {step === 3 ? <ReviewStep form={form} origin={selectedOrigin} calculations={calculations} services={selectedServices} readiness={readiness} onEdit={setStep} /> : null}
+                {step === 2 ? <ServicesStep form={form} destination={selectedDestination} onSet={set} onToggle={toggleService} onFiles={(files) => addFiles(files, "document")} onRemoveFile={(id) => set("attachments", form.attachments.filter((file) => file.id !== id))} /> : null}
+                {step === 3 ? <ReviewStep form={form} origin={selectedOrigin} destination={selectedDestination} calculations={calculations} services={selectedServices} readiness={readiness} onEdit={setStep} /> : null}
               </motion.div>
             </AnimatePresence>
             {attachmentError ? <div role="alert" className="mt-4 flex items-center gap-2 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11.5px] text-amber-800"><AlertCircle className="h-4 w-4" />{attachmentError}</div> : null}
@@ -386,7 +436,7 @@ export function CreateRequestPage() {
           {submitError ? <div role="alert" className="mx-5 mb-5 flex items-start gap-2.5 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-medium text-red-700 sm:mx-6"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />{submitError}</div> : null}
         </section>
 
-        <RequestSummary form={form} origin={selectedOrigin} readiness={readiness} readinessItems={readinessItems} />
+        <RequestSummary form={form} origin={selectedOrigin} destination={selectedDestination} readiness={readiness} readinessItems={readinessItems} />
       </div>
     </main>
   )
@@ -427,27 +477,22 @@ function StepNavigation({ step, onSelect }: { step: Step; onSelect: (step: Step)
   )
 }
 
-function RouteStep({ form, origin, originQuery, originOpen, matchingLocations, onSet, onFreightChange, onOriginQuery, onOriginSelect, onOriginOpen }: { form: FormData; origin: OriginLocation | null; originQuery: string; originOpen: boolean; matchingLocations: OriginLocation[]; onSet: SetForm; onFreightChange: (mode: FreightMode) => void; onOriginQuery: (value: string) => void; onOriginSelect: (location: OriginLocation) => void; onOriginOpen: (open: boolean) => void }) {
-  const popular = matchingLocations.slice(0, 4)
-  const distance = origin ? distanceKm(origin.coordinates, [113.9185, 22.308]) : 0
+function RouteStep({ form, origin, destination, originQuery, destinationQuery, originOpen, destinationOpen, matchingOrigins, matchingDestinations, onSet, onFreightChange, onOriginQuery, onDestinationQuery, onOriginSelect, onDestinationSelect, onOriginOpen, onDestinationOpen }: { form: FormData; origin: LogisticsLocation | null; destination: LogisticsLocation | null; originQuery: string; destinationQuery: string; originOpen: boolean; destinationOpen: boolean; matchingOrigins: LogisticsLocation[]; matchingDestinations: LogisticsLocation[]; onSet: SetForm; onFreightChange: (mode: FreightMode) => void; onOriginQuery: (value: string) => void; onDestinationQuery: (value: string) => void; onOriginSelect: (location: LogisticsLocation) => void; onDestinationSelect: (location: LogisticsLocation) => void; onOriginOpen: (open: boolean) => void; onDestinationOpen: (open: boolean) => void }) {
+  const distance = origin && destination ? distanceKm(origin.coordinates, destination.coordinates) : 0
+  const transit = transitEstimate(distance, form.freight)
   return (
     <div>
       <StepTitle number="1" title="Where is your shipment coming from and going to?" subtitle="Choose a verified airport or seaport. Free-text locations are not accepted." />
       <div className="relative mt-5">
-        <RequestRouteMap origin={origin ? { city: origin.city, code: origin.code, coordinates: origin.coordinates } : null} mode={form.freight} />
-        <div className="mt-3 grid gap-3 lg:absolute lg:inset-x-4 lg:top-11 lg:mt-0 lg:grid-cols-[260px_1fr_230px] lg:items-start">
-          <div className="relative rounded-[10px] border border-white/90 bg-white/94 p-4 shadow-[0_14px_36px_rgba(31,45,70,0.14)] backdrop-blur-xl">
-            <FieldLabel>Origin airport / port</FieldLabel>
-            <div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b96a7]" /><input role="combobox" aria-expanded={originOpen} aria-controls="origin-suggestions" value={originQuery} onChange={(event) => onOriginQuery(event.target.value)} onFocus={() => onOriginOpen(true)} onBlur={() => window.setTimeout(() => onOriginOpen(false), 130)} placeholder={`Search ${form.freight.toLowerCase()} locations`} className={`${INPUT} pl-9 pr-9`} />{originQuery ? <button type="button" aria-label="Clear origin" onMouseDown={(event) => event.preventDefault()} onClick={() => onOriginQuery("")} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-[6px] text-[#8b96a7] hover:bg-[#f2f4f7] hover:text-[#27344b]"><X className="h-3.5 w-3.5" /></button> : null}</div>
-            {originOpen ? <div id="origin-suggestions" role="listbox" className="absolute left-0 right-0 top-[78px] z-30 max-h-[260px] overflow-y-auto rounded-[9px] border border-[#dfe4ec] bg-white p-1.5 shadow-[0_18px_45px_rgba(23,39,67,0.18)]">{matchingLocations.length ? matchingLocations.map((location) => <button key={location.id} type="button" role="option" aria-selected={location.id === form.originId} onMouseDown={(event) => event.preventDefault()} onClick={() => onOriginSelect(location)} className="flex w-full items-start gap-3 rounded-[7px] px-3 py-2.5 text-left transition hover:bg-[#f5f7fb]"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#bc821a]" /><span className="min-w-0"><strong className="block text-[12px] text-[#1f2d45]">{location.city} ({location.code})</strong><span className="mt-0.5 block truncate text-[10px] text-[#8590a2]">{location.facility}</span></span></button>) : <p className="px-3 py-5 text-center text-[11px] text-[#8a95a6]">No verified location found.</p>}</div> : null}
-            <div className="mt-3 border-t border-[#ece7df] pt-3"><p className="text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#9099a8]">Popular locations</p><div className="mt-2 flex flex-wrap gap-1.5">{popular.map((location) => <button type="button" key={location.id} onClick={() => onOriginSelect(location)} className={`rounded-[6px] border px-2 py-1 text-[9.5px] font-medium transition ${form.originId === location.id ? "border-[#d8a340] bg-[#fff6df] text-[#946614]" : "border-[#e3e7ed] bg-white text-[#536077] hover:border-[#d5a54b] hover:text-[#8f6415]"}`}>{location.city} ({location.code})</button>)}</div></div>
-          </div>
+        <RequestRouteMap origin={origin ? { city: origin.city, code: origin.code, coordinates: origin.coordinates } : null} destination={destination ? { city: destination.city, code: destination.code, coordinates: destination.coordinates } : null} mode={form.freight} />
+        <div className="mt-3 grid gap-3 lg:absolute lg:inset-x-4 lg:top-11 lg:mt-0 lg:grid-cols-[280px_1fr_280px] lg:items-start">
+          <LocationSelectorCard kind="origin" mode={form.freight} selectedId={form.originId} query={originQuery} open={originOpen} locations={matchingOrigins} onQuery={onOriginQuery} onSelect={onOriginSelect} onOpen={onOriginOpen} />
           <div />
-          <div className="rounded-[10px] border border-white/90 bg-white/94 p-4 shadow-[0_14px_36px_rgba(31,45,70,0.14)] backdrop-blur-xl"><p className="text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#9099a8]">Destination</p><p className="mt-2 text-[15px] font-bold text-[#16223a]">Hong Kong</p><p className="text-[10.5px] text-[#7f8a9d]">Hong Kong (HKG)</p><div className="mt-3 space-y-2 border-t border-[#ece7df] pt-3 text-[10px] leading-4 text-[#69768a]"><p className="flex gap-2"><ShieldCheck className="h-3.5 w-3.5 flex-shrink-0 text-[#23845f]" />Destination managed by LBID network</p><p className="flex gap-2"><Check className="h-3.5 w-3.5 flex-shrink-0 text-[#23845f]" />Customs support available</p></div></div>
+          <LocationSelectorCard kind="destination" mode={form.freight} selectedId={form.destinationId} query={destinationQuery} open={destinationOpen} locations={matchingDestinations} onQuery={onDestinationQuery} onSelect={onDestinationSelect} onOpen={onDestinationOpen} />
         </div>
       </div>
 
-      <div className="mt-4 grid gap-px overflow-hidden rounded-[9px] border border-[#e6e1d8] bg-[#e6e1d8] sm:grid-cols-3"><RouteMetric icon={MapPin} label="Distance" value={distance ? `${distance.toLocaleString()} km` : "Select origin"} /><RouteMetric icon={Clock3} label={`Typical Transit (${form.freight})`} value={form.freight === "Air" ? "1-3 days" : "7-18 days"} /><RouteMetric icon={CloudSun} label="Route Coverage" value={origin ? "Strong" : "Pending"} positive={Boolean(origin)} /></div>
+      <div className="mt-4 grid gap-px overflow-hidden rounded-[9px] border border-[#e6e1d8] bg-[#e6e1d8] sm:grid-cols-3"><RouteMetric icon={MapPin} label="Distance" value={distance ? `${distance.toLocaleString()} km` : "Select both locations"} /><RouteMetric icon={Clock3} label={`Typical Transit (${form.freight})`} value={distance ? transit : "Calculated after selection"} /><RouteMetric icon={CloudSun} label="Route Coverage" value={origin && destination ? "Available" : "Pending"} positive={Boolean(origin && destination)} /></div>
 
       <div className="mt-4 grid gap-5 rounded-[10px] border border-[#ece7df] bg-[#fffdfa] p-4 xl:grid-cols-[1.05fr_.9fr_1fr]">
         <div><FieldLabel>Freight Mode</FieldLabel><div className="mt-2 grid grid-cols-2 gap-2"><ModeButton mode="Air" selected={form.freight === "Air"} icon={Plane} helper="1-3 days transit" onClick={() => onFreightChange("Air")} /><ModeButton mode="Sea" selected={form.freight === "Sea"} icon={Ship} helper="7-18 days transit" onClick={() => onFreightChange("Sea")} /></div></div>
@@ -457,6 +502,12 @@ function RouteStep({ form, origin, originQuery, originOpen, matchingLocations, o
       <Tip>Accurate route, ready date and Incoterm data helps forwarders return more precise sealed quotes.</Tip>
     </div>
   )
+}
+
+function LocationSelectorCard({ kind, mode, selectedId, query, open, locations, onQuery, onSelect, onOpen }: { kind: "origin" | "destination"; mode: FreightMode; selectedId: string; query: string; open: boolean; locations: LogisticsLocation[]; onQuery: (value: string) => void; onSelect: (location: LogisticsLocation) => void; onOpen: (open: boolean) => void }) {
+  const label = kind === "origin" ? "Origin airport / port" : "Destination airport / port"
+  const suggestionsId = `${kind}-suggestions`
+  return <div className="relative rounded-[10px] border border-white/90 bg-white/94 p-4 shadow-[0_14px_36px_rgba(31,45,70,0.14)] backdrop-blur-xl"><FieldLabel>{label}</FieldLabel><div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b96a7]" /><input role="combobox" aria-label={label} aria-expanded={open} aria-controls={suggestionsId} value={query} onChange={(event) => onQuery(event.target.value)} onFocus={() => onOpen(true)} onBlur={() => window.setTimeout(() => onOpen(false), 130)} placeholder={`Search ${mode.toLowerCase()} locations`} className={`${INPUT} pl-9 pr-9`} />{query ? <button type="button" aria-label={`Clear ${kind}`} onMouseDown={(event) => event.preventDefault()} onClick={() => onQuery("")} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-[6px] text-[#8b96a7] transition hover:bg-[#f2f4f7] hover:text-[#27344b]"><X className="h-3.5 w-3.5" /></button> : null}</div>{open ? <div id={suggestionsId} role="listbox" className="absolute left-0 right-0 top-[78px] z-30 max-h-[260px] overflow-y-auto rounded-[9px] border border-[#dfe4ec] bg-white p-1.5 shadow-[0_18px_45px_rgba(23,39,67,0.18)]">{locations.length ? locations.map((location) => <button key={location.id} type="button" role="option" aria-selected={location.id === selectedId} onMouseDown={(event) => event.preventDefault()} onClick={() => onSelect(location)} className="flex w-full items-start gap-3 rounded-[7px] px-3 py-2.5 text-left transition hover:bg-[#f5f7fb]"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#bc821a]" /><span className="min-w-0"><strong className="block text-[12px] text-[#1f2d45]">{location.city} ({location.code})</strong><span className="mt-0.5 block truncate text-[10px] text-[#8590a2]">{location.facility}</span></span></button>) : <p className="px-3 py-5 text-center text-[11px] text-[#8a95a6]">No verified location found.</p>}</div> : null}<div className="mt-3 border-t border-[#ece7df] pt-3"><p className="text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#9099a8]">Suggested locations</p><div className="mt-2 flex flex-wrap gap-1.5">{locations.slice(0, 4).map((location) => <button type="button" key={location.id} onClick={() => onSelect(location)} className={`rounded-[6px] border px-2 py-1 text-[9.5px] font-medium transition ${selectedId === location.id ? "border-[#d8a340] bg-[#fff6df] text-[#946614]" : "border-[#e3e7ed] bg-white text-[#536077] hover:border-[#d5a54b] hover:text-[#8f6415]"}`}>{location.city} ({location.code})</button>)}</div></div></div>
 }
 
 function CargoStep({ form, calculations, onSet, onCharacteristic, onUnit, onFiles, onRemoveFile }: { form: FormData; calculations: CargoCalculations; onSet: SetForm; onCharacteristic: (value: string) => void; onUnit: (unit: ShipmentUnit) => void; onFiles: (files: FileList | null) => void; onRemoveFile: (id: string) => void }) {
@@ -484,25 +535,25 @@ function CargoStep({ form, calculations, onSet, onCharacteristic, onUnit, onFile
   )
 }
 
-function ServicesStep({ form, onSet, onToggle, onFiles, onRemoveFile }: { form: FormData; onSet: SetForm; onToggle: (id: string) => void; onFiles: (files: FileList | null) => void; onRemoveFile: (id: string) => void }) {
+function ServicesStep({ form, destination, onSet, onToggle, onFiles, onRemoveFile }: { form: FormData; destination: LogisticsLocation | null; onSet: SetForm; onToggle: (id: string) => void; onFiles: (files: FileList | null) => void; onRemoveFile: (id: string) => void }) {
   const documentFiles = form.attachments.filter((file) => file.kind === "document")
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><StepTitle number="3" title="Select services and upload documents" subtitle="Recommended services are based on your route, mode and cargo." /><span className="inline-flex h-9 flex-shrink-0 items-center gap-2 rounded-[8px] border border-[#eadfce] bg-[#fffaf0] px-3 text-[10.5px] font-semibold text-[#966715]"><Sparkles className="h-3.5 w-3.5" />Recommended for this shipment</span></div>
-      <div className="mt-5 space-y-2.5"><ServiceGroup group="origin" icon={Truck} title="Origin Services" subtitle="Services at the pickup location" form={form} onToggle={onToggle} /><ServiceGroup group="main" icon={form.freight === "Air" ? Plane : Ship} title="Main Freight" subtitle={`International ${form.freight.toLowerCase()} transportation`} form={form} onToggle={onToggle} coreService={`${form.freight} Freight`} /><ServiceGroup group="destination" icon={Warehouse} title="Destination Services" subtitle="Services in Hong Kong" form={form} onToggle={onToggle} /><ServiceGroup group="documents" icon={FileCheck2} title="Documentation" subtitle="Shipping documents and certifications" form={form} onToggle={onToggle} /></div>
+      <div className="mt-5 space-y-2.5"><ServiceGroup group="origin" icon={Truck} title="Origin Services" subtitle="Services at the pickup location" form={form} onToggle={onToggle} /><ServiceGroup group="main" icon={form.freight === "Air" ? Plane : Ship} title="Main Freight" subtitle={`International ${form.freight.toLowerCase()} transportation`} form={form} onToggle={onToggle} coreService={`${form.freight} Freight`} /><ServiceGroup group="destination" icon={Warehouse} title="Destination Services" subtitle={`Services in ${destination?.city || "the destination"}`} form={form} onToggle={onToggle} /><ServiceGroup group="documents" icon={FileCheck2} title="Documentation" subtitle="Shipping documents and certifications" form={form} onToggle={onToggle} /></div>
       <div className="mt-5 grid gap-4 lg:grid-cols-2"><TextAreaField label="Additional Requirements (Optional)" value={form.serviceNotes} onChange={(value) => onSet("serviceNotes", value)} placeholder="Delivery constraints, handling instructions or other requirements..." /><FileDropzone label="Shipment Documents (Optional)" hint="Invoice, packing list, COO or permit" files={documentFiles} onFiles={onFiles} onRemove={onRemoveFile} /></div>
     </div>
   )
 }
 
-function ReviewStep({ form, origin, calculations, services, readiness, onEdit }: { form: FormData; origin: OriginLocation | null; calculations: CargoCalculations; services: ServiceOption[]; readiness: number; onEdit: (step: Step) => void }) {
+function ReviewStep({ form, origin, destination, calculations, services, readiness, onEdit }: { form: FormData; origin: LogisticsLocation | null; destination: LogisticsLocation | null; calculations: CargoCalculations; services: ServiceOption[]; readiness: number; onEdit: (step: Step) => void }) {
   const cargoFiles = form.attachments.filter((file) => file.kind === "cargo")
   const documentFiles = form.attachments.filter((file) => file.kind === "document")
   return (
     <div>
       <div className="flex flex-col gap-4 border-b border-[#ece7df] pb-5 lg:flex-row lg:items-center lg:justify-between"><StepTitle number="4" title="Review your request" subtitle="Confirm the details before sending this shipment to LBID review." /><div className="min-w-[290px] rounded-[9px] border border-[#e5e8ee] bg-[#fafbfc] px-4 py-3"><div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-[#445168]">Request readiness</span><strong className="text-[16px] text-[#16223a]">{readiness}%</strong></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e8ebef]"><div className="h-full rounded-full bg-[#16885a] transition-[width]" style={{ width: `${readiness}%` }} /></div></div></div>
       <div className="mt-5 grid gap-3 xl:grid-cols-3">
-        <ReviewCard title="Route & Schedule" onEdit={() => onEdit(0)}><div className="mb-4 flex items-center justify-between"><LocationPill code={origin?.code || "---"} city={origin?.city || "Origin"} tone="green" /><Plane className="h-4 w-4 text-[#172b4c]" /><LocationPill code="HKG" city="Hong Kong" tone="gold" /></div><ReviewPair label="Freight Mode" value={`${form.freight} Freight`} /><ReviewPair label="Trade Term" value={form.tradeTerm} /><ReviewPair label="Pickup Date" value={form.pickupDate || "-"} /><ReviewPair label="Transit" value={form.freight === "Air" ? "1-3 days" : "7-18 days"} /></ReviewCard>
+        <ReviewCard title="Route & Schedule" onEdit={() => onEdit(0)}><div className="mb-4 flex items-center justify-between"><LocationPill code={origin?.code || "---"} city={origin?.city || "Origin"} tone="green" />{form.freight === "Air" ? <Plane className="h-4 w-4 text-[#172b4c]" /> : <Ship className="h-4 w-4 text-[#172b4c]" />}<LocationPill code={destination?.code || "---"} city={destination?.city || "Destination"} tone="gold" /></div><ReviewPair label="Freight Mode" value={`${form.freight} Freight`} /><ReviewPair label="Trade Term" value={form.tradeTerm} /><ReviewPair label="Pickup Date" value={form.pickupDate || "-"} /><ReviewPair label="Transit" value={origin && destination ? transitEstimate(distanceKm(origin.coordinates, destination.coordinates), form.freight) : "-"} /></ReviewCard>
         <ReviewCard title="Cargo Details" onEdit={() => onEdit(1)}><div className="mb-3 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-[8px] bg-[#f1f4f8] text-[#1d3152]"><Box className="h-5 w-5" /></span><div><p className="text-[13px] font-semibold text-[#16223a]">{form.cargoType}</p><p className="text-[10.5px] text-[#8490a2]">{form.pieces} {form.unitType.toLowerCase()}</p></div></div><ReviewPair label="Gross Weight" value={`${formatNumber(calculations.totalGross)} kg`} /><ReviewPair label="Total Volume" value={`${formatNumber(calculations.totalVolume)} CBM`} /><ReviewPair label="Chargeable Weight" value={`${formatNumber(calculations.chargeableWeight)} kg`} /><ReviewPair label="Characteristics" value={form.characteristics.length ? form.characteristics.join(", ") : "None"} /></ReviewCard>
         <ReviewCard title="Services & Documents" onEdit={() => onEdit(2)}><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#919baa]">{services.length} selected services</p><div className="mt-3 space-y-2">{services.slice(0, 6).map((service) => <p key={service.id} className="flex items-start gap-2 text-[10.5px] leading-4 text-[#4f5d72]"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#16885a]" />{service.label}</p>)}{services.length > 6 ? <p className="text-[10px] font-semibold text-[#8e661a]">+{services.length - 6} more services</p> : null}</div><p className="mt-4 border-t border-[#eceff3] pt-3 text-[10.5px] text-[#7e899b]">{documentFiles.length} shipment documents attached</p></ReviewCard>
       </div>
@@ -512,12 +563,12 @@ function ReviewStep({ form, origin, calculations, services, readiness, onEdit }:
   )
 }
 
-function RequestSummary({ form, origin, readiness, readinessItems }: { form: FormData; origin: OriginLocation | null; readiness: number; readinessItems: { label: string; complete: boolean }[] }) {
+function RequestSummary({ form, origin, destination, readiness, readinessItems }: { form: FormData; origin: LogisticsLocation | null; destination: LogisticsLocation | null; readiness: number; readinessItems: { label: string; complete: boolean }[] }) {
   return (
     <aside className="h-fit overflow-hidden rounded-[12px] border border-[#e7e1d8] bg-white shadow-[0_18px_50px_rgba(33,47,73,0.07)] 2xl:sticky 2xl:top-4">
-      <div className="p-5"><div className="flex items-center justify-between"><h2 className="text-[14px] font-bold text-[#16223a]">Shipment Overview</h2><span className="inline-flex items-center gap-1.5 text-[9.5px] font-medium text-[#16885a]"><span className="h-1.5 w-1.5 rounded-full bg-[#16885a]" />Live summary</span></div><div className="mt-5 grid grid-cols-[1fr_52px_1fr] items-center gap-2"><div><p className="truncate text-[12px] font-bold text-[#16223a]">{origin?.city || "Select origin"}</p><p className="mt-1 text-[10px] text-[#8590a2]">{origin?.code || "Airport / port"}</p></div><div className="flex items-center"><span className="h-px flex-1 border-t border-dashed border-[#d4a43f]" />{form.freight === "Air" ? <Plane className="mx-1 h-4 w-4 text-[#c18818]" /> : <Ship className="mx-1 h-4 w-4 text-[#c18818]" />}<span className="h-px flex-1 border-t border-dashed border-[#d4a43f]" /></div><div className="text-right"><p className="text-[12px] font-bold text-[#16223a]">Hong Kong</p><p className="mt-1 text-[10px] text-[#8590a2]">HKG</p></div></div><div className="mt-5 space-y-3 border-t border-[#ece7df] pt-4"><SummaryRow label="Freight Mode" value={`${form.freight} Freight`} /><SummaryRow label="Trade Term" value={form.tradeTerm} /><SummaryRow label="Pickup Date" value={form.pickupDate || "Not selected"} alert={form.flexibleDays ? "Flexible +/- 2 days" : undefined} /></div></div>
+      <div className="p-5"><div className="flex items-center justify-between"><h2 className="text-[14px] font-bold text-[#16223a]">Shipment Overview</h2><span className="inline-flex items-center gap-1.5 text-[9.5px] font-medium text-[#16885a]"><span className="h-1.5 w-1.5 rounded-full bg-[#16885a]" />Live summary</span></div><div className="mt-5 grid grid-cols-[1fr_52px_1fr] items-center gap-2"><div><p className="truncate text-[12px] font-bold text-[#16223a]">{origin?.city || "Select origin"}</p><p className="mt-1 text-[10px] text-[#8590a2]">{origin?.code || "Airport / port"}</p></div><div className="flex items-center"><span className="h-px flex-1 border-t border-dashed border-[#d4a43f]" />{form.freight === "Air" ? <Plane className="mx-1 h-4 w-4 text-[#c18818]" /> : <Ship className="mx-1 h-4 w-4 text-[#c18818]" />}<span className="h-px flex-1 border-t border-dashed border-[#d4a43f]" /></div><div className="text-right"><p className="truncate text-[12px] font-bold text-[#16223a]">{destination?.city || "Select destination"}</p><p className="mt-1 text-[10px] text-[#8590a2]">{destination?.code || "Airport / port"}</p></div></div><div className="mt-5 space-y-3 border-t border-[#ece7df] pt-4"><SummaryRow label="Freight Mode" value={`${form.freight} Freight`} /><SummaryRow label="Trade Term" value={form.tradeTerm} /><SummaryRow label="Pickup Date" value={form.pickupDate || "Not selected"} alert={form.flexibleDays ? "Flexible +/- 2 days" : undefined} /></div></div>
       <div className="border-t border-[#ece7df] p-5"><p className="text-[12px] font-bold text-[#16223a]">Request Readiness</p><div className="mt-4 flex items-center gap-4"><div className="grid h-[76px] w-[76px] flex-shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#c58a18 ${readiness * 3.6}deg,#eee8dd 0)` }}><div className="grid h-[62px] w-[62px] place-items-center rounded-full bg-white text-[18px] font-bold text-[#17233b]">{readiness}%</div></div><div><p className="text-[12px] font-semibold text-[#24324b]">{readiness === 100 ? "Ready to launch" : readiness >= 75 ? "Almost there" : "Keep going"}</p><p className="mt-1 text-[10px] text-[#8490a2]">{readinessItems.filter((item) => item.complete).length} of {readinessItems.length} sections completed</p></div></div><div className="mt-5 space-y-3">{readinessItems.map((item) => <div key={item.label} className="flex items-center gap-2 text-[10.5px]"><span className={`grid h-4 w-4 place-items-center rounded-full border ${item.complete ? "border-[#16885a] bg-[#16885a] text-white" : "border-[#bfc7d2] text-transparent"}`}><Check className="h-2.5 w-2.5" strokeWidth={3} /></span><span className={item.complete ? "text-[#516076]" : "text-[#8994a5]"}>{item.label}</span><span className={`ml-auto font-medium ${item.complete ? "text-[#16885a]" : "text-[#7f8999]"}`}>{item.complete ? "Complete" : "Incomplete"}</span></div>)}</div></div>
-      <div className="divide-y divide-[#ece7df] border-t border-[#ece7df] px-5"><SummaryMetric icon={Users} label="Estimated Forwarders" value={origin?.estimatedForwarders || "Pending"} note="qualified forwarders may be invited" /><SummaryMetric icon={LockKeyhole} label="Sealed Bidding Window" value="3 hours" note="starts after LBID approval" /><SummaryMetric icon={Clock3} label="Typical First Quote" value={origin ? "30-45 min" : "Calculated later"} note="based on recent route activity" /></div>
+      <div className="divide-y divide-[#ece7df] border-t border-[#ece7df] px-5"><SummaryMetric icon={Users} label="Estimated Forwarders" value={estimateForwarders(origin, destination)} note="qualified forwarders may be invited" /><SummaryMetric icon={LockKeyhole} label="Sealed Bidding Window" value="3 hours" note="starts after LBID approval" /><SummaryMetric icon={Clock3} label="Typical First Quote" value={origin && destination ? "30-60 min" : "Calculated later"} note="based on recent route activity" /></div>
     </aside>
   )
 }
@@ -565,13 +616,15 @@ function SummaryRow({ label, value, alert }: { label: string; value: string; ale
 function SummaryMetric({ icon: Icon, label, value, note }: { icon: typeof Users; label: string; value: string; note: string }) { return <div className="flex items-start gap-3 py-4"><span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-[#e2e6ed] bg-[#fafbfc] text-[#183153]"><Icon className="h-3.5 w-3.5" /></span><span className="min-w-0 flex-1"><span className="flex items-start justify-between gap-2"><span className="text-[10.5px] font-medium text-[#58667b]">{label}</span><strong className="text-right text-[11.5px] text-[#17243c]">{value}</strong></span><span className="mt-1 block text-[9px] text-[#929baa]">{note}</span></span></div> }
 
 function readDraft(): FormData { try { const value = localStorage.getItem(DRAFT_KEY); if (!value) return INIT; const parsed = JSON.parse(value) as Partial<FormData>; return { ...INIT, ...parsed, attachments: Array.isArray(parsed.attachments) ? parsed.attachments : [], services: Array.isArray(parsed.services) ? parsed.services : INIT.services, characteristics: Array.isArray(parsed.characteristics) ? parsed.characteristics : [] } } catch { return INIT } }
-function locationLabel(location: OriginLocation) { return `${location.city}, ${location.country} (${location.code})` }
+function locationLabel(location: LogisticsLocation) { return `${location.city}, ${location.country} (${location.code})` }
 function calculateCargo(form: FormData): CargoCalculations { const pieces = Math.max(0, Number(form.pieces) || 0); const length = Math.max(0, Number(form.lengthCm) || 0); const width = Math.max(0, Number(form.widthCm) || 0); const height = Math.max(0, Number(form.heightCm) || 0); const gross = Math.max(0, Number(form.grossWeightPerPiece) || 0); const totalGross = round(gross * pieces, 2); const cubicCm = length * width * height * pieces; const totalVolume = round(cubicCm / 1_000_000, 3); const volumetricWeight = round(cubicCm / 6_000, 2); return { totalGross, totalVolume, volumetricWeight, chargeableWeight: round(Math.max(totalGross, volumetricWeight), 2) } }
 function distanceKm(a: [number, number], b: [number, number]) { const radius = 6371; const lat1 = a[1] * Math.PI / 180; const lat2 = b[1] * Math.PI / 180; const dLat = (b[1] - a[1]) * Math.PI / 180; const dLng = (b[0] - a[0]) * Math.PI / 180; const value = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2; return Math.round(radius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value))) }
+function transitEstimate(distance: number, mode: FreightMode) { if (!distance) return "Calculated after selection"; if (mode === "Air") return distance < 1500 ? "1-2 days" : distance < 6000 ? "2-4 days" : "3-6 days"; return distance < 1500 ? "3-7 days" : distance < 6000 ? "7-16 days" : "14-30 days" }
+function estimateForwarders(origin: LogisticsLocation | null, destination: LogisticsLocation | null) { if (!origin || !destination) return "Pending"; const first = origin.estimatedForwarders.split("-").map(Number); const second = destination.estimatedForwarders.split("-").map(Number); return `${Math.max(3, Math.min(first[0] || 3, second[0] || 3))}-${Math.max(5, Math.min(first[1] || 5, second[1] || 5))}` }
 function round(value: number, precision: number) { const multiplier = 10 ** precision; return Math.round(value * multiplier) / multiplier }
 function formatNumber(value: number) { return value.toLocaleString("en-HK", { maximumFractionDigits: 3 }) }
 function formatFileSize(bytes: number) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB` }
 function tomorrow() { const date = new Date(); date.setDate(date.getDate() + 1); return date.toISOString().slice(0, 10) }
 function relativeTime(date: Date) { const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000)); if (seconds < 10) return "just now"; if (seconds < 60) return `${seconds}s ago`; return `${Math.floor(seconds / 60)} min ago` }
 function incotermDescription(term: string) { const descriptions: Record<string, string> = { EXW: "Buyer takes responsibility from the seller's premises.", FCA: "Seller delivers goods to the named carrier.", FOB: "Seller handles goods until loaded at the origin port.", CFR: "Seller pays freight; buyer assumes transit risk.", CIF: "Seller pays freight and minimum insurance.", DAP: "Seller delivers ready for unloading at destination.", DDP: "Seller handles delivery, duties and import clearance." }; return descriptions[term] || "Select the agreed commercial responsibility." }
-function errorMessage(code: string) { const messages: Record<string, string> = { UNAUTHENTICATED: "Your session expired. Sign in again before submitting.", CLIENT_CAPABILITY_REQUIRED: "Client capability is not enabled for this company account.", ORIGIN_REQUIRED: "Select an origin from the verified suggestions.", VALID_WEIGHT_REQUIRED: "Enter valid piece count and gross weight.", VALID_VOLUME_REQUIRED: "Enter valid length, width and height.", SERVICE_REQUIRED: "Select at least one service.", INVALID_SHIPMENT_DATE: "Select a valid pickup date.", NETWORK_ERROR: "LBID could not reach the server. Check your connection and try again." }; return messages[code] || code || "The request could not be submitted." }
+function errorMessage(code: string) { const messages: Record<string, string> = { UNAUTHENTICATED: "Your session expired. Sign in again before submitting.", CLIENT_CAPABILITY_REQUIRED: "Client capability is not enabled for this company account.", ORIGIN_REQUIRED: "Select an origin from the verified suggestions.", DESTINATION_REQUIRED: "Select a destination from the verified suggestions.", VALID_WEIGHT_REQUIRED: "Enter valid piece count and gross weight.", VALID_VOLUME_REQUIRED: "Enter valid length, width and height.", SERVICE_REQUIRED: "Select at least one service.", INVALID_SHIPMENT_DATE: "Select a valid pickup date.", NETWORK_ERROR: "LBID could not reach the server. Check your connection and try again." }; return messages[code] || code || "The request could not be submitted." }

@@ -38,7 +38,7 @@ export function RequestListPanel({ locale }: { locale: "zh" | "en" }) {
 }
 
 function RequestRow({ request, locale, openLabel }: { request: ShipmentRequest; locale: "zh" | "en"; openLabel: string }) {
-  const route = `${request.route?.origin || "Origin"} → ${request.route?.destination || "Hong Kong"}`
+  const route = `${request.route?.origin || "Origin"} → ${request.route?.destination || "Destination"}`
   const cargo = request.cargo_details?.cargo || request.cargo_details?.cargo_type || (locale === "zh" ? "一般貨物" : "General cargo")
   return <Card><CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><Badge variant={request.status === "OPEN" ? "teal" : "secondary"}>{statusLabel(request.status, locale)}</Badge><span className="font-mono text-xs text-slate-400">{request.id}</span></div><h2 className="mt-3 text-lg font-semibold text-lblue">{route}</h2><p className="mt-1 text-sm text-slate-600">{cargo}{request.cargo_details?.weight_kg ? ` · ${request.cargo_details.weight_kg} kg` : ""}</p></div><div className="text-sm text-slate-500">{request.bid_deadline ? new Date(request.bid_deadline).toLocaleString(locale === "zh" ? "zh-HK" : "en-HK", { dateStyle: "medium", timeStyle: "short" }) : ""}</div><Button asChild variant="outline"><Link href={`/${locale}/requests/${request.id}`}>{openLabel}<ArrowRight className="h-4 w-4" /></Link></Button></CardContent></Card>
 }

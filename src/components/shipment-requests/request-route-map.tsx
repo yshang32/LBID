@@ -12,19 +12,13 @@ type Point = {
 
 type RouteFeatureCollection = GeoJSON.FeatureCollection<GeoJSON.LineString, Record<string, string>>
 
-const HONG_KONG: Point = {
-  city: "Hong Kong",
-  code: "HKG",
-  coordinates: [113.9185, 22.308],
-}
-
-export function RequestRouteMap({ origin, mode }: { origin: Point | null; mode: "Air" | "Sea" }) {
+export function RequestRouteMap({ origin, destination, mode }: { origin: Point | null; destination: Point | null; mode: "Air" | "Sea" }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
-  const routeData = useMemo(() => buildRoute(origin), [origin])
+  const routeData = useMemo(() => buildRoute(origin, destination), [destination, origin])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -36,9 +30,9 @@ export function RequestRouteMap({ origin, mode }: { origin: Point | null; mode: 
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: "https://tiles.openfreemap.org/styles/positron",
-        center: [109.5, 16.5],
-        zoom: 3.2,
-        minZoom: 2.4,
+        center: [18, 18],
+        zoom: 1.2,
+        minZoom: 0.8,
         maxZoom: 10,
         attributionControl: false,
         cooperativeGestures: true,
@@ -99,10 +93,10 @@ export function RequestRouteMap({ origin, mode }: { origin: Point | null; mode: 
     void import("maplibre-gl").then((module) => {
       if (!mapRef.current) return
       const maplibregl = module.default
-      const points = origin ? [origin, HONG_KONG] : [HONG_KONG]
-      markersRef.current = points.map((point, index) => {
+      const points = [{ point: origin, kind: "origin" }, { point: destination, kind: "destination" }].filter((item): item is { point: Point; kind: string } => Boolean(item.point))
+      markersRef.current = points.map(({ point, kind }) => {
         const node = document.createElement("div")
-        node.className = `request-map-marker ${index === 0 && origin ? "request-map-marker-origin" : "request-map-marker-destination"}`
+        node.className = `request-map-marker request-map-marker-${kind}`
         node.setAttribute("aria-label", `${point.city} ${point.code}`)
         node.innerHTML = `<span></span><b>${point.code}</b>`
         return new maplibregl.Marker({ element: node, anchor: "bottom" })
@@ -110,22 +104,24 @@ export function RequestRouteMap({ origin, mode }: { origin: Point | null; mode: 
           .addTo(mapRef.current!)
       })
 
-      if (origin) {
+      if (origin && destination) {
         const bounds = new maplibregl.LngLatBounds(origin.coordinates, origin.coordinates)
-        bounds.extend(HONG_KONG.coordinates)
+        bounds.extend(destination.coordinates)
         map.fitBounds(bounds, { padding: { top: 68, right: 80, bottom: 68, left: 80 }, duration: 650, maxZoom: 5.4 })
+      } else if (origin || destination) {
+        map.easeTo({ center: (origin || destination)!.coordinates, zoom: 4, duration: 450 })
       } else {
-        map.easeTo({ center: [109.5, 16.5], zoom: 3.2, duration: 450 })
+        map.easeTo({ center: [18, 18], zoom: 1.2, duration: 450 })
       }
     })
-  }, [origin, ready, routeData])
+  }, [destination, origin, ready, routeData])
 
   return (
     <div className="relative h-[330px] min-h-[300px] overflow-hidden rounded-[12px] border border-[#eadfce] bg-[#f3f0ea] lg:h-[350px]">
       <div ref={containerRef} className="absolute inset-0" aria-label="Selected logistics route map" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-center bg-gradient-to-b from-white/72 to-transparent px-4 pb-8 pt-3">
         <span className="rounded-full border border-white/90 bg-white/88 px-3 py-1.5 text-[10px] font-semibold text-[#59677c] shadow-sm backdrop-blur">
-          {origin ? `${origin.code} to HKG - ${mode} freight` : "Select an origin to preview the route"}
+          {origin && destination ? `${origin.code} to ${destination.code} - ${mode} freight` : "Select origin and destination to preview the route"}
         </span>
       </div>
       {!ready && !failed ? (
@@ -142,13 +138,13 @@ export function RequestRouteMap({ origin, mode }: { origin: Point | null; mode: 
   )
 }
 
-function buildRoute(origin: Point | null): RouteFeatureCollection {
+function buildRoute(origin: Point | null, destination: Point | null): RouteFeatureCollection {
   return {
     type: "FeatureCollection",
-    features: origin ? [{
+    features: origin && destination ? [{
       type: "Feature",
       properties: { mode: "request" },
-      geometry: { type: "LineString", coordinates: arcCoordinates(origin.coordinates, HONG_KONG.coordinates) },
+      geometry: { type: "LineString", coordinates: arcCoordinates(origin.coordinates, destination.coordinates) },
     }] : [],
   }
 }

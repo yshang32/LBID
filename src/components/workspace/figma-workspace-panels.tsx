@@ -247,7 +247,7 @@ function Empty({ label, href, action }: { label: string; href: string; action: s
   return <section className="mt-7 rounded-[14px] border border-dashed border-[#d3dae6] bg-white px-5 py-12 text-center"><p className="text-[13px] text-[#7e8ba1]">{label}</p><Link href={href} className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#0c1a3e] hover:underline">{action}<ArrowRight className="h-4 w-4" /></Link></section>
 }
 function routeName(request?: Request) {
-  return `${request?.route?.origin || "Origin"} → ${request?.route?.destination || "Hong Kong"}`
+  return `${request?.route?.origin || "Origin"} → ${request?.route?.destination || "Destination"}`
 }
 function formatDate(value?: string) {
   return value ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "Time pending"
