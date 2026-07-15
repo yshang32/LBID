@@ -15,6 +15,8 @@ export type JourneyCanvasHandle = {
 type LoadedImage = { img: HTMLImageElement; ready: boolean }
 
 const DPR_CAP = 1.75
+const MAX_PROGRESS_STEP = 0.022
+const PROGRESS_EASE = 0.2
 
 function smoothstep(t: number) {
   const x = Math.min(1, Math.max(0, t))
@@ -24,22 +26,24 @@ function smoothstep(t: number) {
 export const JourneyCanvas = forwardRef<JourneyCanvasHandle, { className?: string; onFirstFrame?: () => void }>(
   function JourneyCanvas({ className, onFirstFrame }, handle) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const progressRef = useRef(0)
+    const targetProgressRef = useRef(0)
+    const displayProgressRef = useRef(0)
     const dirtyRef = useRef(true)
     const rafRef = useRef<number | null>(null)
     const imagesRef = useRef<LoadedImage[]>([])
     const firstFrameRef = useRef(false)
+    const lastReadyIndexRef = useRef(-1)
     const onFirstFrameRef = useRef(onFirstFrame)
     onFirstFrameRef.current = onFirstFrame
 
     useImperativeHandle(handle, () => ({
       setProgress(p: number) {
         const next = Math.min(1, Math.max(0, p))
-        if (next === progressRef.current && !dirtyRef.current) return
-        progressRef.current = next
+        if (next === targetProgressRef.current && !dirtyRef.current) return
+        targetProgressRef.current = next
         requestRender()
       },
-      getProgress: () => progressRef.current,
+      getProgress: () => targetProgressRef.current,
       warm() {
         journeyScenes.forEach((_, index) => ensureLoaded(index))
       },
@@ -68,9 +72,20 @@ export const JourneyCanvas = forwardRef<JourneyCanvasHandle, { className?: strin
     function requestRender() {
       dirtyRef.current = true
       if (rafRef.current !== null || document.visibilityState === "hidden") return
-      rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = requestAnimationFrame(function tick() {
         rafRef.current = null
-        if (dirtyRef.current) render()
+        const delta = targetProgressRef.current - displayProgressRef.current
+        const moving = Math.abs(delta) > 0.0005
+        if (!moving) {
+          displayProgressRef.current = targetProgressRef.current
+        } else {
+          const eased = delta * PROGRESS_EASE
+          displayProgressRef.current += Math.max(-MAX_PROGRESS_STEP, Math.min(MAX_PROGRESS_STEP, eased))
+        }
+        if (dirtyRef.current || moving) render()
+        if (Math.abs(targetProgressRef.current - displayProgressRef.current) > 0.0005) {
+          rafRef.current = requestAnimationFrame(tick)
+        }
       })
     }
 
@@ -127,7 +142,7 @@ export const JourneyCanvas = forwardRef<JourneyCanvasHandle, { className?: strin
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-      const p = progressRef.current
+      const p = displayProgressRef.current
       const count = journeyScenes.length
       const seg = 1 / count
       const index = Math.min(count - 1, Math.floor(p / seg))
@@ -151,10 +166,15 @@ export const JourneyCanvas = forwardRef<JourneyCanvasHandle, { className?: strin
 
       if (current?.ready) {
         drawScene(ctx, cw, ch, journeyScenes[index], current, localT, 1)
+        lastReadyIndexRef.current = index
         if (!firstFrameRef.current) {
           firstFrameRef.current = true
           onFirstFrameRef.current?.()
         }
+      } else {
+        const fallbackIndex = lastReadyIndexRef.current
+        const fallback = fallbackIndex >= 0 ? imagesRef.current[fallbackIndex] : undefined
+        if (fallback?.ready) drawScene(ctx, cw, ch, journeyScenes[fallbackIndex], fallback, 0.5, 1)
       }
       if (next?.ready && nextAlpha > 0) {
         drawScene(ctx, cw, ch, journeyScenes[index + 1], next, 0, nextAlpha)

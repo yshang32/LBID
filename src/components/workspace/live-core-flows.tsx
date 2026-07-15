@@ -35,6 +35,7 @@ import {
 
 import { motion } from "motion/react"
 
+import { BiddingCommandCenter } from "@/components/marketplace/bidding-command-center"
 import { apiJson } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n"
 
@@ -393,65 +394,7 @@ function FlowRow({ href, label, value, active }: { href: string; label: string; 
 }
 
 export function LiveMarketplace({ locale }: { locale: Locale }) {
-  const [state, setState] = useState<LoadState>("loading")
-  const [workspace, setWorkspace] = useState<LiveWorkspace>({})
-  const [query, setQuery] = useState("")
-  const [mode, setMode] = useState<"all" | "air" | "sea">("all")
-  const [sort, setSort] = useState<"match" | "deadline">("match")
-
-  useEffect(() => {
-    let active = true
-    apiJson("/api/workspace").then(({ response, body }) => {
-      if (!active) return
-      setWorkspace(response.ok ? body : {})
-      setState(response.ok ? "ready" : "error")
-    })
-    return () => {
-      active = false
-    }
-  }, [])
-
-  const recommendations = workspace.recommendations || []
-  const scoreBySr = new Map(recommendations.map((item) => [item.shipment_request_id, Number(item.match_score || 0)]))
-  const opportunitySource = (workspace.opportunities || []) as JsonRecord[]
-  const opportunities: JsonRecord[] = opportunitySource
-    .map((item): JsonRecord => ({ ...item, matchScore: scoreBySr.get(item.id) || 72 }))
-    .filter((item: JsonRecord) => {
-      const cargo = item.cargo_details || {}
-      const haystack = `${routeText(item.route)} ${cargoText(cargo)} ${item.id}`.toLowerCase()
-      const modeOk = mode === "all" || String(cargo.mode || "").toLowerCase() === mode
-      return modeOk && haystack.includes(query.toLowerCase())
-    })
-    .sort((a: JsonRecord, b: JsonRecord) => sort === "match" ? Number(b.matchScore || 0) - Number(a.matchScore || 0) : secondsLeft(a.bid_deadline) - secondsLeft(b.bid_deadline))
-
-  return (
-    <WorkspaceSurface eyebrow="Opportunities" title="Live marketplace for sealed bids." intro="These SRs come from Supabase. Recommended matches are ranked by your profile fit, then deadline.">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-line bg-white px-4 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.03)]">
-          <Plane className="h-4 w-4 text-ink-3" />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search route, SR ID, cargo..." className="w-full bg-transparent text-[13.5px] outline-none placeholder:text-ink-3" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(["all", "air", "sea"] as const).map((value) => (
-            <button key={value} onClick={() => setMode(value)} className={`rounded-xl border px-3.5 py-2 text-[12px] font-bold capitalize transition ${mode === value ? "border-navy bg-navy text-white" : "border-line bg-white text-ink-2 hover:border-navy/30 hover:bg-navy-soft"}`}>{value}</button>
-          ))}
-          {(["match", "deadline"] as const).map((value) => (
-            <button key={value} onClick={() => setSort(value)} className={`rounded-xl border px-3.5 py-2 text-[12px] font-bold capitalize transition ${sort === value ? "border-gold bg-gold-soft text-gold-dark" : "border-line bg-white text-ink-2 hover:border-gold-border"}`}>{value}</button>
-          ))}
-        </div>
-      </div>
-
-      {state === "loading" ? <StatePanel title="Loading live opportunities" body="Reading open shipment requests from Supabase." /> : null}
-      {state === "error" ? <StatePanel tone="error" title="Marketplace could not load" body="Check Supabase connection and user session." /> : null}
-      {state === "ready" && opportunities.length === 0 ? <StatePanel title="No live SR available" body="Once Admin publishes shipment requests, forwarders will see bid opportunities here." icon={Plane} /> : null}
-
-      <div className="grid gap-3">
-        {opportunities.map((item, index) => (
-          <LiveOpportunityRow key={item.id} locale={locale} item={item} index={index} />
-        ))}
-      </div>
-    </WorkspaceSurface>
-  )
+  return <BiddingCommandCenter locale={locale} />
 }
 
 export function LiveQuoteConsole({ locale, id }: { locale: Locale; id?: string }) {
@@ -895,34 +838,6 @@ function TaskRow({ href, icon: Icon, title, meta }: { href: string; icon: typeof
         </div>
       </div>
       <ArrowRight className="h-4 w-4 text-ink-3" />
-    </Link>
-  )
-}
-
-function LiveOpportunityRow({ locale, item, index }: { locale: Locale; item: JsonRecord; index: number }) {
-  const cargo = item.cargo_details || {}
-  const mode = String(cargo.mode || "").toLowerCase()
-  const Icon = mode === "sea" ? Ship : Plane
-  return (
-    <Link href={`/${locale}/marketplace/${item.id}`} className="group rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-px hover:border-navy/20 hover:shadow-[0_14px_36px_rgba(15,23,42,0.09)]" style={{ animationDelay: `${index * 35}ms` }}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 gap-4">
-          <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-canvas text-navy group-hover:bg-navy group-hover:text-white"><Icon className="h-5 w-5" /></span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-[16px] font-bold text-ink">{routeText(item.route)}</h2>
-              {(item.matchScore || 0) >= 85 ? <span className="rounded-full border border-gold-border bg-gold-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-gold-dark">Recommended</span> : null}
-            </div>
-            <p className="mt-1 text-[13px] text-ink-3">{cargoText(cargo)} · SR {item.id}</p>
-            <p className="mt-2 text-[12px] text-ink-3">Services: {Array.isArray(item.services_needed) && item.services_needed.length ? item.services_needed.join(", ") : "Not specified"}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-          <span className="rounded-xl border border-emerald/20 bg-emerald-soft px-3 py-2 text-[12px] font-bold text-emerald">{item.matchScore || 72}% match</span>
-          <span className={`rounded-xl border px-3 py-2 text-[12px] font-bold ${secondsLeft(item.bid_deadline) < 3600 ? "border-red-200 bg-red-50 text-red-600" : "border-line bg-canvas text-ink-2"}`}>{timeLeft(item.bid_deadline)}</span>
-          <span className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-4 py-2.5 text-[12px] font-bold text-white">Bid <ArrowRight className="h-3.5 w-3.5" /></span>
-        </div>
-      </div>
     </Link>
   )
 }

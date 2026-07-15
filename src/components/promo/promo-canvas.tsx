@@ -11,11 +11,13 @@ export type PromoCanvasHandle = {
   warm: () => void
 }
 
-type Slot = { img: HTMLImageElement; ready: boolean }
+type Slot = { img: HTMLImageElement | null; ready: boolean; loading: boolean }
 
 const DPR_CAP = 1.75
 const SPINE_STEP = 24
-const WARM_BATCH = 8
+const MAX_CONCURRENT_LOADS = 6
+const MAX_PROGRESS_STEP = 0.014
+const PROGRESS_EASE = 0.18
 
 type Grade = { top: [number, number, number, number]; bottom: [number, number, number, number] }
 
@@ -62,13 +64,17 @@ export const PromoCanvas = forwardRef<
 >(function PromoCanvas({ className, onFirstFrame, onLoaded }, handle) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const slotsRef = useRef<(Slot | undefined)[]>([])
-  const progressRef = useRef(0)
+  const targetProgressRef = useRef(0)
+  const displayProgressRef = useRef(0)
   const dirtyRef = useRef(true)
   const rafRef = useRef<number | null>(null)
+  const loadQueueRef = useRef<number[]>([])
+  const activeLoadsRef = useRef(0)
   const smallRef = useRef(false)
   const readyCountRef = useRef(0)
   const warmedRef = useRef(false)
   const firstFrameRef = useRef(false)
+  const lastDrawnIndexRef = useRef(-1)
   const posterRef = useRef<HTMLImageElement | null>(null)
   const reducedMotionRef = useRef(false)
   const onFirstFrameRef = useRef(onFirstFrame)
@@ -79,46 +85,67 @@ export const PromoCanvas = forwardRef<
   useImperativeHandle(handle, () => ({
     setProgress(p: number) {
       const next = Math.min(1, Math.max(0, p))
-      if (next === progressRef.current && !dirtyRef.current) return
-      progressRef.current = next
+      if (next === targetProgressRef.current && !dirtyRef.current) return
+      targetProgressRef.current = next
       requestRender()
     },
     warm,
   }))
 
-  function ensureLoaded(index: number) {
+  function ensureLoaded(index: number, priority = false) {
     if (index < 0 || index >= PROMO_FRAME_COUNT) return
     const slots = slotsRef.current
-    if (slots[index]) return
-    const img = new Image()
-    img.decoding = "async"
-    const slot: Slot = { img, ready: false }
-    slots[index] = slot
-    img.onload = () => {
-      slot.ready = true
-      readyCountRef.current += 1
-      onLoadedRef.current?.(readyCountRef.current / PROMO_FRAME_COUNT)
-      requestRender()
+    const existing = slots[index]
+    if (existing) {
+      if (priority && !existing.loading && !existing.ready) {
+        const queue = loadQueueRef.current
+        const queuedAt = queue.indexOf(index)
+        if (queuedAt >= 0) queue.splice(queuedAt, 1)
+        queue.unshift(index)
+        pumpLoads()
+      }
+      return
     }
-    img.src = promoFrameSrc(index, smallRef.current)
+    slots[index] = { img: null, ready: false, loading: false }
+    if (priority) loadQueueRef.current.unshift(index)
+    else loadQueueRef.current.push(index)
+    pumpLoads()
+  }
+
+  function pumpLoads() {
+    while (activeLoadsRef.current < MAX_CONCURRENT_LOADS && loadQueueRef.current.length > 0) {
+      const index = loadQueueRef.current.shift()
+      if (index === undefined) return
+      const slot = slotsRef.current[index]
+      if (!slot || slot.loading || slot.ready) continue
+
+      const img = new Image()
+      img.decoding = "async"
+      slot.img = img
+      slot.loading = true
+      activeLoadsRef.current += 1
+
+      const finish = (ready: boolean) => {
+        slot.loading = false
+        slot.ready = ready
+        activeLoadsRef.current -= 1
+        if (ready) {
+          readyCountRef.current += 1
+          onLoadedRef.current?.(readyCountRef.current / PROMO_FRAME_COUNT)
+          requestRender()
+        }
+        pumpLoads()
+      }
+      img.onload = () => finish(true)
+      img.onerror = () => finish(false)
+      img.src = promoFrameSrc(index, smallRef.current)
+    }
   }
 
   function warm() {
     if (warmedRef.current) return
     warmedRef.current = true
-    let next = 0
-    const pump = () => {
-      let queued = 0
-      while (next < PROMO_FRAME_COUNT && queued < WARM_BATCH) {
-        if (!slotsRef.current[next]) {
-          ensureLoaded(next)
-          queued += 1
-        }
-        next += 1
-      }
-      if (next < PROMO_FRAME_COUNT) window.setTimeout(pump, 120)
-    }
-    pump()
+    for (let index = 0; index < PROMO_FRAME_COUNT; index += 1) ensureLoaded(index)
   }
 
   function nearestReady(target: number): number {
@@ -134,9 +161,20 @@ export const PromoCanvas = forwardRef<
   function requestRender() {
     dirtyRef.current = true
     if (rafRef.current !== null || document.visibilityState === "hidden") return
-    rafRef.current = requestAnimationFrame(() => {
+    rafRef.current = requestAnimationFrame(function tick() {
       rafRef.current = null
-      if (dirtyRef.current) render()
+      const delta = targetProgressRef.current - displayProgressRef.current
+      const moving = Math.abs(delta) > 0.0005
+      if (reducedMotionRef.current || !moving) {
+        displayProgressRef.current = targetProgressRef.current
+      } else {
+        const eased = delta * PROGRESS_EASE
+        displayProgressRef.current += Math.max(-MAX_PROGRESS_STEP, Math.min(MAX_PROGRESS_STEP, eased))
+      }
+      if (dirtyRef.current || moving) render()
+      if (Math.abs(targetProgressRef.current - displayProgressRef.current) > 0.0005) {
+        rafRef.current = requestAnimationFrame(tick)
+      }
     })
   }
 
@@ -157,13 +195,6 @@ export const PromoCanvas = forwardRef<
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    // Deep-navy base keeps edges calm while frames stream in.
-    const base = ctx.createLinearGradient(0, 0, 0, ch)
-    base.addColorStop(0, "#0a1229")
-    base.addColorStop(1, "#050a1a")
-    ctx.fillStyle = base
-    ctx.fillRect(0, 0, cw, ch)
-
     const drawCover = (img: HTMLImageElement) => {
       const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight)
       const drawW = img.naturalWidth * scale
@@ -176,19 +207,29 @@ export const PromoCanvas = forwardRef<
       return
     }
 
-    const target = Math.round(progressRef.current * (PROMO_FRAME_COUNT - 1))
-    ensureLoaded(target)
-    ensureLoaded(Math.min(PROMO_FRAME_COUNT - 1, target + 1))
-    ensureLoaded(Math.max(0, target - 1))
+    const target = Math.round(displayProgressRef.current * (PROMO_FRAME_COUNT - 1))
+    for (let offset = 1; offset <= 6; offset += 1) {
+      ensureLoaded(Math.min(PROMO_FRAME_COUNT - 1, target + offset), true)
+      ensureLoaded(Math.max(0, target - offset), true)
+    }
+    ensureLoaded(target, true)
 
-    const drawIndex = nearestReady(target)
+    const previous = lastDrawnIndexRef.current
+    const drawIndex = slotsRef.current[target]?.ready
+      ? target
+      : previous >= 0 && slotsRef.current[previous]?.ready
+        ? previous
+        : nearestReady(target)
     if (drawIndex < 0) {
-      if (posterRef.current?.complete && posterRef.current.naturalWidth > 0) drawCover(posterRef.current)
+      const poster = posterRef.current
+      if (poster?.complete && poster.naturalWidth > 0) drawCover(poster)
       return
     }
 
     const { img } = slotsRef.current[drawIndex] as Slot
+    if (!img) return
     drawCover(img)
+    lastDrawnIndexRef.current = drawIndex
 
     // Stage color grade + vignette keep copy legible and the journey tonally continuous.
     const grade = gradeAt(target / Math.max(1, PROMO_FRAME_COUNT - 1))

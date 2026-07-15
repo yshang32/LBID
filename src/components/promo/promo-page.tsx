@@ -174,7 +174,7 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
         trigger: track,
         start: "top top",
         end: "bottom bottom",
-        scrub: 0.7,
+        scrub: 1.05,
       },
     })
 

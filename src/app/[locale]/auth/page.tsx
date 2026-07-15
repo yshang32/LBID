@@ -244,7 +244,7 @@ export default function AuthPage({ params }: { params: { locale: string } }) {
       trigger: track,
       start: "top top",
       end: "bottom bottom",
-      scrub: 0.7,
+      scrub: 0.9,
       onUpdate(self) {
         applyProgress(self.progress)
         if (self.progress > 0.985) markSeen()
