@@ -138,7 +138,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   const bidding: NavItem[] = [
     { href: `${prefix}/dashboard`, label: "Overview", icon: LayoutDashboard, exact: true },
     { href: `${prefix}/marketplace`, label: "Bidding Command Center", icon: Send },
-    { href: `${prefix}/requests`, label: "Projects", icon: BriefcaseBusiness },
+    { href: `${prefix}/requests`, label: "My Requests", icon: BriefcaseBusiness },
   ]
   const operations: NavItem[] = [
     { href: `${prefix}/orders`, label: "Shipments", icon: Package },

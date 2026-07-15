@@ -15,13 +15,80 @@ export async function GET(request: Request) {
 
   if (srId) {
     const service = getApiSupabaseServiceClient()
-    if (service) {
-      await service
+    if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+
+    const { data: shipmentRequest, error: requestError } = await service
+      .from("shipment_requests")
+      .select("id, agent_id, status, bid_deadline")
+      .eq("id", srId)
+      .maybeSingle()
+    if (requestError) return NextResponse.json({ error: requestError.message }, { status: 500 })
+    if (!shipmentRequest) return NextResponse.json({ error: "SHIPMENT_REQUEST_NOT_FOUND" }, { status: 404 })
+
+    const expired = shipmentRequest.status === "OPEN"
+      && new Date(shipmentRequest.bid_deadline).getTime() <= Date.now()
+    const currentStatus = expired ? "CLOSED" : shipmentRequest.status
+    if (expired) {
+      const { error: closeError } = await service
         .from("shipment_requests")
         .update({ status: "CLOSED" })
         .eq("id", srId)
         .eq("status", "OPEN")
-        .lt("bid_deadline", new Date().toISOString())
+      if (closeError) return NextResponse.json({ error: closeError.message }, { status: 500 })
+    }
+
+    const isOwner = shipmentRequest.agent_id === session.user.id
+    if (isOwner && currentStatus === "OPEN") {
+      const { count, error: countError } = await service
+        .from("bids")
+        .select("id", { count: "exact", head: true })
+        .eq("sr_id", srId)
+      if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
+      return NextResponse.json({
+        bids: [],
+        bidCount: count || 0,
+        sealed: true,
+        revealAt: shipmentRequest.bid_deadline,
+      })
+    }
+
+    if (isOwner && ["CLOSED", "AWARDED"].includes(currentStatus)) {
+      const { data: bids, error: bidsError } = await service
+        .from("bids")
+        .select("id, sr_id, forwarder_id, price, currency, transit_time, terms, submitted_at")
+        .eq("sr_id", srId)
+        .order("price", { ascending: true })
+      if (bidsError) return NextResponse.json({ error: bidsError.message }, { status: 500 })
+
+      const forwarderIds = [...new Set((bids || []).map((bid) => bid.forwarder_id))]
+      const [profilesResult, statsResult] = forwarderIds.length
+        ? await Promise.all([
+          service
+            .from("company_profiles")
+            .select("user_id, company_name_zh, company_name_en, logo_url, region, founded_year, company_size, service_routes, service_types, slogan, description, advantage_tags, certifications, reputation_score, verification_status")
+            .in("user_id", forwarderIds),
+          service
+            .from("forwarder_profiles")
+            .select("user_id, tier, badges, service_coverage, rating, completed_orders, verified_at")
+            .in("user_id", forwarderIds),
+        ])
+        : [{ data: [], error: null }, { data: [], error: null }]
+      const profileError = profilesResult.error || statsResult.error
+      if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 })
+
+      const profiles = new Map((profilesResult.data || []).map((profile) => [profile.user_id, profile]))
+      const stats = new Map((statsResult.data || []).map((profile) => [profile.user_id, profile]))
+      return NextResponse.json({
+        sealed: false,
+        bidCount: bids?.length || 0,
+        bids: (bids || []).map((bid) => ({
+          ...bid,
+          forwarder: {
+            ...(profiles.get(bid.forwarder_id) || {}),
+            ...(stats.get(bid.forwarder_id) || {}),
+          },
+        })),
+      })
     }
   }
 
@@ -36,7 +103,7 @@ export async function GET(request: Request) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ bids: data })
+  return NextResponse.json({ bids: data, sealed: false })
 }
 
 export async function POST(request: Request) {

@@ -59,16 +59,15 @@ import { CommunityPage as FigmaCommunityPage } from "@/components/figma-25jun-so
 import { ForwardersPage as FigmaForwardersPage } from "@/components/figma-25jun-source/pages/ForwardersPage"
 import { ForwarderProfilePage as FigmaForwarderProfilePage } from "@/components/figma-25jun-source/pages/ForwarderProfilePage"
 import { MyRoutesPage as FigmaMyRoutesPage } from "@/components/figma-25jun-source/pages/MyRoutesPage"
+import { LiveMyRequests, LiveRequestDetail } from "@/components/requests/request-management-workspace"
 import {
   LiveActiveBids,
   LiveMarketplace,
-  LiveMyRequests,
   LiveNotifications,
   LiveOrders,
   LiveOrderWorkspace,
   LiveQuoteComparison,
   LiveQuoteConsole,
-  LiveRequestDetail,
   LiveSubscription,
   LiveTokenWallet,
 } from "@/components/workspace/live-core-flows"
