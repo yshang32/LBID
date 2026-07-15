@@ -1146,7 +1146,7 @@ export function LiveMyRequests({ locale }: { locale: Locale }) {
   const bidCounts = workspace.bidCountByRequest || {}
 
   return (
-    <WorkspaceSurface eyebrow="My Requests" title="Your shipment requests." intro="Every SR you have created, pulled live from Supabase — from admin review through sealed bidding to award.">
+    <WorkspaceSurface eyebrow="My Requests" title="Your shipment requests." intro="Every SR you have created, pulled live from Supabase - from live sealed bidding through comparison and award.">
       {state === "loading" ? <StatePanel title="Loading requests" body="Reading your shipment requests from Supabase." /> : null}
       {state === "error" ? <StatePanel tone="error" title="Requests could not load" body={error} /> : null}
       {state === "ready" && requests.length === 0 ? <StatePanel title="No shipment requests yet" body="Create your first SR to start receiving sealed bids from forwarders." icon={FileText} /> : null}
