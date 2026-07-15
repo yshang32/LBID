@@ -140,12 +140,14 @@ export const intelligenceRoutes: IntelligenceRoute[] = [
 export function RouteIntelligenceMap({
   locale,
   expanded = false,
+  dashboard = false,
   routes = intelligenceRoutes,
   selectedRouteId,
   onRouteSelect,
 }: {
   locale: Locale
   expanded?: boolean
+  dashboard?: boolean
   routes?: IntelligenceRoute[]
   selectedRouteId?: string
   onRouteSelect?: (route: IntelligenceRoute) => void
@@ -169,9 +171,9 @@ export function RouteIntelligenceMap({
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: "https://tiles.openfreemap.org/styles/positron",
-        center: [112.5, 16.5],
-        zoom: expanded ? 3.7 : 3.25,
-        minZoom: 2.4,
+        center: dashboard ? [18, 18] : [112.5, 16.5],
+        zoom: dashboard ? 1.2 : expanded ? 3.7 : 3.25,
+        minZoom: dashboard ? 0.8 : 2.4,
         maxZoom: 11,
         cooperativeGestures: true,
         attributionControl: false,
@@ -256,7 +258,7 @@ export function RouteIntelligenceMap({
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [data, expanded, onRouteSelect, routeById, routes])
+  }, [dashboard, data, expanded, onRouteSelect, routeById, routes])
 
   useEffect(() => {
     const map = mapRef.current
@@ -288,10 +290,10 @@ export function RouteIntelligenceMap({
   ]
 
   return (
-    <div className={`relative overflow-hidden bg-[#e9eef5] ${expanded ? "h-[calc(100dvh-168px)] min-h-[560px] rounded-[8px]" : "h-[470px] min-h-[420px] rounded-[7px]"}`}>
-      <div ref={containerRef} className="absolute inset-0" aria-label={locale === "zh" ? "LBID 航線情報地圖" : "LBID route intelligence map"} />
+    <div className={`relative overflow-hidden bg-[#e9eef5] ${expanded ? "h-[calc(100dvh-168px)] min-h-[560px] rounded-[8px]" : dashboard ? "h-[420px] min-h-[420px] xl:h-[320px] xl:min-h-[320px]" : "h-[470px] min-h-[420px] rounded-[7px]"}`}>
+      <div ref={containerRef} className={dashboard ? "absolute inset-x-0 bottom-0 top-[84px] xl:top-[43px]" : "absolute inset-0"} aria-label={locale === "zh" ? "LBID 航線情報地圖" : "LBID route intelligence map"} />
 
-      <div className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-76px)] flex-wrap items-center gap-1.5 rounded-[8px] border border-white/90 bg-white/92 p-1.5 shadow-[0_10px_28px_rgba(25,42,79,0.14)] backdrop-blur-xl">
+      <div className={`absolute z-10 flex max-w-[calc(100%-76px)] flex-wrap items-center gap-1.5 ${dashboard ? "left-3 top-1 bg-transparent p-1.5 shadow-none xl:left-[305px]" : "left-3 top-3 rounded-[8px] border border-white/90 bg-white/92 p-1.5 shadow-[0_10px_28px_rgba(25,42,79,0.14)] backdrop-blur-xl"}`}>
         {filters.map((filter) => {
           const FilterIcon = filter.icon
           return (
@@ -333,34 +335,34 @@ export function RouteDetailPanel({ locale, route, compact = false }: { locale: L
     <aside className={`flex h-full flex-col bg-white ${compact ? "p-4" : "rounded-[8px] border border-[#e2e7ef] p-5 shadow-[0_12px_34px_rgba(26,45,82,0.07)]"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase text-[#8a96a8]">{route.originCode} → {route.destinationCode}</p>
-          <h2 className="mt-1 text-[17px] font-semibold leading-snug text-[#14213a]">{route.origin} → {route.destination}</h2>
+          <p className={`${compact ? "text-[8.5px]" : "text-[10px]"} font-semibold uppercase text-[#8a96a8]`}>{route.originCode} → {route.destinationCode}</p>
+          <h2 className={`${compact ? "mt-0.5 text-[14px]" : "mt-1 text-[17px]"} font-semibold leading-snug text-[#14213a]`}>{route.origin} → {route.destination}</h2>
         </div>
-        <span className="inline-flex h-7 items-center rounded-full bg-[#e9f8f0] px-2.5 text-[10px] font-semibold text-[#16885a]">{statusLabel}</span>
+        <span className={`${compact ? "h-6 px-2 text-[8.5px]" : "h-7 px-2.5 text-[10px]"} inline-flex items-center rounded-full bg-[#e9f8f0] font-semibold text-[#16885a]`}>{statusLabel}</span>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className={compact ? "mt-2 flex flex-wrap gap-2" : "mt-4 flex flex-wrap gap-2"}>
         <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[#eef3ff] px-2.5 py-1.5 text-[10px] font-semibold" style={{ color: meta.color }}><ModeIcon className="h-3.5 w-3.5" />{meta.label}</span>
         <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[#f3f5f8] px-2.5 py-1.5 text-[10px] font-semibold text-[#5e6b80]"><Clock3 className="h-3.5 w-3.5" />{route.nextDeadline}</span>
       </div>
 
-      <dl className="mt-5 divide-y divide-[#edf0f4] border-y border-[#edf0f4]">
+      <dl className={`${compact ? "mt-3" : "mt-5"} divide-y divide-[#edf0f4] border-y border-[#edf0f4]`}>
         <DetailRow label={locale === "zh" ? "活躍需求" : "Active requests"} value={String(route.activeRequests)} />
         <DetailRow label={locale === "zh" ? "有效回應" : "Qualified responses"} value={String(route.responseCount)} />
         <DetailRow label={locale === "zh" ? "運量" : "Tracked volume"} value={route.volumeLabel} />
         <DetailRow label={locale === "zh" ? "準時交付" : "On-time delivery"} value={`${route.onTimeRate}%`} accent="#159c69" />
       </dl>
 
-      <div className="mt-5">
+      <div className={compact ? "mt-3" : "mt-5"}>
         <div className="flex items-center justify-between text-[11px]"><span className="font-medium text-[#718097]">{locale === "zh" ? "風險評級" : "Risk level"}</span><strong className="capitalize" style={{ color: riskTone }}>{route.risk}</strong></div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#edf0f4]"><div className="h-full rounded-full" style={{ width: route.risk === "high" ? "82%" : route.risk === "medium" ? "54%" : "24%", backgroundColor: riskTone }} /></div>
       </div>
 
-      <p className="mt-5 rounded-[7px] bg-[#f5f7fb] px-3 py-2.5 text-[10.5px] leading-5 text-[#65738a]">
+      {!compact ? <p className="mt-5 rounded-[7px] bg-[#f5f7fb] px-3 py-2.5 text-[10.5px] leading-5 text-[#65738a]">
         {locale === "zh" ? "地圖只顯示需求、狀態及營運表現。密封報價及競爭者身份會在關標前保持隱藏。" : "The map shows demand, status and operating performance only. Sealed prices and competitor identities stay hidden before close."}
-      </p>
+      </p> : null}
 
-      <Link href={`/${locale}/my-routes`} className="mt-auto inline-flex h-10 items-center justify-center rounded-[7px] border border-[#dfe5ef] bg-white text-[11px] font-semibold text-[#273650] transition hover:border-[#aebcce] hover:bg-[#f8faff] hover:text-[#315ee8]">
+      <Link href={`/${locale}/my-routes`} className={`${compact ? "mt-3 h-8 text-[9.5px]" : "mt-auto h-10 text-[11px]"} inline-flex items-center justify-center rounded-[7px] border border-[#dfe5ef] bg-white font-semibold text-[#273650] transition hover:border-[#aebcce] hover:bg-[#f8faff] hover:text-[#315ee8]`}>
         {locale === "zh" ? "查看航線詳情" : "View route details"}
       </Link>
     </aside>
@@ -368,7 +370,7 @@ export function RouteDetailPanel({ locale, route, compact = false }: { locale: L
 }
 
 function DetailRow({ label, value, accent }: { label: string; value: string; accent?: string }) {
-  return <div className="flex items-center justify-between gap-3 py-3 text-[11px]"><dt className="text-[#718097]">{label}</dt><dd className="font-semibold tabular-nums text-[#24324a]" style={accent ? { color: accent } : undefined}>{value}</dd></div>
+  return <div className="flex items-center justify-between gap-3 py-1.5 text-[9.5px]"><dt className="text-[#718097]">{label}</dt><dd className="font-semibold tabular-nums text-[#24324a]" style={accent ? { color: accent } : undefined}>{value}</dd></div>
 }
 
 function LegendLine({ label, color, dashed = false }: { label: string; color: string; dashed?: boolean }) {

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import {
   BarChart2,
   Bell,
+  BriefcaseBusiness,
   Building2,
   ChevronRight,
   CircleHelp,
@@ -21,6 +22,7 @@ import {
   Send,
   Settings,
   ShieldCheck,
+  Star,
   Users,
   WalletCards,
 } from "lucide-react"
@@ -130,18 +132,28 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   const standalone = pathname === prefix || pathname === `${prefix}/auth`
   if (standalone) return <>{children}</>
 
+  const dashboardChrome = pathname === `${prefix}/dashboard`
+    || pathname === `${prefix}/product-preview`
+
   const bidding: NavItem[] = [
     { href: `${prefix}/dashboard`, label: "Overview", icon: LayoutDashboard, exact: true },
-    { href: `${prefix}/marketplace`, label: "Bidding Center", icon: Send },
-    { href: `${prefix}/requests`, label: "My Requests", icon: FileText },
+    { href: `${prefix}/marketplace`, label: "Bidding Command Center", icon: Send },
+    { href: `${prefix}/requests`, label: "Projects", icon: BriefcaseBusiness },
   ]
   const operations: NavItem[] = [
-    { href: `${prefix}/orders`, label: "Orders", icon: Package },
+    { href: `${prefix}/orders`, label: "Shipments", icon: Package },
     { href: `${prefix}/network-map`, label: "Routes", icon: Map },
-    { href: `${prefix}/forwarders`, label: "Directory", icon: Users },
+    { href: `${prefix}/forwarders`, label: "Suppliers", icon: Users },
   ]
   const intelligence: NavItem[] = [
     { href: `${prefix}/analytics`, label: "Analytics", icon: BarChart2 },
+    { href: `${prefix}/analytics?view=risk`, label: "Risk & Compliance", icon: ShieldCheck },
+    { href: `${prefix}/analytics?view=reports`, label: "Reports", icon: FileText },
+  ]
+  const utilities: NavItem[] = [
+    { href: `${prefix}/profile`, label: "Shortcuts", icon: Star },
+    { href: `${prefix}/notifications`, label: "Alerts", icon: Bell },
+    { href: `${prefix}/community`, label: "Messages", icon: MessageCircle },
   ]
   const admin: NavItem[] = [
     { href: `${prefix}/admin`, label: "Admin", icon: ShieldCheck, exact: true },
@@ -151,19 +163,13 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
   const mobileNav = [bidding[0], bidding[1], bidding[2], operations[0], operations[1]]
 
   return (
-    <div className="workspace-scene flex h-[100dvh] max-h-[100dvh] overflow-hidden font-sans text-ink">
-      <aside className="workspace-sidebar hidden w-[224px] flex-shrink-0 flex-col border-r border-[#e8ebf1] bg-white/94 backdrop-blur-xl lg:flex">
-        <Link href={`${prefix}/dashboard`} className="flex h-[82px] items-center px-5" aria-label="LBID workspace">
-          <Image src="/assets/lbid-web-logo.svg" alt="LBID Logistics Bidding Platform" width={158} height={50} priority className="h-auto w-[154px] object-contain object-left" />
+    <div className="workspace-scene flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#fbfaf7] font-sans text-ink">
+      <aside className="workspace-sidebar hidden w-[202px] flex-shrink-0 flex-col border-r border-[#ece7df] bg-white/96 backdrop-blur-xl lg:flex">
+        <Link href={`${prefix}/dashboard`} className="flex h-[84px] items-center px-5" aria-label="LBID workspace">
+          <Image src="/assets/lbid-web-logo.svg" alt="LBID Logistics Bidding Platform" width={150} height={48} priority className="h-auto w-[148px] object-contain object-left" />
         </Link>
 
-        <div className="px-3 pb-4">
-          <Link href={`${prefix}/inquiries/new`} className="flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-[linear-gradient(135deg,#6c62f5,#5268ff)] text-[11.5px] font-semibold text-white shadow-[0_10px_22px_rgba(83,99,239,0.24)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6671f3]/30">
-            <Plus className="h-4 w-4" />New Request
-          </Link>
-        </div>
-
-        <SidebarLabel>Bidding</SidebarLabel>
+        <SidebarLabel>Workspace</SidebarLabel>
         <NavSection items={bidding} pathname={pathname} />
         <SidebarLabel>Operations</SidebarLabel>
         <NavSection items={operations} pathname={pathname} />
@@ -172,13 +178,17 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
         {identity?.role === "admin" ? <><SidebarLabel>Admin</SidebarLabel><NavSection items={admin} pathname={pathname} admin /></> : null}
 
-        <div className="relative mt-auto border-t border-[#edf0f4] px-3 py-4">
+        <div className="mt-auto border-t border-[#f0ece6] pt-3">
+          <NavSection items={utilities} pathname={pathname} />
+        </div>
+
+        <div className="relative px-3 pb-4 pt-3">
           <AccountMenu locale={locale} prefix={prefix} identity={identity} />
         </div>
       </aside>
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <TopBar pathname={pathname} prefix={prefix} locale={locale} unreadNotifications={unreadNotifications} identity={identity} />
+        {dashboardChrome ? null : <TopBar pathname={pathname} prefix={prefix} locale={locale} unreadNotifications={unreadNotifications} identity={identity} />}
         <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto max-lg:pb-20" style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D6E0 transparent" }}>
           {children}
         </div>
@@ -270,7 +280,7 @@ function SidebarLabel({ children }: { children: React.ReactNode }) {
 }
 
 function NavSection({ items, pathname, admin = false }: { items: NavItem[]; pathname: string; admin?: boolean }) {
-  return <nav className="flex flex-col gap-0.5 px-3">{items.map((item) => { const active = isActive(pathname, item); return <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11.5px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6470ef]/25 ${active ? admin ? "bg-[#fff2e8] text-[#b45b23]" : "bg-[linear-gradient(90deg,#fff2e6,#f8f2ed)] text-[#b46a2e] shadow-[inset_2px_0_0_#e88a42]" : "text-[#506078] hover:bg-[#f5f7fb] hover:text-[#1f2d47]"}`}><item.icon className="h-4 w-4 flex-shrink-0" strokeWidth={active ? 2.2 : 1.7} /><span className="truncate">{item.label}</span></Link> })}</nav>
+  return <nav className="flex flex-col gap-0.5 px-3">{items.map((item) => { const active = isActive(pathname, item); return <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[10px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6470ef]/25 ${active ? admin ? "bg-[#fff2e8] text-[#b45b23]" : "bg-[linear-gradient(90deg,#fff2e6,#f8f2ed)] text-[#b46a2e] shadow-[inset_2px_0_0_#e88a42]" : "text-[#506078] hover:bg-[#f5f7fb] hover:text-[#1f2d47]"}`}><item.icon className="h-4 w-4 flex-shrink-0" strokeWidth={active ? 2.2 : 1.7} /><span className="truncate">{item.label}</span></Link> })}</nav>
 }
 
 function MobileNavItem({ item, active }: { item: NavItem; active: boolean }) {

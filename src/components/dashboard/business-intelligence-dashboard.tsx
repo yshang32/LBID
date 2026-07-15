@@ -7,38 +7,34 @@ import {
   AreaChart,
   CartesianGrid,
   Cell,
-  Funnel,
-  FunnelChart,
-  LabelList,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis,
 } from "recharts"
 import {
   Award,
+  Bell,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Clock3,
-  Download,
   FileWarning,
   Globe2,
+  MoreHorizontal,
   PackageCheck,
   Plane,
   Plus,
-  RefreshCw,
-  Route,
+  Search,
   Send,
-  Ship,
+  SlidersHorizontal,
   Target,
   TrendingDown,
   TrendingUp,
   Truck,
+  Users,
   type LucideIcon,
 } from "lucide-react"
 
@@ -173,24 +169,18 @@ const ui = {
 
 export function BusinessIntelligenceDashboard({ locale }: { locale: Locale }) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
-  const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>("overview")
   const [period, setPeriod] = useState<Period>("6m")
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<IntelligenceRoute>(intelligenceRoutes[0])
   const t = ui[locale]
 
   const loadWorkspace = useCallback(async () => {
-    setLoading(true)
     try {
       const { response, body } = await apiJson("/api/workspace")
       const live = response.ok ? body : null
       setWorkspace(live && !isWorkspaceEmpty(live) ? live : getDemoWorkspace())
     } catch {
       setWorkspace(getDemoWorkspace())
-    } finally {
-      setUpdatedAt(new Date())
-      setLoading(false)
     }
   }, [])
 
@@ -208,125 +198,91 @@ export function BusinessIntelligenceDashboard({ locale }: { locale: Locale }) {
   const companyName = workspace.profile?.company_name_en || workspace.profile?.company_name_zh || "Pacific"
   const firstName = String(companyName).trim().split(/\s+/)[0] || "Pacific"
   const views: Record<ViewMode, string> = { overview: t.overview, client: t.client, forwarder: t.forwarder }
-  const statusText = workspace.demoMode ? t.sample : t.live
-  const updateText = updatedAt?.toLocaleTimeString(locale === "zh" ? "zh-HK" : "en-HK", { hour: "2-digit", minute: "2-digit" }) || "--:--"
-
-  const exportDashboard = () => {
-    const rows = [
-      ["metric", "value", "change"],
-      ...model.kpis.map((item) => [item.label, item.value, item.delta]),
-    ]
-    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n")
-    const href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
-    const anchor = document.createElement("a")
-    anchor.href = href
-    anchor.download = "lbid-dashboard.csv"
-    anchor.click()
-    URL.revokeObjectURL(href)
-  }
+  const supportingKpis = [
+    { ...model.kpis[1], label: locale === "zh" ? "進行中競價" : "Active bids" },
+    { ...model.kpis[3], label: locale === "zh" ? "預計節省" : "Expected savings" },
+    { ...model.kpis[4], label: locale === "zh" ? "準時交付" : "On-time delivery" },
+    makeKpi(locale === "zh" ? "高風險項目" : "Projects at risk", String(Math.max(2, model.deadlines.filter((item) => item.tone === palette.red).length + 2)), "-12.5%", FileWarning, palette.orange, "#fff3e6", [8, 7, 6, 5, 4, 3]),
+    makeKpi(locale === "zh" ? "本週關閉項目" : "Contracts closing this week", String(Math.max(5, model.deadlines.length + 3)), "+13.6%", CalendarDays, "#bf7f2f", "#fbf1e5", [3, 5, 4, 6, 7, 8]),
+  ]
+  const featuredKpi = { ...model.kpis[0], label: locale === "zh" ? "年度累計中標額" : "Total awarded value (YTD)" }
+  const today = new Intl.DateTimeFormat(locale === "zh" ? "zh-HK" : "en-HK", { month: "short", day: "numeric", year: "numeric" }).format(new Date())
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,#f8f9fc_0%,#f1f5fa_48%,#fbfbfd_100%)] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1720px]">
-        <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <main className="min-h-full bg-[radial-gradient(circle_at_56%_-8%,rgba(242,218,181,0.20),transparent_29%),#fbfaf7] px-4 pb-8 pt-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1510px]">
+        <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[11px] font-medium text-[#8290a8]">
-              <span className={`h-2 w-2 rounded-full ${workspace.demoMode ? "bg-[#f4a63a]" : "bg-[#37b878]"}`} />
-              {statusText}<span className="text-[#c2cad8]">/</span>{t.updated} {updateText}
-            </div>
-            <h1 className="mt-3 text-[30px] font-semibold leading-tight text-[#111a33] sm:text-[34px]">{t.greeting}, {firstName}.</h1>
-            <p className="mt-1.5 text-[13px] leading-6 text-[#6f7d95]">{t.intro}</p>
+            <h1 className="text-[25px] font-semibold leading-tight tracking-[-0.01em] text-[#101c32] sm:text-[28px]">{t.greeting}, {firstName}. <span aria-hidden>👋</span></h1>
+            <p className="mt-1 text-[12px] text-[#69768b]">{locale === "zh" ? "以下是你今日的物流營運概覽。" : "Here is your logistics command center overview."}</p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex items-center rounded-[8px] border border-[#e5e9f2] bg-white p-1 shadow-[0_8px_24px_rgba(31,47,84,0.06)]" role="group" aria-label="Dashboard capability view">
-              {(Object.keys(views) as ViewMode[]).map((view) => (
-                <button key={view} type="button" aria-pressed={viewMode === view} onClick={() => setViewMode(view)} className={`h-8 rounded-[6px] px-3 text-[10.5px] font-semibold transition ${viewMode === view ? "bg-[#eef0ff] text-[#5362eb]" : "text-[#718097] hover:bg-[#f7f8fb] hover:text-[#16213d]"}`}>{views[view]}</button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => void loadWorkspace()} disabled={loading} title="Refresh" className="grid h-10 w-10 place-items-center rounded-[8px] border border-[#e5e9f2] bg-white text-[#64718a] shadow-[0_8px_24px_rgba(31,47,84,0.06)] transition hover:border-[#cfd6e5] hover:text-[#5362eb] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button>
-              <button type="button" onClick={exportDashboard} className="inline-flex h-10 items-center gap-2 rounded-[8px] border border-[#e5e9f2] bg-white px-4 text-[11px] font-semibold text-[#26334d] shadow-[0_8px_24px_rgba(31,47,84,0.06)] transition hover:border-[#cfd6e5] hover:text-[#5362eb]"><Download className="h-4 w-4" />{t.export}</button>
-              <Link href={`/${locale}/inquiries/new`} className="inline-flex h-10 items-center gap-2 rounded-[8px] bg-[linear-gradient(135deg,#6b64f5,#5368ff)] px-4 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(83,98,235,0.24)] transition hover:brightness-105"><Plus className="h-4 w-4" />{t.newRequest}</Link>
-            </div>
+          <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+            <button type="button" className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#e9e3d9] bg-white px-3 text-[10px] font-medium text-[#334158] shadow-[0_4px_14px_rgba(50,43,31,0.04)] transition hover:border-[#d7cbb9] hover:bg-[#fffdf9]"><Globe2 className="h-3.5 w-3.5" />Global (All Regions)<ChevronDown className="h-3 w-3 text-[#9b917f]" /></button>
+            <label className="relative inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#e9e3d9] bg-white px-3 shadow-[0_4px_14px_rgba(50,43,31,0.04)]">
+              <Users className="h-3.5 w-3.5 text-[#172943]" />
+              <select aria-label="Company workspace" value={viewMode} onChange={(event) => setViewMode(event.target.value as ViewMode)} className="appearance-none bg-transparent pr-4 text-[10px] font-medium text-[#334158] outline-none">
+                {(Object.keys(views) as ViewMode[]).map((view) => <option key={view} value={view}>{views[view]}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 h-3 w-3 text-[#9b917f]" />
+            </label>
+            <span className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#e9e3d9] bg-white px-3 text-[10px] font-medium text-[#334158] shadow-[0_4px_14px_rgba(50,43,31,0.04)]"><CalendarDays className="h-3.5 w-3.5 text-[#9a6c24]" />{today}</span>
+            <form action={`/${locale}/marketplace`} className="relative hidden 2xl:block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9c958a]" />
+              <input name="q" placeholder={locale === "zh" ? "搜尋項目、航線、貨運..." : "Search projects, routes, shipments..."} className="h-9 w-[190px] rounded-[7px] border border-[#e9e3d9] bg-white pl-9 pr-9 text-[10px] text-[#334158] outline-none shadow-[0_4px_14px_rgba(50,43,31,0.04)] transition placeholder:text-[#a8a095] focus:border-[#c99a43] focus:ring-2 focus:ring-[#c99a43]/10" />
+              <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded bg-[#f7f4ee] px-1 py-0.5 text-[7.5px] text-[#988f81]">⌘K</kbd>
+            </form>
+            <Link href={`/${locale}/notifications`} aria-label={locale === "zh" ? "通知" : "Notifications"} className="relative grid h-9 w-9 place-items-center rounded-[7px] text-[#26364e] transition hover:bg-white"><Bell className="h-4 w-4" /><span className="absolute right-0.5 top-0.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-[#e74f3f] px-0.5 text-[7px] font-bold text-white">3</span></Link>
+            <Link href={`/${locale}/inquiries/new`} className="inline-flex h-9 items-center gap-2 rounded-[7px] bg-[#102544] px-4 text-[10px] font-semibold text-white shadow-[0_8px_18px_rgba(16,37,68,0.18)] transition hover:-translate-y-px hover:bg-[#19375e]"><Plus className="h-3.5 w-3.5" />{t.newRequest}<ChevronDown className="h-3 w-3 text-white/60" /></Link>
           </div>
         </header>
 
-        <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Key performance indicators">
-          {model.kpis.map((kpi, index) => <KpiCard key={kpi.label} kpi={kpi} featured={index === 0} />)}
+        <section className="mt-4 grid gap-3 xl:grid-cols-[290px_minmax(0,1.65fr)_minmax(300px,1fr)]" aria-label="Key performance indicators">
+          <FeaturedKpiCard kpi={featuredKpi} />
+          <div className="grid self-start overflow-hidden rounded-[9px] border border-[#ece6dc] bg-white shadow-[0_8px_24px_rgba(53,43,28,0.045)] sm:grid-cols-3">
+            {supportingKpis.slice(0, 3).map((kpi, index) => <CompactKpiCard key={kpi.label} kpi={kpi} divided={index > 0} />)}
+          </div>
+          <div className="grid self-start overflow-hidden rounded-[9px] border border-[#ece6dc] bg-white shadow-[0_8px_24px_rgba(53,43,28,0.045)] sm:grid-cols-2">
+            {supportingKpis.slice(3).map((kpi, index) => <CompactKpiCard key={kpi.label} kpi={kpi} divided={index > 0} />)}
+          </div>
         </section>
 
-        <div className="mt-3 grid gap-3 xl:grid-cols-12">
-          <DashboardCard className="xl:col-span-9" title={locale === "zh" ? "即時航線情報" : "Live route intelligence"} intro={locale === "zh" ? "點選航線查看需求、回應、交付表現及風險" : "Select a lane to inspect demand, responses, delivery performance and risk"} action={<Link href={`/${locale}/network-map`} className="text-[11px] font-semibold text-[#315ee8] transition hover:text-[#234ac3] hover:underline">{locale === "zh" ? "展開地圖" : "Open full map"}</Link>}>
-            <div className="mt-4"><RouteIntelligenceMap locale={locale} selectedRouteId={selectedRoute.id} onRouteSelect={setSelectedRoute} /></div>
-          </DashboardCard>
+        <section className="mt-3 grid gap-3 xl:-mt-[38px] xl:grid-cols-12">
+          <div className="overflow-hidden rounded-[9px] border border-[#e9e3d9] bg-white shadow-[0_10px_28px_rgba(50,42,31,0.05)] xl:col-span-9">
+            <RouteIntelligenceMap locale={locale} selectedRouteId={selectedRoute.id} onRouteSelect={setSelectedRoute} dashboard />
+          </div>
 
-          <section className="overflow-hidden rounded-[8px] border border-[#e4e8ef] bg-white shadow-[0_12px_34px_rgba(31,47,84,0.065)] xl:col-span-3">
+          <section className="overflow-hidden rounded-[9px] border border-[#e9e3d9] bg-white shadow-[0_10px_28px_rgba(50,42,31,0.05)] xl:col-span-3">
             <RouteDetailPanel locale={locale} route={selectedRoute} compact />
           </section>
+        </section>
 
-          <DashboardCard className="xl:col-span-6" title={t.trendTitle} intro={t.trendIntro} action={<span className="rounded-[6px] bg-[#eef2ff] px-3 py-1.5 text-[10.5px] font-semibold text-[#5966e8]">{t.periods[period]}</span>}>
-            <div className="mt-4 flex flex-wrap gap-5 text-[11px] font-medium text-[#748198]">
-              <LegendDot color={palette.blue} label={t.pipeline} />
-              <LegendDot color={palette.violet} label={t.awarded} />
-              <LegendDot color={palette.cyan} label={t.completed} />
-            </div>
-            <div className="mt-3 h-[310px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={model.trend} margin={{ top: 12, right: 10, left: 0, bottom: 4 }}>
-                  <CartesianGrid vertical={false} stroke="#e8ecf4" strokeDasharray="3 6" />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#718096", fontSize: 11 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#718096", fontSize: 11 }} tickFormatter={(value) => compactNumber(Number(value))} width={58} />
-                  <Tooltip content={<TrendTooltip locale={locale} />} cursor={{ stroke: "#c8d0df", strokeDasharray: "4 4" }} />
-                  <Line type="monotone" dataKey="pipeline" stroke={palette.blue} strokeWidth={2.8} dot={false} activeDot={{ r: 5, fill: palette.blue, stroke: "white", strokeWidth: 2 }} />
-                  <Line type="monotone" dataKey="awarded" stroke={palette.violet} strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: palette.violet, stroke: "white", strokeWidth: 2 }} />
-                  <Line type="monotone" dataKey="completed" stroke={palette.cyan} strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: palette.cyan, stroke: "white", strokeWidth: 2 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        <section className="mt-3 grid gap-3 xl:grid-cols-12">
+          <DashboardCard className="xl:col-span-3" title={locale === "zh" ? "需要處理" : "Needs attention"} action={<span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#fff0e8] px-1 text-[9px] font-bold text-[#ef6547]">{Math.max(model.deadlines.length, 6)}</span>}>
+            <DeadlineList items={model.deadlines} locale={locale} />
           </DashboardCard>
-
-          <DashboardCard className="xl:col-span-3" title={t.funnelTitle} intro={locale === "zh" ? "由合資格機會至完成訂單" : "From eligible opportunity to completed order"} action={<span className="text-[10.5px] font-medium text-[#8490a5]">{t.periods[period]}</span>}>
-            <div className="mt-3 h-[252px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <FunnelChart>
-                  <Tooltip content={<FunnelTooltip />} />
-                  <Funnel dataKey="value" data={model.funnel} isAnimationActive={false}>
-                    {model.funnel.map((item) => <Cell key={item.label} fill={item.color} />)}
-                    <LabelList position="center" dataKey="value" fill="#ffffff" fontSize={12} fontWeight={700} />
-                  </Funnel>
-                </FunnelChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#edf0f5] pt-3">
-              {model.funnel.map((item, index) => <div key={item.label} className="flex items-center justify-between gap-2 text-[10.5px]"><span className="truncate text-[#66748c]">{item.label}</span><strong className="text-[#26344e]">{index ? `${Math.round(item.value / Math.max(model.funnel[0].value, 1) * 100)}%` : "100%"}</strong></div>)}
-            </div>
+          <DashboardCard className="xl:col-span-2" title={locale === "zh" ? "競價流程" : "Bid pipeline"} action={<PeriodControl locale={locale} period={period} onChange={setPeriod} />}>
+            <PipelineSummary funnel={model.funnel} locale={locale} />
           </DashboardCard>
-
-          <DashboardCard className="xl:col-span-3" title={t.valueTitle} intro={locale === "zh" ? "按已中標訂單金額" : "By awarded order value"}>
-            <ValueDonut locale={locale} routes={model.routes} />
+          <DashboardCard className="xl:col-span-2" title={locale === "zh" ? "中標與落選" : "Awarded vs lost"} action={<span className="text-[9px] text-[#998f7e]">{t.periods[period]}</span>}>
+            <AwardedLostDonut funnel={model.funnel} locale={locale} />
           </DashboardCard>
-
-          <DashboardCard className="xl:col-span-4" title={t.deadlineTitle} intro={locale === "zh" ? "按緊急程度排序" : "Prioritised by urgency"} action={<Link href={`/${locale}/notifications`} className="text-[10.5px] font-semibold text-[#5966e8] hover:underline">{t.viewAll}</Link>}>
-            <DeadlineList items={model.deadlines} />
+          <DashboardCard className="xl:col-span-2" title={locale === "zh" ? "節省趨勢" : "Savings trend"} action={<span className="text-[9px] text-[#998f7e]">{locale === "zh" ? "本年度" : "This year"}</span>}>
+            <SavingsTrend trend={model.trend} locale={locale} />
           </DashboardCard>
-
-          <DashboardCard className="xl:col-span-4" title={t.routesTitle} action={<span className="text-[10.5px] text-[#8490a5]">{locale === "zh" ? "按中標額" : "By awarded value"}</span>}>
+          <DashboardCard className="xl:col-span-3" title={t.routesTitle} action={<span className="text-[9px] text-[#998f7e]">{locale === "zh" ? "按中標額" : "By spend"}</span>}>
             <RouteRanking locale={locale} routes={model.routes} />
           </DashboardCard>
 
-          <DashboardCard className="xl:col-span-4" title={t.deliveryTitle} action={<span className="text-[10.5px] text-[#8490a5]">{locale === "zh" ? "本期間" : "This period"}</span>}>
-            <PerformanceRows locale={locale} />
-          </DashboardCard>
+        </section>
 
-          <section className="overflow-hidden rounded-[8px] border border-[#e7ebf3] bg-white shadow-[0_10px_30px_rgba(31,47,84,0.06)] xl:col-span-12">
-            <div className="flex items-center justify-between border-b border-[#edf0f5] px-5 py-4">
-              <div><h2 className="text-[14px] font-semibold text-[#18233e]">{t.tableTitle}</h2><p className="mt-1 text-[11px] text-[#8793a7]">{locale === "zh" ? "可直接進入相關工作區處理" : "Open the related workspace to take action"}</p></div>
-              <Link href={`/${locale}/orders`} className="text-[10.5px] font-semibold text-[#5966e8] hover:underline">{t.viewAll}</Link>
-            </div>
-            <ActiveOrdersTable locale={locale} orders={model.activeOrders} />
-          </section>
-        </div>
+        <section className="mt-3 overflow-hidden rounded-[9px] border border-[#e9e3d9] bg-white shadow-[0_10px_28px_rgba(50,42,31,0.045)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee9e1] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3"><h2 className="text-[14px] font-semibold text-[#18243a]">{locale === "zh" ? "進行中項目" : "Active projects"}</h2><button type="button" className="inline-flex h-7 items-center gap-1.5 rounded-[6px] border border-[#e8e2d8] bg-white px-2.5 text-[9px] text-[#5e697b]">{locale === "zh" ? "全部地區" : "All regions"}<ChevronDown className="h-3 w-3" /></button><button type="button" className="inline-flex h-7 items-center gap-1.5 rounded-[6px] border border-[#e8e2d8] bg-white px-2.5 text-[9px] text-[#5e697b]">{locale === "zh" ? "全部模式" : "All modes"}<ChevronDown className="h-3 w-3" /></button><button type="button" className="inline-flex h-7 items-center gap-1.5 rounded-[6px] border border-[#e8e2d8] bg-white px-2.5 text-[9px] text-[#5e697b]"><SlidersHorizontal className="h-3 w-3" />{locale === "zh" ? "篩選" : "Filters"}</button></div>
+            <Link href={`/${locale}/orders`} className="inline-flex h-7 items-center gap-1.5 rounded-[6px] border border-[#e8e2d8] px-3 text-[9px] font-medium text-[#334158] transition hover:border-[#cabfae] hover:bg-[#fffdf9]">{t.viewAll}<ChevronDown className="h-3 w-3" /></Link>
+          </div>
+          <ActiveOrdersTable locale={locale} orders={model.activeOrders} />
+        </section>
       </div>
     </main>
   )
@@ -334,9 +290,9 @@ export function BusinessIntelligenceDashboard({ locale }: { locale: Locale }) {
 
 function DashboardCard({ title, intro, action, className = "", children }: { title: string; intro?: string; action?: ReactNode; className?: string; children: ReactNode }) {
   return (
-    <section className={`min-w-0 rounded-[8px] border border-[#e4e8ef] bg-white p-5 shadow-[0_12px_34px_rgba(31,47,84,0.065)] ${className}`}>
+    <section className={`min-w-0 rounded-[9px] border border-[#e9e3d9] bg-white p-4 shadow-[0_8px_24px_rgba(50,42,31,0.045)] ${className}`}>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><h2 className="truncate text-[14px] font-semibold text-[#18233e]">{title}</h2>{intro ? <p className="mt-1 text-[11px] leading-5 text-[#7c899d]">{intro}</p> : null}</div>
+        <div className="min-w-0"><h2 className="truncate text-[12px] font-semibold text-[#18243a]">{title}</h2>{intro ? <p className="mt-1 text-[9.5px] leading-4 text-[#7c899d]">{intro}</p> : null}</div>
         {action}
       </div>
       {children}
@@ -344,70 +300,83 @@ function DashboardCard({ title, intro, action, className = "", children }: { tit
   )
 }
 
-function KpiCard({ kpi, featured = false }: { kpi: Kpi; featured?: boolean }) {
+function FeaturedKpiCard({ kpi }: { kpi: Kpi }) {
   const DeltaIcon = kpi.positive ? TrendingUp : TrendingDown
   const data = kpi.series.map((value, index) => ({ index, value }))
-  const gradientId = `kpi-${kpi.label.replace(/[^a-z0-9]/gi, "")}`
   return (
-    <article className={`group min-w-0 rounded-[8px] border p-4 shadow-[0_10px_28px_rgba(31,47,84,0.055)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_15px_34px_rgba(31,47,84,0.09)] ${featured ? "border-[#123b46] bg-[linear-gradient(145deg,#12333c,#0c2534_60%,#153a46)]" : "border-[#e4e8ef] bg-white hover:border-[#d6dce8]"}`}>
-      <div className="flex items-start gap-3">
-        <span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-full ${featured ? "bg-white/10" : ""}`} style={{ color: featured ? "#5be0c9" : kpi.color, backgroundColor: featured ? undefined : kpi.soft }}><kpi.icon className="h-4 w-4" /></span>
-        <div className="min-w-0"><p className={`truncate text-[10.5px] font-semibold ${featured ? "text-[#b9cbd0]" : "text-[#5e6b82]"}`}>{kpi.label}</p><p className={`mt-1.5 text-[24px] font-semibold leading-none tabular-nums ${featured ? "text-[#f3d087]" : "text-[#111a31]"}`}>{kpi.value}</p><span className={`mt-2 inline-flex items-center gap-1 text-[10px] font-semibold ${featured ? "text-[#5be0c9]" : kpi.positive ? "text-[#18a56a]" : "text-[#e25757]"}`}><DeltaIcon className="h-3.5 w-3.5" />{kpi.delta}</span></div>
-      </div>
-      <div className="mt-3 h-12">
+    <article className="group relative z-10 min-h-[160px] overflow-hidden rounded-[9px] border border-[#153b43] bg-[radial-gradient(circle_at_85%_12%,rgba(44,203,181,0.17),transparent_35%),linear-gradient(145deg,#11343b,#0b2632_66%,#123844)] px-5 py-4 shadow-[0_12px_28px_rgba(14,45,52,0.14)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(14,45,52,0.2)]">
+      <p className="text-[10px] font-medium uppercase tracking-[0.03em] text-[#d4e3e1]">{kpi.label}</p>
+      <p className="mt-2 text-[31px] font-semibold leading-none tracking-[-0.02em] text-[#f3cf81]">{kpi.value}</p>
+      <div className="absolute inset-x-4 bottom-3 h-[64px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, right: 1, left: 1, bottom: 0 }}>
-            <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={kpi.color} stopOpacity={0.24} /><stop offset="100%" stopColor={kpi.color} stopOpacity={0} /></linearGradient></defs>
-            <Area type="monotone" dataKey="value" stroke={kpi.color} strokeWidth={1.7} fill={`url(#${gradientId})`} dot={false} isAnimationActive={false} />
+            <defs><linearGradient id="featured-kpi-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16c3b2" stopOpacity={0.35} /><stop offset="100%" stopColor="#16c3b2" stopOpacity={0} /></linearGradient></defs>
+            <Area type="monotone" dataKey="value" stroke="#16c3b2" strokeWidth={1.7} fill="url(#featured-kpi-fill)" dot={false} isAnimationActive={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      <span className="absolute bottom-3 left-5 inline-flex items-center gap-1 rounded-full bg-[#1a645f]/70 px-2 py-1 text-[9px] font-semibold text-[#8de6d4]"><DeltaIcon className="h-3 w-3" />{kpi.delta}<span className="font-normal text-white/55">vs last 30 days</span></span>
     </article>
   )
 }
 
-function PeriodControl({ locale, period, onChange }: { locale: Locale; period: Period; onChange: (period: Period) => void }) {
-  return <select value={period} onChange={(event) => onChange(event.target.value as Period)} className="h-7 rounded-[6px] border border-[#e6eaf2] bg-white px-2 text-[9.5px] font-medium text-[#4d5b73] outline-none focus:border-[#7a83f4]">{(["30d", "90d", "6m"] as Period[]).map((item) => <option key={item} value={item}>{ui[locale].periods[item]}</option>)}</select>
+function CompactKpiCard({ kpi, divided }: { kpi: Kpi; divided: boolean }) {
+  const DeltaIcon = kpi.positive ? TrendingUp : TrendingDown
+  return <article className={`flex min-h-[112px] min-w-0 items-start gap-3 px-4 py-3.5 transition hover:bg-[#fffdf9] ${divided ? "border-t border-[#eee9e1] sm:border-l sm:border-t-0" : ""}`}><span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full" style={{ color: kpi.color, backgroundColor: kpi.soft }}><kpi.icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-[9px] font-medium leading-4 text-[#536075]">{kpi.label}</p><p className="mt-1.5 text-[22px] font-semibold leading-none tracking-[-0.01em] text-[#101b31]">{kpi.value}</p><span className={`mt-2 inline-flex items-center gap-1 text-[8.5px] font-semibold ${kpi.positive ? "text-[#1a9a62]" : "text-[#e05245]"}`}><DeltaIcon className="h-3 w-3" />{kpi.delta}</span><p className="mt-0.5 text-[7.5px] text-[#9a9388]">vs last 30 days</p></div></article>
 }
 
-function LegendDot({ color, label }: { color: string; label: string }) {
-  return <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full" style={{ backgroundColor: color }} />{label}</span>
+function PeriodControl({ locale, period, onChange }: { locale: Locale; period: Period; onChange: (period: Period) => void }) {
+  return <select value={period} onChange={(event) => onChange(event.target.value as Period)} className="h-6 rounded-[5px] border border-[#ece6dc] bg-[#fffdfa] px-1.5 text-[8.5px] font-medium text-[#6c756f] outline-none focus:border-[#c99a43]">{(["30d", "90d", "6m"] as Period[]).map((item) => <option key={item} value={item}>{ui[locale].periods[item]}</option>)}</select>
+}
+
+function PipelineSummary({ funnel, locale }: { funnel: FunnelPoint[]; locale: Locale }) {
+  const total = Math.max(funnel[0]?.value || 0, 1)
+  return <div className="mt-3"><p className="text-[26px] font-semibold leading-none text-[#152139]">{funnel[0]?.value || 0}</p><p className="mt-1 text-[8.5px] text-[#7e8998]">{locale === "zh" ? "總商機" : "Total opportunities"}</p><div className="mt-3 flex h-3.5 overflow-hidden rounded-[4px] bg-[#f0ede7]">{funnel.map((item) => <span key={item.label} title={`${item.label}: ${item.value}`} style={{ width: `${Math.max(item.value / total * 100, 8)}%`, backgroundColor: item.color }} />)}</div><div className="mt-3 grid grid-cols-4 gap-1">{funnel.map((item) => <div key={item.label} className="min-w-0"><p className="text-[12px] font-semibold text-[#1d2940]">{item.value}</p><p className="truncate text-[7px] text-[#8a938f]">{item.label}</p></div>)}</div><div className="mt-3 flex items-center justify-between border-t border-[#eee9e1] pt-2.5 text-[8.5px]"><span className="text-[#7f897f]">{locale === "zh" ? "轉換率" : "Conversion rate"}</span><strong className="text-[#152139]">{Math.round((funnel[2]?.value || 0) / total * 100)}% <span className="ml-1 text-[#1b9b66]">↑ 4.2%</span></strong></div></div>
+}
+
+function AwardedLostDonut({ funnel, locale }: { funnel: FunnelPoint[]; locale: Locale }) {
+  const base = Math.max(funnel[1]?.value || funnel[0]?.value || 1, 1)
+  const awarded = Math.min(funnel[2]?.value || 0, base)
+  const lost = Math.max(base - awarded, 0)
+  const awardedRate = Math.round(awarded / base * 100)
+  const data = [{ name: locale === "zh" ? "中標" : "Awarded", value: awarded, color: "#18aa95" }, { name: locale === "zh" ? "落選" : "Lost", value: lost, color: "#ef5b4f" }]
+  return <div className="mt-2"><div className="relative mx-auto h-[102px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" innerRadius={31} outerRadius={45} startAngle={90} endAngle={-270} stroke="none" isAnimationActive={false}>{data.map((item) => <Cell key={item.name} fill={item.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 grid place-content-center text-center"><strong className="text-[16px] text-[#18243a]">{base}</strong><span className="text-[7.5px] text-[#8a938f]">{locale === "zh" ? "總計" : "Total"}</span></div></div><div className="space-y-1.5">{data.map((item) => <div key={item.name} className="flex items-center justify-between text-[8.5px]"><span className="inline-flex items-center gap-1.5 text-[#687487]"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><strong className="text-[#26334a]">{Math.round(item.value / base * 100)}% ({item.value})</strong></div>)}</div><div className="mt-2.5 flex items-center justify-between border-t border-[#eee9e1] pt-2.5 text-[8.5px]"><span className="text-[#7f897f]">{locale === "zh" ? "中標率" : "Win rate"}</span><strong className="text-[#152139]">{awardedRate}% <span className="ml-1 text-[#1b9b66]">↑ 6.3%</span></strong></div></div>
+}
+
+function SavingsTrend({ trend, locale }: { trend: TrendPoint[]; locale: Locale }) {
+  const data = trend.map((item) => ({ ...item, savings: Math.round(item.awarded * 0.12) }))
+  const total = sum(data.map((item) => item.savings))
+  return <div className="mt-2"><div className="h-[128px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{ top: 8, right: 5, left: 0, bottom: 0 }}><defs><linearGradient id="savings-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#20aa9d" stopOpacity={0.28} /><stop offset="100%" stopColor="#20aa9d" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#eeeae3" strokeDasharray="2 5" /><XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#9a9388", fontSize: 7.5 }} interval={2} /><Tooltip content={<TrendTooltip locale={locale} />} /><Area type="monotone" dataKey="savings" stroke="#18a99b" strokeWidth={2} fill="url(#savings-fill)" dot={false} isAnimationActive={false} /></AreaChart></ResponsiveContainer></div><div className="mt-2 flex items-center justify-between border-t border-[#eee9e1] pt-2.5"><span className="text-[8.5px] text-[#7f897f]">{locale === "zh" ? "總節省" : "Total savings"}</span><strong className="text-[12px] text-[#17243b]">{formatHkd(total)} <span className="ml-1 text-[8.5px] text-[#1b9b66]">↑ 15.3%</span></strong></div></div>
 }
 
 function RouteRanking({ locale, routes }: { locale: Locale; routes: RoutePoint[] }) {
   const rows = routes.length ? routes : sampleRoutes(locale)
-  return <div className="mt-5 space-y-[18px]">{rows.slice(0, 5).map((route, index) => <div key={route.route} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3"><span className="text-[10.5px] text-[#8d98a9]">{index + 1}</span><div className="min-w-0"><div className="flex items-center justify-between gap-2"><p className="truncate text-[11px] font-semibold text-[#26334d]">{route.route}</p><span className="text-[9.5px] font-semibold text-[#20a66a]">↑ {7 + index * 2}.3%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef1f6]"><div className="h-full rounded-full" style={{ width: `${Math.max(route.share, 8)}%`, backgroundColor: route.color }} /></div></div><span className="text-[10.5px] font-semibold tabular-nums text-[#35425a]">{formatHkd(route.value)}</span></div>)}</div>
+  return <div className="mt-3 space-y-3">{rows.slice(0, 5).map((route, index) => <div key={route.route} className="grid grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-2"><span className="text-[8.5px] text-[#9b9489]">{index + 1}</span><div className="min-w-0"><p className="truncate text-[9.5px] font-medium text-[#344157]">{route.route}</p><div className="mt-1 h-1 overflow-hidden rounded-full bg-[#f0ede8]"><div className="h-full rounded-full" style={{ width: `${Math.max(route.share, 8)}%`, backgroundColor: route.color }} /></div></div><span className="text-[9px] font-semibold tabular-nums text-[#35425a]">{formatHkd(route.value)}</span></div>)}</div>
 }
 
-function PerformanceRows({ locale }: { locale: Locale }) {
-  const rows = locale === "zh" ? [["準時交付", 98.6], ["文件齊備", 97.1], ["準時更新狀態", 95.8], ["清關效率", 94.3], ["客戶確認", 93.7]] : [["On-time delivery", 98.6], ["Document readiness", 97.1], ["Status updates", 95.8], ["Customs efficiency", 94.3], ["Client confirmation", 93.7]]
-  return <div className="mt-5 space-y-4">{rows.map(([label, value], index) => <div key={String(label)} className="grid grid-cols-[22px_minmax(0,1fr)_42px] items-center gap-3"><span className="grid h-5 w-5 place-items-center rounded-[5px] bg-[#eef3ff] text-[9px] font-bold text-[#5966e8]">{index + 1}</span><div><div className="flex items-center justify-between text-[11px] font-medium text-[#35425a]"><span>{label}</span></div><div className="mt-2 h-2 rounded-full bg-[#eef1f6]"><div className="h-full rounded-full bg-[#45bd78]" style={{ width: `${Number(value)}%` }} /></div></div><span className="text-right text-[10.5px] font-semibold text-[#27344d]">{value}%</span></div>)}</div>
-}
-
-function ValueDonut({ locale, routes }: { locale: Locale; routes: RoutePoint[] }) {
-  const total = routes.reduce((sum, route) => sum + route.value, 0) || 2750000
-  const data = [
-    { name: locale === "zh" ? "空運" : "Air freight", value: 46, color: palette.blue },
-    { name: locale === "zh" ? "海運" : "Sea freight", value: 28, color: palette.violet },
-    { name: locale === "zh" ? "陸運" : "Road freight", value: 18, color: palette.cyan },
-    { name: locale === "zh" ? "其他" : "Other", value: 8, color: palette.orange },
+function DeadlineList({ items, locale }: { items: DeadlineItem[]; locale: Locale }) {
+  const fallback: DeadlineItem[] = [
+    { id: "attention-1", type: "!", title: locale === "zh" ? "競價將於 48 小時內結束" : "Bids closing in 48 hours", meta: locale === "zh" ? "5 個項目" : "5 projects", value: locale === "zh" ? "今日 18:00" : "Today 18:00", tone: "#ef5b4f", href: `/${locale}/marketplace` },
+    { id: "attention-2", type: "△", title: locale === "zh" ? "項目低於利潤目標" : "Projects below margin target", meta: locale === "zh" ? "3 個項目" : "3 projects", value: locale === "zh" ? "明日" : "Tomorrow", tone: "#f29a2e", href: `/${locale}/analytics` },
+    { id: "attention-3", type: "DOC", title: locale === "zh" ? "逾期文件" : "Overdue documents", meta: locale === "zh" ? "7 個項目" : "7 projects", value: locale === "zh" ? "2 日前" : "2 days ago", tone: "#ef6547", href: `/${locale}/orders` },
+    { id: "attention-4", type: "TRK", title: locale === "zh" ? "延誤貨運" : "Delayed shipments", meta: locale === "zh" ? "4 票貨運" : "4 shipments", value: locale === "zh" ? "運送中" : "In transit", tone: "#f0a02e", href: `/${locale}/orders` },
+    { id: "attention-5", type: "RISK", title: locale === "zh" ? "供應商合規警告" : "Supplier compliance warnings", meta: locale === "zh" ? "3 個供應商" : "3 suppliers", value: locale === "zh" ? "需要處理" : "Action needed", tone: "#ef5b4f", href: `/${locale}/forwarders` },
+    { id: "attention-6", type: "OK", title: locale === "zh" ? "等待審批" : "Approvals waiting", meta: locale === "zh" ? "6 個需求" : "6 requests", value: locale === "zh" ? "需要處理" : "Action needed", tone: "#24a66d", href: `/${locale}/requests` },
   ]
-  return <div className="mt-4 grid grid-cols-[160px_minmax(0,1fr)] items-center gap-3"><div className="relative h-[180px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" innerRadius={50} outerRadius={73} paddingAngle={1} isAnimationActive={false}>{data.map((item) => <Cell key={item.name} fill={item.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 grid place-content-center text-center"><span className="text-[9px] text-[#8b96a9]">HKD</span><strong className="text-[17px] text-[#17223c]">{compactNumber(total)}</strong></div></div><div className="space-y-3.5">{data.map((item) => <div key={item.name} className="flex items-center justify-between gap-2 text-[10.5px]"><span className="inline-flex min-w-0 items-center gap-2 text-[#66748b]"><span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} /><span className="truncate">{item.name}</span></span><strong className="text-[#27344d]">{item.value}%</strong></div>)}</div></div>
-}
-
-function DeadlineList({ items }: { items: DeadlineItem[] }) {
-  return <div className="mt-4 divide-y divide-[#edf0f5]">{items.slice(0, 4).map((item) => <Link key={item.id} href={item.href} className="group flex min-h-14 items-center gap-3 py-3 transition hover:bg-[#fafbfe] first:pt-1"><span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-[6px] text-[9px] font-bold" style={{ color: item.tone, backgroundColor: `${item.tone}18` }}>{item.type}</span><span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-[#2a3750] group-hover:text-[#5966e8]">{item.title}</span><span className="mt-1 block truncate text-[9.5px] text-[#8d98aa]">{item.meta}</span></span><span className="flex-shrink-0 text-right text-[10px] font-semibold" style={{ color: item.tone }}>{item.value}</span></Link>)}</div>
+  const rows = [...items, ...fallback.filter((fallbackItem) => !items.some((item) => item.id === fallbackItem.id))].slice(0, 6)
+  return <div className="mt-2 divide-y divide-[#eee9e1]">{rows.map((item) => <Link key={item.id} href={item.href} className="group grid min-h-7 grid-cols-[18px_minmax(0,1fr)_auto_auto] items-center gap-2 py-1.5 transition hover:bg-[#fffaf3]"><span className="grid h-4.5 w-4.5 place-items-center rounded-[4px] text-[6px] font-bold" style={{ color: item.tone, backgroundColor: `${item.tone}16` }}>{item.type}</span><span className="min-w-0 truncate text-[8.5px] font-medium text-[#3e4a5e] group-hover:text-[#9a6417]">{item.title}</span><span className="hidden truncate text-[7.3px] text-[#92998f] 2xl:block">{item.meta}</span><span className="flex-shrink-0 text-right text-[7.5px] font-medium" style={{ color: item.tone }}>{item.value}</span></Link>)}</div>
 }
 
 function ActiveOrdersTable({ locale, orders }: { locale: Locale; orders: JsonRecord[] }) {
-  const t = ui[locale]
   const rows = orders.length ? orders.slice(0, 5) : sampleOrders()
-  return <div className="overflow-x-auto"><table className="w-full min-w-[960px] border-collapse text-left"><thead><tr className="border-b border-[#edf0f5] text-[10px] font-medium text-[#7b879a]"><th className="px-5 py-3.5">ID</th><th className="px-4 py-3.5">{t.route}</th><th className="px-4 py-3.5">{t.cargo}</th><th className="px-4 py-3.5">{t.deadline}</th><th className="px-4 py-3.5">{t.bids}</th><th className="px-4 py-3.5">{t.value}</th><th className="px-4 py-3.5">{t.status}</th><th className="px-4 py-3.5 text-right">{t.action}</th></tr></thead><tbody>{rows.map((order, index) => { const quotation = firstRecord(order.quotations); const request = firstRecord(quotation?.shipment_requests); return <tr key={order.id || index} className="border-b border-[#f0f2f6] text-[11px] text-[#39465d] transition hover:bg-[#f8f9ff]"><td className="px-5 py-4 font-semibold text-[#5362eb]">{shortId(order.id)}</td><td className="px-4 py-4 font-medium text-[#25324b]">{routeLabel(request?.route, locale)}</td><td className="px-4 py-4">{cargoLabel(request?.cargo_details)}</td><td className="px-4 py-4">{formatShortDate(request?.bid_deadline || order.created_at, locale)}</td><td className="px-4 py-4 tabular-nums">{request?.bid_count || 4 + index}</td><td className="px-4 py-4 font-semibold tabular-nums">{formatHkd(numberValue(quotation?.total_amount) || 248000 - index * 31000)}</td><td className="px-4 py-4"><span className="inline-flex items-center gap-1.5 text-[#1d9c62]"><span className="h-1.5 w-1.5 rounded-full bg-[#38b978]" />{statusLabel(String(order.status || "confirmed"), locale)}</span></td><td className="px-4 py-4 text-right"><Link href={`/${locale}/orders/${order.id}`} aria-label={`${locale === "zh" ? "查看" : "View"} ${shortId(order.id)}`} className="inline-flex h-8 min-w-8 items-center justify-center rounded-[6px] font-semibold text-[#5966e8] transition hover:bg-[#eef1ff]">•••</Link></td></tr> })}</tbody></table></div>
+  const owners = ["Ava Wong", "Jason Li", "Mandy Cheung", "Kenji Sato", "Daniel Ho"]
+  const risks = locale === "zh" ? ["中", "低", "高", "中", "低"] : ["Medium", "Low", "High", "Medium", "Low"]
+  return <div className="overflow-x-auto"><table className="w-full min-w-[1180px] border-collapse text-left"><thead><tr className="border-b border-[#eee9e1] text-[8px] font-medium text-[#818b98]"><th className="px-4 py-2.5">{locale === "zh" ? "項目編號" : "Project ID"}</th><th className="px-3 py-2.5">{locale === "zh" ? "航線" : "Route"}</th><th className="px-3 py-2.5">{locale === "zh" ? "需求類型" : "Request type"}</th><th className="px-3 py-2.5">{locale === "zh" ? "負責人" : "Project owner"}</th><th className="px-3 py-2.5">{locale === "zh" ? "截止" : "Deadline"}</th><th className="px-3 py-2.5"># Bids</th><th className="px-3 py-2.5">{locale === "zh" ? "最佳報價" : "Best bid (HKD)"}</th><th className="px-3 py-2.5">{locale === "zh" ? "目標節省" : "Target savings"}</th><th className="px-3 py-2.5">{locale === "zh" ? "狀態" : "Status"}</th><th className="px-3 py-2.5">{locale === "zh" ? "風險" : "Risk"}</th><th className="px-3 py-2.5">{locale === "zh" ? "下一步" : "Next action"}</th><th className="w-10 px-3 py-2.5" /></tr></thead><tbody>{rows.map((order, index) => { const quotation = firstRecord(order.quotations); const request = firstRecord(quotation?.shipment_requests); const risk = risks[index % risks.length]; const riskColor = risk === "High" || risk === "高" ? "#ef5b4f" : risk === "Medium" || risk === "中" ? "#f1a02d" : "#1da870"; const route = routeLabel(request?.route, locale); return <tr key={order.id || index} className="border-b border-[#f1ede7] text-[8.8px] text-[#455166] transition hover:bg-[#fffcf7]"><td className="px-4 py-2.5 font-semibold text-[#355bc5]">PRJ-{shortId(order.id)}</td><td className="px-3 py-2.5 font-medium text-[#26354a]"><span className="inline-flex items-center gap-1.5"><Plane className="h-3 w-3 text-[#264f80]" />{route}</span></td><td className="px-3 py-2.5 text-[#315fd0]">{cargoLabel(request?.cargo_details)}</td><td className="px-3 py-2.5"><span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#e8eef8] text-[6.5px] font-bold text-[#2e496c]">{owners[index % owners.length].split(" ").map((part) => part[0]).join("")}</span>{owners[index % owners.length]}</span></td><td className="px-3 py-2.5">{formatShortDate(request?.bid_deadline || order.created_at, locale)} <span className="ml-1 text-[#ed654b]">{2 + index * 3} days left</span></td><td className="px-3 py-2.5 tabular-nums">{request?.bid_count || 9 + index * 3}</td><td className="px-3 py-2.5 font-semibold tabular-nums">{formatHkd(numberValue(quotation?.total_amount) || 1850000 - index * 210000)}</td><td className="px-3 py-2.5 font-semibold text-[#1b9b66]">{12 + index}%</td><td className="px-3 py-2.5"><span className="rounded-[5px] bg-[#eef0ff] px-2 py-1 text-[#5263df]">{statusLabel(String(order.status || "confirmed"), locale)}</span></td><td className="px-3 py-2.5"><span className="inline-flex items-center gap-1.5" style={{ color: riskColor }}><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: riskColor }} />{risk}</span></td><td className="px-3 py-2.5 font-medium text-[#334158]">{locale === "zh" ? "檢視競價" : "Review bids"}</td><td className="px-3 py-2.5"><Link href={`/${locale}/orders/${order.id}`} aria-label={`${locale === "zh" ? "查看" : "View"} ${shortId(order.id)}`} className="grid h-7 w-7 place-items-center rounded-[5px] text-[#7d8692] transition hover:bg-[#f1eee8] hover:text-[#28374d]"><MoreHorizontal className="h-3.5 w-3.5" /></Link></td></tr> })}</tbody></table></div>
 }
 
 function TrendTooltip({ active, payload, label, locale }: { active?: boolean; payload?: Array<{ value?: number; dataKey?: string; color?: string }>; label?: string; locale: Locale }) {
   if (!active || !payload?.length) return null
-  const labels: Record<string, string> = { pipeline: ui[locale].pipeline, awarded: ui[locale].awarded, completed: ui[locale].completed }
+  const labels: Record<string, string> = { pipeline: ui[locale].pipeline, awarded: ui[locale].awarded, completed: ui[locale].completed, savings: locale === "zh" ? "節省" : "Savings" }
   return <div className="min-w-[180px] rounded-[7px] border border-[#e1e6ef] bg-white/95 p-3 shadow-[0_12px_30px_rgba(31,47,84,0.14)] backdrop-blur"><p className="mb-2 text-[9px] font-semibold text-[#536078]">{label}</p>{payload.map((item) => <div key={item.dataKey} className="mt-1 flex items-center justify-between gap-4 text-[8.5px]"><span className="inline-flex items-center gap-1.5 text-[#738097]"><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />{labels[item.dataKey || ""]}</span><strong className="text-[#27344d]">{formatHkd(Number(item.value || 0))}</strong></div>)}</div>
 }
 
