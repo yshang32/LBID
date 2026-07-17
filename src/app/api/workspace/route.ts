@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   await service
     .from("shipment_requests")
-    .update({ status: "CLOSED" })
+    .update({ status: "CLOSED", closed_at: new Date().toISOString() })
     .eq("status", "OPEN")
     .lte("bid_deadline", new Date().toISOString())
 

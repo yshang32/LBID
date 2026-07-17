@@ -42,7 +42,7 @@ async function runBidWindowCloseCron() {
 
   const { data: closedRequests, error } = await supabase
     .from("shipment_requests")
-    .update({ status: "CLOSED" })
+    .update({ status: "CLOSED", closed_at: new Date().toISOString() })
     .eq("status", "OPEN")
     .lt("bid_deadline", new Date().toISOString())
     .select("id, agent_id")

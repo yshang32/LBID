@@ -19,19 +19,19 @@ export async function GET(request: Request) {
 
     const { data: shipmentRequest, error: requestError } = await service
       .from("shipment_requests")
-      .select("id, agent_id, status, bid_deadline")
+      .select("id, agent_id, status, bid_deadline, scope_version")
       .eq("id", srId)
       .maybeSingle()
     if (requestError) return NextResponse.json({ error: requestError.message }, { status: 500 })
     if (!shipmentRequest) return NextResponse.json({ error: "SHIPMENT_REQUEST_NOT_FOUND" }, { status: 404 })
 
-    const expired = shipmentRequest.status === "OPEN"
+    const expired = shipmentRequest.status === "OPEN" && shipmentRequest.bid_deadline
       && new Date(shipmentRequest.bid_deadline).getTime() <= Date.now()
     const currentStatus = expired ? "CLOSED" : shipmentRequest.status
     if (expired) {
       const { error: closeError } = await service
         .from("shipment_requests")
-        .update({ status: "CLOSED" })
+        .update({ status: "CLOSED", closed_at: new Date().toISOString() })
         .eq("id", srId)
         .eq("status", "OPEN")
       if (closeError) return NextResponse.json({ error: closeError.message }, { status: 500 })
@@ -55,8 +55,10 @@ export async function GET(request: Request) {
     if (isOwner && ["CLOSED", "AWARDED"].includes(currentStatus)) {
       const { data: bids, error: bidsError } = await service
         .from("bids")
-        .select("id, sr_id, forwarder_id, price, currency, transit_time, terms, submitted_at")
+        .select("id, sr_id, forwarder_id, price, currency, transit_time, terms, submitted_at, status, scope_version")
         .eq("sr_id", srId)
+        .eq("scope_version", shipmentRequest.scope_version)
+        .in("status", ["SUBMITTED", "AWARDED", "NOT_AWARDED", "LEGACY"])
         .order("price", { ascending: true })
       if (bidsError) return NextResponse.json({ error: bidsError.message }, { status: 500 })
 
@@ -112,6 +114,17 @@ export async function POST(request: Request) {
 
   if (session) {
     const { supabase, user } = session
+    const srId = String(body.sr_id ?? body.shipmentRequestId ?? "").trim()
+    const price = Number(body.price)
+    const currency = String(body.currency ?? "HKD").trim().toUpperCase()
+    const transitTime = body.transit_time ?? body.transitTime ?? null
+    const terms = body.terms ?? null
+    if (!srId) return NextResponse.json({ error: "SHIPMENT_REQUEST_ID_REQUIRED" }, { status: 400 })
+    if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: "INVALID_BID_PRICE" }, { status: 400 })
+    if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "INVALID_BID_CURRENCY" }, { status: 400 })
+    if (transitTime != null && String(transitTime).length > 160) return NextResponse.json({ error: "INVALID_TRANSIT_TIME" }, { status: 400 })
+    if (terms != null && String(terms).length > 4000) return NextResponse.json({ error: "BID_TERMS_TOO_LONG" }, { status: 400 })
+
     const { data: sub, error: subError } = await supabase
       .from("subscriptions")
       .select("status, trial_ends_at, current_period_end")
@@ -128,11 +141,11 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase.rpc("submit_bid_with_token", {
       p_user_id: user.id,
-      p_sr_id: body.sr_id ?? body.shipmentRequestId,
-      p_price: body.price,
-      p_currency: body.currency ?? "HKD",
-      p_transit_time: body.transit_time ?? body.transitTime ?? null,
-      p_terms: body.terms ?? null,
+      p_sr_id: srId,
+      p_price: price,
+      p_currency: currency,
+      p_transit_time: transitTime,
+      p_terms: terms,
     })
 
     if (error) {
@@ -148,6 +161,9 @@ export async function POST(request: Request) {
       if (error.message.includes("SHIPMENT_REQUEST_NOT_OPEN")) {
         return NextResponse.json({ error: "SHIPMENT_REQUEST_NOT_OPEN" }, { status: 409 })
       }
+      if (error.message.includes("INVALID_BID_PRICE") || error.message.includes("INVALID_BID_CURRENCY")) {
+        return NextResponse.json({ error: error.message.includes("PRICE") ? "INVALID_BID_PRICE" : "INVALID_BID_CURRENCY" }, { status: 400 })
+      }
       if (error.message.includes("UNAUTHORIZED")) {
         return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 403 })
       }
@@ -159,11 +175,11 @@ export async function POST(request: Request) {
       await service
         .from("bid_recommendations")
         .update({ status: "bid_submitted", updated_at: new Date().toISOString() })
-        .eq("shipment_request_id", body.sr_id ?? body.shipmentRequestId)
+        .eq("shipment_request_id", srId)
         .eq("forwarder_id", user.id)
     }
 
-    return NextResponse.json({ success: true, ...data })
+    return NextResponse.json({ success: true, ...data }, { status: 201 })
   }
 
   if (isSupabaseConfigured()) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 })

@@ -28,16 +28,14 @@ export async function POST(request: Request) {
     const intentId = checkout.metadata?.paymentIntentId
     if (!intentId) return NextResponse.json({ error: "PAYMENT_INTENT_METADATA_MISSING" }, { status: 400 })
 
-    await supabase
-      .from("payment_intents")
-      .update({
-        stripe_session_id: checkout.id,
-        stripe_customer_id: typeof checkout.customer === "string" ? checkout.customer : null,
-        stripe_subscription_id: typeof checkout.subscription === "string" ? checkout.subscription : null,
-      })
-      .eq("id", intentId)
-    const result = await confirmPaymentIntent(supabase, intentId, null)
-    if (!result.alreadyConfirmed) {
+    const result = await confirmPaymentIntent(supabase, intentId, null, {
+      eventId: event.id,
+      eventType: event.type,
+      stripeSessionId: checkout.id,
+      stripeCustomerId: typeof checkout.customer === "string" ? checkout.customer : null,
+      stripeSubscriptionId: typeof checkout.subscription === "string" ? checkout.subscription : null,
+    })
+    if (!result.alreadyConfirmed && !result.alreadyProcessed) {
       await Promise.all([
         writeAuditLog(supabase, { action: "stripe_payment_confirmed", entityType: "payment_intent", entityId: intentId, metadata: { stripeSessionId: checkout.id } }),
         createNotification(supabase, { userId: result.userId, type: "payment_confirmed", title: "Payment confirmed", body: "Your LBID payment has been confirmed and access is now updated.", href: "/subscription", metadata: { paymentIntentId: intentId } }),

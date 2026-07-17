@@ -215,6 +215,8 @@ export function CreateRequestPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [submittedId, setSubmittedId] = useState("")
+  const [submittedStatus, setSubmittedStatus] = useState("")
+  const [submittedReasons, setSubmittedReasons] = useState<string[]>([])
   const [attachmentError, setAttachmentError] = useState("")
   const saveTimer = useRef<number | null>(null)
 
@@ -267,12 +269,6 @@ export function CreateRequestPage() {
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
     }
   }, [draftLoaded, form])
-
-  useEffect(() => {
-    if (!submittedId) return
-    const timer = window.setTimeout(() => navigate(`/requests/${submittedId}`), 1700)
-    return () => window.clearTimeout(timer)
-  }, [navigate, submittedId])
 
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -355,8 +351,18 @@ export function CreateRequestPage() {
     setSubmitting(true)
     setSubmitError("")
 
+    const idempotencyStorageKey = `${DRAFT_KEY}-submission-key`
+    let idempotencyKey = ""
+    try {
+      idempotencyKey = localStorage.getItem(idempotencyStorageKey) || crypto.randomUUID()
+      localStorage.setItem(idempotencyStorageKey, idempotencyKey)
+    } catch {
+      idempotencyKey = crypto.randomUUID()
+    }
+
     const { response, body } = await apiJson("/api/shipment-requests", {
       method: "POST",
+      headers: { "idempotency-key": idempotencyKey },
       body: JSON.stringify({
         route: {
           origin: locationLabel(selectedOrigin),
@@ -407,11 +413,16 @@ export function CreateRequestPage() {
       return
     }
 
-    try { localStorage.removeItem(DRAFT_KEY) } catch {}
+    try {
+      localStorage.removeItem(DRAFT_KEY)
+      localStorage.removeItem(idempotencyStorageKey)
+    } catch {}
     setSubmittedId(body.shipmentRequest.id)
+    setSubmittedStatus(body.shipmentRequest.status || "PENDING_REVIEW")
+    setSubmittedReasons(Array.isArray(body.validation?.reasons) ? body.validation.reasons : [])
   }
 
-  if (submittedId) return <SuccessState id={submittedId} onOpen={() => navigate(`/requests/${submittedId}`)} />
+  if (submittedId) return <SuccessState id={submittedId} status={submittedStatus} reasons={submittedReasons} onOpen={() => navigate(`/requests/${submittedId}`)} />
 
   return (
     <main className="mx-auto w-full max-w-[1640px] px-4 pb-14 pt-5 sm:px-6 lg:px-7">
@@ -551,7 +562,7 @@ function ReviewStep({ form, origin, destination, calculations, services, readine
   const documentFiles = form.attachments.filter((file) => file.kind === "document")
   return (
     <div>
-      <div className="flex flex-col gap-4 border-b border-[#ece7df] pb-5 lg:flex-row lg:items-center lg:justify-between"><StepTitle number="4" title="Review your request" subtitle="Confirm the details before launching the three-hour sealed bid." /><div className="min-w-[290px] rounded-[9px] border border-[#e5e8ee] bg-[#fafbfc] px-4 py-3"><div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-[#445168]">Request readiness</span><strong className="text-[16px] text-[#16223a]">{readiness}%</strong></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e8ebef]"><div className="h-full rounded-full bg-[#16885a] transition-[width]" style={{ width: `${readiness}%` }} /></div></div></div>
+      <div className="flex flex-col gap-4 border-b border-[#ece7df] pb-5 lg:flex-row lg:items-center lg:justify-between"><StepTitle number="4" title="Review your request" subtitle="Confirm the details before LBID validates and publishes the sealed bid." /><div className="min-w-[290px] rounded-[9px] border border-[#e5e8ee] bg-[#fafbfc] px-4 py-3"><div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-[#445168]">Request readiness</span><strong className="text-[16px] text-[#16223a]">{readiness}%</strong></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e8ebef]"><div className="h-full rounded-full bg-[#16885a] transition-[width]" style={{ width: `${readiness}%` }} /></div></div></div>
       <div className="mt-5 grid gap-3 xl:grid-cols-3">
         <ReviewCard title="Route & Schedule" onEdit={() => onEdit(0)}><div className="mb-4 flex items-center justify-between"><LocationPill code={origin?.code || "---"} city={origin?.city || "Origin"} tone="green" />{form.freight === "Air" ? <Plane className="h-4 w-4 text-[#172b4c]" /> : <Ship className="h-4 w-4 text-[#172b4c]" />}<LocationPill code={destination?.code || "---"} city={destination?.city || "Destination"} tone="gold" /></div><ReviewPair label="Freight Mode" value={`${form.freight} Freight`} /><ReviewPair label="Trade Term" value={form.tradeTerm} /><ReviewPair label="Pickup Date" value={form.pickupDate || "-"} /><ReviewPair label="Transit" value={origin && destination ? transitEstimate(distanceKm(origin.coordinates, destination.coordinates), form.freight) : "-"} /></ReviewCard>
         <ReviewCard title="Cargo Details" onEdit={() => onEdit(1)}><div className="mb-3 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-[8px] bg-[#f1f4f8] text-[#1d3152]"><Box className="h-5 w-5" /></span><div><p className="text-[13px] font-semibold text-[#16223a]">{form.cargoType}</p><p className="text-[10.5px] text-[#8490a2]">{form.pieces} {form.unitType.toLowerCase()}</p></div></div><ReviewPair label="Gross Weight" value={`${formatNumber(calculations.totalGross)} kg`} /><ReviewPair label="Total Volume" value={`${formatNumber(calculations.totalVolume)} CBM`} /><ReviewPair label="Chargeable Weight" value={`${formatNumber(calculations.chargeableWeight)} kg`} /><ReviewPair label="Characteristics" value={form.characteristics.length ? form.characteristics.join(", ") : "None"} /></ReviewCard>
@@ -583,12 +594,13 @@ function ServiceGroup({ group, icon: Icon, title, subtitle, form, onToggle, core
 }
 
 function WorkflowPreview() {
-  const items = [{ icon: FileText, title: "Request Published", body: "Your structured brief goes live" }, { icon: Users, title: "Forwarder Matching", body: "Qualified partners receive the brief" }, { icon: LockKeyhole, title: "Sealed Bidding", body: "Fixed three-hour bidding window" }, { icon: PackageCheck, title: "Compare & Award", body: "Choose price, fit and capability" }]
+  const items = [{ icon: FileText, title: "Validate & Publish", body: "LBID checks scope integrity and risk" }, { icon: Users, title: "Forwarder Matching", body: "Qualified partners receive the brief" }, { icon: LockKeyhole, title: "Sealed Bidding", body: "Three hours start only after publication" }, { icon: PackageCheck, title: "Compare & Award", body: "Choose price, fit and capability" }]
   return <section className="mt-4 rounded-[10px] border border-[#e7e1d8] bg-[linear-gradient(100deg,#fffdf8,#fbf7ef)] p-4"><p className="text-[11px] font-bold text-[#22314a]">What happens next?</p><div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{items.map((item, index) => <div key={item.title} className="relative flex gap-3"><span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-[#d8b56c] bg-white text-[#9a6c18]"><item.icon className="h-4 w-4" /></span><div><p className="text-[10.5px] font-semibold text-[#25344c]">{index + 1}. {item.title}</p><p className="mt-1 text-[9.5px] leading-4 text-[#7d889a]">{item.body}</p></div></div>)}</div></section>
 }
 
-function SuccessState({ id, onOpen }: { id: string; onOpen: () => void }) {
-  return <main className="mx-auto flex min-h-[72vh] w-full max-w-[900px] items-center justify-center px-5 py-12"><div className="relative w-full overflow-hidden rounded-[18px] border border-[#b8d9ca] bg-white px-8 py-14 text-center shadow-[0_28px_80px_rgba(25,74,55,0.12)]"><div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#16885a,#71c9a3,#c99527)]" /><motion.div initial={{ scale: 0.75, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }} className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-[#b8d9ca] bg-[#f0fbf6] text-[#16885a]"><CheckCircle2 className="h-8 w-8" /></motion.div><p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#16885a]">Bidding is live</p><h1 className="mt-2 text-[26px] font-bold text-[#14213a]">Your three-hour sealed bid has started.</h1><p className="mx-auto mt-3 max-w-xl text-[13px] leading-6 text-[#6d7a8f]">Qualified forwarders can now see the opportunity in Bidding Command Center. Track responses from My Requests while every quote remains sealed.</p><p className="mt-4 font-mono text-[11px] text-[#8a95a6]">SR {id}</p><button type="button" onClick={onOpen} className="mt-6 inline-flex h-11 items-center gap-2 rounded-[8px] bg-[#102544] px-5 text-[12px] font-semibold text-white shadow-[0_8px_18px_rgba(16,37,68,0.2)] transition hover:-translate-y-px hover:bg-[#19375e]">Track live request <ArrowRight className="h-4 w-4" /></button></div></main>
+function SuccessState({ id, status, reasons, onOpen }: { id: string; status: string; reasons: string[]; onOpen: () => void }) {
+  const live = status === "OPEN"
+  return <main className="mx-auto flex min-h-[72vh] w-full max-w-[900px] items-center justify-center px-5 py-12"><div className="relative w-full overflow-hidden rounded-[18px] border border-[#b8d9ca] bg-white px-8 py-14 text-center shadow-[0_28px_80px_rgba(25,74,55,0.12)]"><div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#16885a,#71c9a3,#c99527)]" /><motion.div initial={{ scale: 0.75, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }} className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-[#b8d9ca] bg-[#f0fbf6] text-[#16885a]"><CheckCircle2 className="h-8 w-8" /></motion.div><p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#16885a]">{live ? "Bidding is live" : "Validation in progress"}</p><h1 className="mt-2 text-[26px] font-bold text-[#14213a]">{live ? "Your three-hour sealed bid has started." : "Your request is safely with LBID."}</h1><p className="mx-auto mt-3 max-w-xl text-[13px] leading-6 text-[#6d7a8f]">{live ? "Qualified forwarders can now see the opportunity in Bidding Command Center. Every quote remains sealed until closing." : "We are checking the scope, company status and cargo risk. The three-hour window starts only when the request is published."}</p>{!live && reasons.length ? <p className="mx-auto mt-3 max-w-xl text-[10.5px] text-[#8b6a25]">Review checks: {reasons.map((reason) => reason.replaceAll("_", " ").toLowerCase()).join(" · ")}</p> : null}<p className="mt-4 font-mono text-[11px] text-[#8a95a6]">SR {id}</p><button type="button" onClick={onOpen} className="mt-6 inline-flex h-11 items-center gap-2 rounded-[8px] bg-[#102544] px-5 text-[12px] font-semibold text-white shadow-[0_8px_18px_rgba(16,37,68,0.2)] transition hover:-translate-y-px hover:bg-[#19375e]">Open request <ArrowRight className="h-4 w-4" /></button></div></main>
 }
 
 type SetForm = <K extends keyof FormData>(key: K, value: FormData[K]) => void

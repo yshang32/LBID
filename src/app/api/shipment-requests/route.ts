@@ -3,7 +3,10 @@ import { NextResponse } from "next/server"
 import { checkAccess } from "@/lib/backend"
 import { syncBidRecommendations } from "@/lib/bid-recommendations"
 import { inquiries } from "@/lib/data"
+import { createShipmentScopeHash, evaluateShipmentRequest } from "@/lib/shipment-request-validation"
 import { getApiSupabaseServiceClient, getApiSupabaseSession, isSupabaseConfigured } from "@/lib/supabase/api"
+
+const fields = "id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at, validation_decision, validation_reasons, validation_score, review_required, scope_version, scope_hash, scope_locked_at, published_at, closed_at, supersedes_request_id, idempotency_key"
 
 export async function GET(request: Request) {
   const session = await getApiSupabaseSession(request)
@@ -13,14 +16,14 @@ export async function GET(request: Request) {
     if (service) {
       await service
         .from("shipment_requests")
-        .update({ status: "CLOSED" })
+        .update({ status: "CLOSED", closed_at: new Date().toISOString() })
         .eq("status", "OPEN")
         .lt("bid_deadline", new Date().toISOString())
     }
 
     const { data, error } = await session.supabase
       .from("shipment_requests")
-      .select("id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at")
+      .select(fields)
       .order("created_at", { ascending: false })
       .limit(50)
 
@@ -44,8 +47,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "INVALID_SHIPMENT_DATE" }, { status: 400 })
     }
     const deadline = deadlineDate.toISOString()
-    // Submission launches the sealed-bid window immediately.
-    const bidDeadline = new Date(Date.now() + 3 * 3600000).toISOString()
     const suppliedCargo = body.cargo_details ?? body.cargoDetails ?? {}
     const suppliedRoute = body.route && typeof body.route === "object" ? body.route : {}
     const cargoDetails = {
@@ -74,7 +75,60 @@ export async function POST(request: Request) {
     if (!Number.isFinite(cargoDetails.cbm) || cargoDetails.cbm <= 0) return NextResponse.json({ error: "VALID_VOLUME_REQUIRED" }, { status: 400 })
     if (!Array.isArray(servicesNeeded) || servicesNeeded.length === 0) return NextResponse.json({ error: "SERVICE_REQUIRED" }, { status: 400 })
 
-    const { data, error } = await session.supabase
+    const service = getApiSupabaseServiceClient()
+    if (!service) return NextResponse.json({ error: "SUPABASE_SERVICE_NOT_CONFIGURED" }, { status: 500 })
+
+    const idempotencyKey = String(request.headers.get("idempotency-key") ?? body.idempotencyKey ?? "").trim().slice(0, 160) || null
+    if (idempotencyKey) {
+      const { data: replay, error: replayError } = await service
+        .from("shipment_requests")
+        .select(fields)
+        .eq("agent_id", session.user.id)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle()
+      if (replayError) return NextResponse.json({ error: replayError.message }, { status: 500 })
+      if (replay) return NextResponse.json({ ok: true, replayed: true, shipmentRequest: replay }, { status: 200 })
+    }
+
+    const scopeHash = createShipmentScopeHash({ cargoDetails, route, servicesNeeded, deadline })
+    const duplicateSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const [profileResult, requestCountResult, duplicateResult] = await Promise.all([
+      service
+        .from("company_profiles")
+        .select("can_be_client, verification_status, onboarding_completed")
+        .eq("user_id", session.user.id)
+        .maybeSingle(),
+      service
+        .from("shipment_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", session.user.id),
+      service
+        .from("shipment_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", session.user.id)
+        .eq("scope_hash", scopeHash)
+        .gte("created_at", duplicateSince)
+        .neq("status", "CANCELLED"),
+    ])
+    if (profileResult.error) return NextResponse.json({ error: profileResult.error.message }, { status: 500 })
+    if (!profileResult.data?.can_be_client) return NextResponse.json({ error: "CLIENT_CAPABILITY_REQUIRED" }, { status: 403 })
+    if (requestCountResult.error) return NextResponse.json({ error: requestCountResult.error.message }, { status: 500 })
+    if (duplicateResult.error) return NextResponse.json({ error: duplicateResult.error.message }, { status: 500 })
+
+    const validation = evaluateShipmentRequest({
+      cargoDetails,
+      route,
+      servicesNeeded,
+      deadline,
+      companyVerificationStatus: profileResult.data.verification_status,
+      companyOnboardingCompleted: profileResult.data.onboarding_completed,
+      previousRequestCount: requestCountResult.count ?? 0,
+      duplicateRequest: (duplicateResult.count ?? 0) > 0,
+    })
+    const publishedAt = validation.reviewRequired ? null : new Date().toISOString()
+    const bidDeadline = validation.reviewRequired ? null : new Date(Date.now() + 3 * 3600000).toISOString()
+
+    const { data, error } = await service
       .from("shipment_requests")
       .insert({
         agent_id: session.user.id,
@@ -84,22 +138,34 @@ export async function POST(request: Request) {
         deadline,
         bid_deadline: bidDeadline,
         is_anonymous: body.isAnonymous ?? body.is_anonymous ?? true,
-        status: "OPEN",
+        status: validation.reviewRequired ? "PENDING_REVIEW" : "OPEN",
+        validation_decision: validation.decision,
+        validation_reasons: validation.reasons,
+        validation_score: validation.score,
+        review_required: validation.reviewRequired,
+        scope_version: 1,
+        scope_hash: scopeHash,
+        scope_locked_at: publishedAt,
+        published_at: publishedAt,
+        idempotency_key: idempotencyKey,
       })
-      .select("id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at")
+      .select(fields)
       .single()
 
-    if (error?.code === "42501") return NextResponse.json({ error: "CLIENT_CAPABILITY_REQUIRED" }, { status: 403 })
+    if (error?.code === "23505" && idempotencyKey) {
+      const { data: replay } = await service.from("shipment_requests").select(fields).eq("agent_id", session.user.id).eq("idempotency_key", idempotencyKey).maybeSingle()
+      if (replay) return NextResponse.json({ ok: true, replayed: true, shipmentRequest: replay }, { status: 200 })
+    }
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const service = getApiSupabaseServiceClient()
-    const recommendationResult = service
+    const recommendationResult = data.status === "OPEN"
       ? await syncBidRecommendations(service, data)
       : { created: 0 }
 
     return NextResponse.json({
       ok: true,
       shipmentRequest: data,
+      validation,
       recommendationsCreated: recommendationResult.created,
     }, { status: 201 })
   }
@@ -113,8 +179,8 @@ export async function POST(request: Request) {
     ok: true,
     shipmentRequest: {
       id: `SR-${Date.now()}`,
-      status: "OPEN",
-      bidDeadline: body.bidDeadline ?? "3h",
+      status: "PENDING_REVIEW",
+      bidDeadline: null,
       isAnonymous: body.isAnonymous ?? true,
       ...body,
     },

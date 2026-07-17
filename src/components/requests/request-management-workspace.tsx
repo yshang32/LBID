@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   Award,
@@ -152,7 +153,7 @@ export function LiveMyRequests({ locale }: { locale: Locale }) {
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search route, cargo or request ID..." className="h-11 w-full rounded-[9px] border border-[#dfe4ec] bg-white pl-10 pr-3 text-[12px] text-[#23314a] outline-none transition hover:border-[#bdc7d5] focus:border-[#b77d18] focus:ring-4 focus:ring-[#c58a18]/10" />
             </label>
             <FilterSelect icon={CalendarDays} label="Date range" value={dateRange} onChange={setDateRange} options={[["all", "All dates"], ["30d", "Last 30 days"], ["90d", "Last 90 days"]]} />
-            <FilterSelect label="Status" value={status} onChange={setStatus} options={[["all", "All statuses"], ["OPEN", "Live bidding"], ["CLOSED", "Awaiting decision"], ["AWARDED", "Awarded"], ["PENDING_REVIEW", "Pending review"]]} />
+            <FilterSelect label="Status" value={status} onChange={setStatus} options={[["all", "All statuses"], ["OPEN", "Live bidding"], ["CLOSED", "Awaiting decision"], ["AWARDED", "Awarded"], ["PENDING_REVIEW", "Pending validation"], ["NEEDS_CHANGES", "Changes required"]]} />
             <FilterSelect label="Mode" value={mode} onChange={setMode} options={[["all", "All modes"], ["air", "Air freight"], ["sea", "Sea freight"]]} />
             <FilterSelect label="Origin" value={origin} onChange={setOrigin} options={[["all", "All origins"], ...origins.map((item) => [item, item] as [string, string])]} />
             <button type="button" onClick={() => setMoreOpen((current) => !current)} aria-expanded={moreOpen} className="inline-flex h-11 items-center justify-center gap-2 rounded-[9px] border border-[#dfe4ec] bg-white px-3 text-[11px] font-semibold text-[#48566d] transition hover:border-[#bfc8d5] hover:bg-[#fafbfc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c58a18]/10"><Filter className="h-3.5 w-3.5" />More filters<ChevronDown className={`h-3.5 w-3.5 transition ${moreOpen ? "rotate-180" : ""}`} /></button>
@@ -224,6 +225,7 @@ export function LiveRequestDetail({ locale, id }: { locale: Locale; id?: string 
   const [error, setError] = useState("")
   const [accepting, setAccepting] = useState(false)
   const [confirmBid, setConfirmBid] = useState<JsonRecord | null>(null)
+  const [selectionReason, setSelectionReason] = useState("")
   const [linkedOrder, setLinkedOrder] = useState<JsonRecord | null>(null)
   const [now, setNow] = useState(Date.now())
 
@@ -282,7 +284,7 @@ export function LiveRequestDetail({ locale, id }: { locale: Locale; id?: string 
     setError("")
     const { response, body } = await apiJson(`/api/bids/${bid.id}/accept`, {
       method: "POST",
-      body: JSON.stringify({ totalAmount: bid.price }),
+      body: JSON.stringify({ selectionReason: bid.id === lowest?.id ? null : selectionReason.trim() }),
     })
     setAccepting(false)
     if (!response.ok) {
@@ -290,12 +292,16 @@ export function LiveRequestDetail({ locale, id }: { locale: Locale; id?: string 
       setConfirmBid(null)
       return
     }
+    setSelectionReason("")
     router.push(`/${locale}/orders/${body.order?.id || ""}`)
   }
 
   function requestAccept(bid: JsonRecord) {
     if (bid.id === lowest?.id) void acceptBid(bid)
-    else setConfirmBid(bid)
+    else {
+      setSelectionReason("")
+      setConfirmBid(bid)
+    }
   }
 
   return (
@@ -332,7 +338,8 @@ export function LiveRequestDetail({ locale, id }: { locale: Locale; id?: string 
             <h2 id="confirm-award-title" className="mt-4 text-[20px] font-bold text-[#14243e]">Choose a non-lowest quote?</h2>
             <p className="mt-2 text-[12.5px] leading-6 text-[#69768a]">This quote is <strong className="text-[#24324a]">{money(Number(confirmBid.price || 0) - Number(lowest?.price || 0), confirmBid.currency)}</strong> above the lowest valid quote. You may still choose it for service fit, transit time or reputation.</p>
             <div className="mt-5 rounded-[10px] border border-[#ece7df] bg-[#fbfaf7] p-4"><p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b95a4]">Selected partner</p><p className="mt-1 text-[14px] font-bold text-[#172944]">{companyName(confirmBid)}</p><p className="mt-1 text-[22px] font-bold text-[#172944]">{money(confirmBid.price, confirmBid.currency)}</p></div>
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => setConfirmBid(null)} className="h-11 rounded-[9px] border border-[#dfe4ec] px-4 text-[11.5px] font-semibold text-[#536177] transition hover:bg-[#f7f8fa]">Keep comparing</button><button type="button" disabled={accepting} onClick={() => void acceptBid(confirmBid)} className="h-11 rounded-[9px] bg-[#102544] px-5 text-[11.5px] font-semibold text-white transition hover:bg-[#19375e] disabled:opacity-50">{accepting ? "Awarding..." : "Confirm and award"}</button></div>
+            <label className="mt-4 block text-left text-[10.5px] font-semibold text-[#34425a]">Reason for choosing this quote<textarea value={selectionReason} onChange={(event) => setSelectionReason(event.target.value)} maxLength={1000} placeholder="For example: faster transit, stronger cold-chain capability, or better service history" className="mt-2 min-h-[92px] w-full resize-none rounded-[9px] border border-[#dfe4ec] p-3 text-[12px] font-normal leading-5 text-[#28364e] outline-none transition placeholder:text-[#9aa4b3] focus:border-[#b77d18] focus:ring-4 focus:ring-[#c58a18]/10" /></label>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => setConfirmBid(null)} className="h-11 rounded-[9px] border border-[#dfe4ec] px-4 text-[11.5px] font-semibold text-[#536177] transition hover:bg-[#f7f8fa]">Keep comparing</button><button type="button" disabled={accepting || selectionReason.trim().length < 8} onClick={() => void acceptBid(confirmBid)} className="h-11 rounded-[9px] bg-[#102544] px-5 text-[11.5px] font-semibold text-white transition hover:bg-[#19375e] disabled:cursor-not-allowed disabled:opacity-45">{accepting ? "Awarding..." : "Confirm and award"}</button></div>
           </section>
         </div>
       ) : null}
@@ -467,7 +474,8 @@ function requestStatus(item: JsonRecord) {
   if (status === "OPEN") return { label: "Sealed Bidding", helper: "Bidding in progress", badge: "bg-[#eaf7ef] text-[#14794c]", dot: "bg-[#1da365]", text: "text-[#bd6f10]", icon: LockKeyhole }
   if (status === "CLOSED") return { label: "Ready to Compare", helper: "Bidding closed", badge: "bg-[#fff3df] text-[#a8670d]", dot: "bg-[#d48b18]", text: "text-[#a8670d]", icon: SlidersHorizontal }
   if (status === "AWARDED") return { label: "Awarded", helper: "Partner selected", badge: "bg-[#eaf7ef] text-[#14794c]", dot: "bg-[#1da365]", text: "text-[#168a55]", icon: Award }
-  if (status === "PENDING_REVIEW") return { label: "Pending Review", helper: "LBID review", badge: "bg-[#fff4e4] text-[#b56d12]", dot: "bg-[#e3a13d]", text: "text-[#b56d12]", icon: Clock3 }
+  if (status === "PENDING_REVIEW") return { label: "Pending Validation", helper: "LBID validation", badge: "bg-[#fff4e4] text-[#b56d12]", dot: "bg-[#e3a13d]", text: "text-[#b56d12]", icon: Clock3 }
+  if (status === "NEEDS_CHANGES") return { label: "Changes Required", helper: String(item.review_reason || "Update and resubmit"), badge: "bg-[#fff0ed] text-[#bd4b38]", dot: "bg-[#e16652]", text: "text-[#bd4b38]", icon: AlertCircle }
   return { label: status ? titleCase(status) : "Unknown", helper: "Request updated", badge: "bg-[#eef1f5] text-[#59667a]", dot: "bg-[#9aa4b2]", text: "text-[#6f7b8e]", icon: FileText }
 }
 

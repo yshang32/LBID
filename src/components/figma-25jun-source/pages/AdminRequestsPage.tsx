@@ -23,14 +23,14 @@ type RequestRow = {
 };
 
 const STATUS_CFG = {
-  pending: { label: "Pending Review", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+  pending: { label: "Pending Validation", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
   approved: { label: "Approved", color: "text-emerald", bg: "bg-emerald-soft", border: "border-emerald/20" },
-  rejected: { label: "Rejected", color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
+  rejected: { label: "Changes Required", color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
 };
 
 function category(status: string): Exclude<Filter, "all"> {
   if (status === "PENDING_REVIEW") return "pending";
-  if (status === "REJECTED") return "rejected";
+  if (["NEEDS_CHANGES", "REJECTED"].includes(status)) return "rejected";
   return "approved";
 }
 
@@ -98,12 +98,12 @@ function ReviewModal({ request, onClose, onReview }: {
             <textarea id="rejection-reason" value={reason} onChange={(event) => setReason(event.target.value)} rows={4} maxLength={1000} placeholder="Explain what the client must correct before resubmitting." className="mt-2 w-full resize-none rounded-xl border border-line px-4 py-3 text-[13px] text-ink outline-none transition placeholder:text-ink-3 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(220,38,38,0.08)]" />
             <div className="mt-4 flex gap-3">
               <button disabled={busy} onClick={() => { setRejecting(false); setError(""); }} className="h-11 flex-1 rounded-xl border border-line text-[13px] font-semibold text-ink-2 transition hover:bg-canvas disabled:opacity-40">Back</button>
-              <button disabled={busy || !reason.trim()} onClick={() => void submit("reject")} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 text-[13px] font-semibold text-white transition hover:enabled:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Confirm rejection</button>
+              <button disabled={busy || !reason.trim()} onClick={() => void submit("reject")} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 text-[13px] font-semibold text-white transition hover:enabled:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Request changes</button>
             </div>
           </div>
         ) : (
           <div className="mt-5 flex gap-3">
-            <button disabled={busy} onClick={() => setRejecting(true)} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 text-[13px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-40"><X className="h-4 w-4" /> Reject</button>
+            <button disabled={busy} onClick={() => setRejecting(true)} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 text-[13px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-40"><X className="h-4 w-4" /> Request changes</button>
             <button disabled={busy} onClick={() => void submit("publish")} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald text-[13px] font-semibold text-white transition hover:bg-[#15693d] disabled:opacity-40">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve & publish</button>
           </div>
         )}
@@ -153,7 +153,7 @@ export function AdminRequestsPage() {
   return (
     <main className="px-5 pb-16 pt-8 sm:px-8 lg:px-9">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gold-dark">Platform operations</p><h1 className="mt-2 text-[30px] font-bold leading-tight text-ink">Shipment request review</h1><p className="mt-1.5 text-[14px] text-ink-3">Approve valid requests to open their fixed three-hour sealed bidding window.</p></div>
+        <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gold-dark">Platform operations</p><h1 className="mt-2 text-[30px] font-bold leading-tight text-ink">Shipment request validation</h1><p className="mt-1.5 text-[14px] text-ink-3">Validate scope integrity and risk before publishing the fixed three-hour sealed bidding window.</p></div>
         <div className="inline-flex h-11 items-center gap-2 self-start rounded-xl border border-amber-200 bg-amber-50 px-4 text-[12.5px] font-semibold text-amber-800 sm:self-auto"><Clock3 className="h-4 w-4" />{filter === "pending" ? counts.pending : "-"} awaiting review</div>
       </header>
 

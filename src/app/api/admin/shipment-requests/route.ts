@@ -6,7 +6,7 @@ import { renderSimpleEmail, sendLbidEmail } from "@/lib/email"
 import { getAdminApiContext } from "@/lib/admin"
 import { createNotification } from "@/lib/notifications"
 
-const fields = "id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at"
+const fields = "id, agent_id, cargo_details, route, services_needed, deadline, bid_deadline, is_anonymous, status, created_at, validation_decision, validation_reasons, validation_score, review_required, scope_version, scope_hash, scope_locked_at, published_at, closed_at, supersedes_request_id"
 
 export async function GET(request: Request) {
   const admin = await getAdminApiContext(request)
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
   if (status === "pending") query = query.eq("status", "PENDING_REVIEW")
   if (status === "approved") query = query.in("status", ["OPEN", "CLOSED", "AWARDED"])
-  if (status === "rejected") query = query.eq("status", "REJECTED")
+  if (status === "rejected") query = query.in("status", ["NEEDS_CHANGES", "REJECTED"])
 
   const { data, error } = await query
 
@@ -55,9 +55,30 @@ export async function PATCH(request: Request) {
   if (!id) return NextResponse.json({ error: "SHIPMENT_REQUEST_ID_REQUIRED" }, { status: 400 })
   if (action === "reject" && !reason) return NextResponse.json({ error: "REJECTION_REASON_REQUIRED" }, { status: 400 })
 
+  const reviewedAt = new Date().toISOString()
   const update = action === "publish"
-    ? { status: "OPEN", bid_deadline: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), reviewed_by: admin.userId, reviewed_at: new Date().toISOString(), review_reason: null }
-    : { status: "REJECTED", reviewed_by: admin.userId, reviewed_at: new Date().toISOString(), review_reason: reason }
+    ? {
+        status: "OPEN",
+        bid_deadline: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+        reviewed_by: admin.userId,
+        reviewed_at: reviewedAt,
+        review_reason: null,
+        review_required: false,
+        validation_decision: "MANUAL_APPROVED",
+        scope_locked_at: reviewedAt,
+        published_at: reviewedAt,
+      }
+    : {
+        status: "NEEDS_CHANGES",
+        bid_deadline: null,
+        reviewed_by: admin.userId,
+        reviewed_at: reviewedAt,
+        review_reason: reason,
+        review_required: true,
+        validation_decision: "NEEDS_CHANGES",
+        scope_locked_at: null,
+        published_at: null,
+      }
   const { data, error } = await admin.service
     .from("shipment_requests")
     .update(update)
@@ -73,7 +94,7 @@ export async function PATCH(request: Request) {
   const recommendationResult = action === "publish" ? await syncBidRecommendations(admin.service, data) : { created: 0 }
   await Promise.all([
     writeAuditLog(admin.service, { actorId: admin.userId, action: `shipment_request_${action}ed`, entityType: "shipment_request", entityId: data.id, metadata: { reason: reason || null } }),
-    createNotification(admin.service, { userId: data.agent_id, type: action === "publish" ? "shipment_request_published" : "shipment_request_rejected", title, body: bodyText, href: `/requests/${data.id}`, metadata: { shipmentRequestId: data.id } }),
+    createNotification(admin.service, { userId: data.agent_id, type: action === "publish" ? "shipment_request_published" : "shipment_request_needs_changes", title, body: bodyText, href: `/requests/${data.id}`, metadata: { shipmentRequestId: data.id } }),
   ])
   const { data: agency } = await admin.service.from("users").select("email").eq("id", data.agent_id).maybeSingle()
   await sendLbidEmail({ to: agency?.email, subject: `LBID: ${title}`, text: bodyText, html: renderSimpleEmail({ title, body: bodyText, ctaHref: `${process.env.NEXT_PUBLIC_APP_URL || ""}/zh/requests/${data.id}`, ctaLabel: "Open request" }), idempotencyKey: `sr-review-${data.id}-${action}` })
