@@ -134,6 +134,8 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 
   const dashboardChrome = pathname === `${prefix}/dashboard`
     || pathname === `${prefix}/product-preview`
+    || pathname === `${prefix}/marketplace`
+    || pathname === `${prefix}/marketplace-preview`
 
   const bidding: NavItem[] = [
     { href: `${prefix}/dashboard`, label: "Overview", icon: LayoutDashboard, exact: true },

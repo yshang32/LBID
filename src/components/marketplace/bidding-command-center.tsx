@@ -6,17 +6,22 @@ import {
   ArrowRight,
   Award,
   BadgeCheck,
-  BellRing,
+  Bell,
   Bookmark,
   CheckCircle2,
+  CircleHelp,
   Coins,
   Crown,
   FileCheck2,
   Flame,
+  LayoutGrid,
+  Mail,
   PackageCheck,
   Plane,
   Radar,
   Search,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   TimerReset,
 } from "lucide-react"
@@ -41,6 +46,7 @@ type Opportunity = JsonRecord & {
   matchReasons: string[]
   submitted: boolean
   resultStatus?: string | null
+  preview?: boolean
 }
 type Tab = "recommended" | "all" | "bids" | "closing" | "results" | "watchlist"
 type LoadState = "loading" | "ready" | "error"
@@ -56,7 +62,9 @@ const zh = {
   eligible: "\u53ef\u7af6\u50f9\u6a5f\u6703",
   closing: "1 \u5c0f\u6642\u5167\u622a\u6a19",
   recommended: "\u7cfb\u7d71\u63a8\u85a6",
+  draft: "\u5831\u50f9\u8349\u7a3f",
   submitted: "\u5df2\u63d0\u4ea4\u5831\u50f9",
+  shortlisted: "\u5df2\u5165\u570d",
   orders: "\u5f97\u6a19\u8a02\u55ae",
   alerts: "\u91cd\u8981\u52d5\u614b",
   viewAlerts: "\u67e5\u770b\u5168\u90e8\u52d5\u614b",
@@ -91,6 +99,12 @@ const zh = {
   onboardedClient: "\u5df2\u5b8c\u6210\u5165\u99d0 Client",
   scopeLocked: "\u9700\u6c42\u5df2\u9396\u5b9a",
   sealed: "\u5bc6\u5c01\u7af6\u50f9",
+  profileLocked: "\u516c\u53f8\u6a94\u6848\u5df2\u9396\u5b9a",
+  liveWindow: "\u7af6\u50f9\u8996\u7a97\u958b\u653e\u4e2d",
+  bidActivity: "\u5831\u50f9\u6d3b\u8e8d\u5ea6",
+  activityVeryHigh: "\u6975\u9ad8",
+  activityHigh: "\u9ad8",
+  activityActive: "\u6d3b\u8e8d",
   termsPending: "\u8cbf\u6613\u689d\u6b3e\u5f85\u5b9a",
   generalCargo: "\u4e00\u822c\u8ca8\u7269",
   air: "\u7a7a\u904b",
@@ -111,6 +125,9 @@ const zh = {
   recommendationsProfile: "\u63a8\u85a6\u6839\u64da\u5df2\u9a57\u8b49\u7684\u516c\u53f8\u6a94\u6848",
   noNewScope: "\u76ee\u524d\u6c92\u6709\u65b0\u9700\u6c42",
   newLiveRequest: "\u65b0\u7684\u5be6\u6642\u8ca8\u904b\u9700\u6c42",
+  showcase: "\u793a\u7bc4\u9810\u89bd",
+  showcaseNote: "\u76ee\u524d\u6c92\u6709 live SR\uff1b\u4ee5\u4e0b\u6a5f\u6703\u53ea\u7528\u4f5c\u9a57\u6536 UI\uff0c\u4e0d\u80fd\u63d0\u4ea4\u5831\u50f9\u3002",
+  previewCta: "\u793a\u7bc4\u6a5f\u6703\u4e0d\u80fd\u5831\u50f9",
 }
 
 const en = {
@@ -122,7 +139,9 @@ const en = {
   eligible: "Eligible opportunities",
   closing: "Closing within 1 hour",
   recommended: "Recommended matches",
+  draft: "Draft bids",
   submitted: "Submitted bids",
+  shortlisted: "Shortlisted",
   orders: "Awarded orders",
   alerts: "Important activity",
   viewAlerts: "View all activity",
@@ -157,6 +176,12 @@ const en = {
   onboardedClient: "Onboarded Client",
   scopeLocked: "Scope Locked",
   sealed: "Sealed Bidding",
+  profileLocked: "Profile locked",
+  liveWindow: "Live window",
+  bidActivity: "Bid activity",
+  activityVeryHigh: "Very high",
+  activityHigh: "High",
+  activityActive: "Active",
   termsPending: "Terms pending",
   generalCargo: "General cargo",
   air: "Air",
@@ -177,9 +202,12 @@ const en = {
   recommendationsProfile: "Recommendations use your verified profile",
   noNewScope: "No new scope",
   newLiveRequest: "New live shipment request",
+  showcase: "Showcase preview",
+  showcaseNote: "There are no live SRs right now. These opportunities are UI previews and cannot accept bids.",
+  previewCta: "Preview opportunities cannot be bid",
 }
 
-export function BiddingCommandCenter({ locale }: { locale: Locale }) {
+export function BiddingCommandCenter({ locale, previewMode = false }: { locale: Locale; previewMode?: boolean }) {
   const rootRef = useRef<HTMLElement>(null)
   const selectedPanelRef = useRef<HTMLElement>(null)
   const [state, setState] = useState<LoadState>("loading")
@@ -192,10 +220,26 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [now, setNow] = useState(() => Date.now())
+  const [previewBase] = useState(() => Date.now())
   const isZh = locale === "zh"
   const copy = isZh ? zh : en
 
   useEffect(() => {
+    if (previewMode) {
+      setWorkspace({
+        profile: {
+          company_name_en: "LBID Company",
+          token_balance_free: 120,
+          token_balance_paid: 300,
+          can_be_forwarder: true,
+          onboarding_completed: true,
+        },
+        subscription: { tier: "enterprise", status: "active" },
+      })
+      setState("ready")
+      return
+    }
+
     let active = true
     apiJson("/api/workspace").then(({ response, body }) => {
       if (!active) return
@@ -208,7 +252,7 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
       setState("ready")
     })
     return () => { active = false }
-  }, [])
+  }, [previewMode])
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
@@ -250,6 +294,10 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
     }
   }), [recommendationByRequest, submittedIds, workspace.opportunities])
 
+  const previewOpportunities = useMemo(() => createPreviewOpportunities(previewBase), [previewBase])
+  const isShowcase = liveOpportunities.length === 0
+  const activeOpportunities = isShowcase ? previewOpportunities : liveOpportunities
+
   const resultOpportunities = useMemo<Opportunity[]>(() => (workspace.bids || [])
     .filter((bid) => bid.shipment_requests?.status && bid.shipment_requests.status !== "OPEN")
     .map((bid) => ({
@@ -262,7 +310,7 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
     })), [recommendationByRequest, workspace.bids])
 
   const filtered = useMemo(() => {
-    const source = tab === "results" ? resultOpportunities : liveOpportunities
+    const source = tab === "results" ? resultOpportunities : activeOpportunities
     return source.filter((item) => {
       const remaining = secondsLeft(item.bid_deadline, now)
       const cargoMode = String(item.cargo_details?.mode || "").toLowerCase()
@@ -277,16 +325,18 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
     }).sort((a, b) => sort === "match"
       ? (b.matchScore ?? -1) - (a.matchScore ?? -1)
       : secondsLeft(a.bid_deadline, now) - secondsLeft(b.bid_deadline, now))
-  }, [liveOpportunities, mode, now, query, resultOpportunities, sort, tab, watchlist])
+  }, [activeOpportunities, mode, now, query, resultOpportunities, sort, tab, watchlist])
 
   const featured = filtered.find((item) => item.matchScore !== null) || filtered[0] || null
   const standardRows = featured ? filtered.filter((item) => item.id !== featured.id) : []
   const selected = filtered.find((item) => item.id === selectedId) || featured
   const tokenBalance = Number(workspace.profile?.token_balance_free || 0) + Number(workspace.profile?.token_balance_paid || 0)
+  const displayTokenBalance = isShowcase && tokenBalance === 0 ? 420 : tokenBalance
   const closingCount = liveOpportunities.filter((item) => {
     const remaining = secondsLeft(item.bid_deadline, now)
     return remaining > 0 && remaining <= 3600
   }).length
+  const displayClosingCount = isShowcase ? 3 : closingCount
 
   useEffect(() => {
     if (state !== "ready" || !rootRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
@@ -299,6 +349,11 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
         .fromTo("[data-bcc-feature]", { autoAlpha: 0, scale: 0.985, y: 12 }, { autoAlpha: 1, scale: 1, y: 0, duration: 0.55 }, "-=0.1")
       gsap.to("[data-bcc-plane]", { x: 8, y: -2, duration: 1.8, repeat: -1, yoyo: true, ease: "sine.inOut" })
       gsap.to("[data-bcc-glow]", { opacity: 0.72, scale: 1.08, duration: 2.1, repeat: -1, yoyo: true, ease: "sine.inOut" })
+      gsap.fromTo("[data-bcc-scan]", { xPercent: -120, autoAlpha: 0 }, { xPercent: 420, autoAlpha: 0.42, duration: 3.4, repeat: -1, repeatDelay: 1.8, ease: "power2.inOut" })
+      gsap.fromTo("[data-bcc-route-pulse]", { scaleX: 0, transformOrigin: "left center", autoAlpha: 0.35 }, { scaleX: 1, autoAlpha: 1, duration: 1.7, repeat: -1, repeatDelay: 0.55, ease: "power2.inOut" })
+      gsap.to("[data-bcc-score-halo]", { scale: 1.1, autoAlpha: 0.38, duration: 1.35, repeat: -1, yoyo: true, ease: "sine.inOut" })
+      gsap.to("[data-bcc-activity-bar]", { scaleY: 0.48, transformOrigin: "bottom center", duration: 0.55, repeat: -1, yoyo: true, stagger: { each: 0.055, from: "random" }, ease: "sine.inOut" })
+      gsap.to("[data-bcc-countdown]", { textShadow: "0 0 22px rgba(244,194,94,0.55)", duration: 0.9, repeat: -1, yoyo: true, ease: "sine.inOut" })
       gsap.to("[data-bcc-urgent]", { boxShadow: "0 0 0 7px rgba(220,52,43,0)", duration: 1.1, repeat: -1, ease: "power1.out" })
     }, rootRef)
     return () => context.revert()
@@ -324,41 +379,52 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
   }
 
   const stats = [
-    { label: copy.eligible, value: liveOpportunities.filter((item) => !item.submitted).length, icon: Radar, tone: "blue" },
-    { label: copy.closing, value: closingCount, icon: TimerReset, tone: closingCount ? "red" : "slate" },
-    { label: copy.recommended, value: liveOpportunities.filter((item) => item.matchScore !== null).length, icon: Sparkles, tone: "gold" },
-    { label: copy.submitted, value: (workspace.bids || []).length, icon: FileCheck2, tone: "violet" },
-    { label: copy.orders, value: (workspace.orders || []).length, icon: Award, tone: "green" },
+    { label: copy.eligible, value: isShowcase ? 24 : liveOpportunities.filter((item) => !item.submitted).length, icon: Radar, tone: "blue", meta: isShowcase ? "View all" : undefined },
+    { label: copy.closing, value: isShowcase ? 3 : closingCount, icon: TimerReset, tone: (isShowcase || closingCount) ? "red" : "slate", meta: (isShowcase || closingCount) ? "URGENT" : undefined },
+    { label: copy.draft, value: isShowcase ? 2 : (workspace.bids || []).filter((bid) => String(bid.status).toUpperCase() === "DRAFT").length, icon: PackageCheck, tone: "gold", meta: "In progress" },
+    { label: copy.submitted, value: isShowcase ? 8 : (workspace.bids || []).filter((bid) => String(bid.status).toUpperCase() !== "DRAFT").length, icon: FileCheck2, tone: "violet", meta: "View all" },
+    { label: copy.shortlisted, value: isShowcase ? 1 : (workspace.bids || []).filter((bid) => String(bid.status).toUpperCase() === "SHORTLISTED").length, icon: Sparkles, tone: "green", meta: "View all" },
+    { label: copy.orders, value: isShowcase ? 0 : (workspace.orders || []).length, icon: Award, tone: "gold", meta: "Results" },
   ] as const
 
   if (state === "loading") return <CommandShell><LoadingState label={copy.load} /></CommandShell>
   if (state === "error") return <CommandShell><ErrorState error={error} /></CommandShell>
 
   return (
-    <main ref={rootRef} className="min-h-screen bg-[#f4f6fa] px-4 py-5 text-[#17233a] sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1540px]">
-        <header data-bcc-heading className="grid gap-4 xl:grid-cols-[minmax(280px,1fr)_minmax(360px,520px)_auto] xl:items-center">
+    <main ref={rootRef} className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_68%_-12%,rgba(235,212,172,0.2),transparent_30%),linear-gradient(145deg,#f8fafc_0%,#f4f6fa_55%,#faf9f6_100%)] px-4 py-5 text-[#17233a] sm:px-6 lg:px-7">
+      <div className="mx-auto max-w-[1600px]">
+        <header data-bcc-heading className="grid gap-4 2xl:grid-cols-[minmax(300px,1fr)_minmax(330px,500px)_auto] 2xl:items-center">
           <div>
-            <h1 className="text-[30px] font-bold leading-none tracking-0 text-[#142039] sm:text-[38px]">{copy.title}</h1>
-            <p className="mt-2 text-[12px] text-[#5f6d83]">{copy.subtitle}</p>
-          </div>
-          <label className="flex h-12 items-center gap-3 rounded-[8px] border border-[#dde2ea] bg-white px-4 shadow-[0_5px_18px_rgba(24,37,67,0.045)] transition focus-within:border-[#9ba9bd] focus-within:shadow-[0_0_0_3px_rgba(35,55,89,0.08)]">
-            <Search className="h-4 w-4 text-[#647289]" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.search} className="min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-[#98a2b3]" />
-          </label>
-          <div className="flex items-center gap-3">
-            <div className="min-w-[170px] rounded-[8px] border border-[#e6dfd4] bg-[#fffdf9] px-4 py-2.5 shadow-[0_5px_18px_rgba(99,72,30,0.05)]">
-              <p className="text-[8px] font-bold uppercase tracking-[0.09em] text-[#776447]">{copy.tokenBalance}</p>
-              <div className="mt-1 flex items-center gap-2"><Coins className="h-5 w-5 text-[#c58222]" /><strong className="text-[21px] tabular-nums">{tokenBalance}</strong><span className="text-[9px] text-[#68758a]">Token</span><Link href={`/${locale}/tokens`} className="ml-auto rounded-[5px] border border-[#e6d8bf] px-2 py-1 text-[8px] font-bold text-[#745329] transition hover:bg-[#fff3dd]">{copy.topUp}</Link></div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-[31px] font-bold leading-none tracking-0 text-[#142039] sm:text-[40px]">{copy.title}</h1>
+              {isShowcase ? <span className="rounded-[5px] border border-[#e0c077] bg-[#fff8e8] px-2.5 py-1 text-[9px] font-bold uppercase text-[#8b641e]">{copy.showcase}</span> : <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#16815e]"><span className="h-1.5 w-1.5 rounded-full bg-[#1da674] shadow-[0_0_0_4px_rgba(29,166,116,0.1)]" />Live</span>}
             </div>
-            <MembershipCard subscription={workspace.subscription || {}} />
+            <p className="mt-2.5 text-[13px] text-[#5f6d83]">{copy.subtitle}</p>
+          </div>
+          <label className="flex h-[54px] items-center gap-3 rounded-[9px] border border-[#dde2ea] bg-white/95 px-4 shadow-[0_8px_22px_rgba(24,37,67,0.05)] transition focus-within:border-[#9ba9bd] focus-within:shadow-[0_0_0_3px_rgba(35,55,89,0.08)]">
+            <Search className="h-4 w-4 text-[#647289]" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.search} className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[#98a2b3]" />
+            <kbd className="rounded-[4px] bg-[#f0f2f6] px-1.5 py-1 text-[8px] text-[#7f899b]">Ctrl K</kbd>
+          </label>
+          <div className="flex items-center justify-end gap-2">
+            <div className="min-w-[194px] rounded-[9px] border border-[#e6dfd4] bg-[#fffdf9] px-4 py-2.5 shadow-[0_7px_20px_rgba(99,72,30,0.06)]">
+              <p className="text-[9px] font-bold uppercase text-[#776447]">{copy.tokenBalance}</p>
+              <div className="mt-1 flex items-center gap-2"><Coins className="h-6 w-6 text-[#c58222]" /><strong className="text-[24px] tabular-nums">{displayTokenBalance}</strong><span className="text-[9px] text-[#68758a]">Tokens</span><Link href={`/${locale}/tokens`} className="ml-auto rounded-[5px] border border-[#e6d8bf] px-2.5 py-1.5 text-[9px] font-bold text-[#745329] transition hover:bg-[#fff3dd]">{copy.topUp}</Link></div>
+            </div>
+            <HeaderIcon href={`/${locale}/notifications`} label="Notifications" badge={isShowcase ? 6 : 0}><Bell className="h-4 w-4" /></HeaderIcon>
+            <HeaderIcon href={`/${locale}/community`} label="Messages" badge={isShowcase ? 2 : 0}><Mail className="h-4 w-4" /></HeaderIcon>
+            <HeaderIcon href={`/${locale}/workflow`} label="Help"><CircleHelp className="h-4 w-4" /></HeaderIcon>
+            <Link href={`/${locale}/profile`} className="hidden h-[54px] min-w-[132px] items-center gap-2 rounded-[9px] border border-[#e1e4ea] bg-white px-3 shadow-[0_7px_20px_rgba(24,37,67,0.045)] transition hover:border-[#c3cad6] 2xl:flex"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#f4ead7] text-[9px] font-bold text-[#76552b]">{initials(workspace.profile?.company_name || workspace.profile?.company_name_en || "LBID")}</span><span className="min-w-0"><strong className="block max-w-[92px] truncate text-[10px] text-[#233149]">{workspace.profile?.company_name || workspace.profile?.company_name_en || "LBID Company"}</strong><span className="mt-0.5 block text-[8px] text-[#7c8798]">Company profile</span></span></Link>
           </div>
         </header>
 
-        <ActivityRail locale={locale} items={liveOpportunities} closingCount={closingCount} copy={copy} />
+        {isShowcase ? <div className="mt-4 flex items-center gap-2 rounded-[7px] border border-[#ead5a7] bg-[#fff9ec] px-4 py-2.5 text-[10px] text-[#7a5d24]"><ShieldCheck className="h-4 w-4 flex-shrink-0" /><span>{copy.showcaseNote}</span></div> : null}
 
-        <section className="mt-3 grid overflow-hidden rounded-[9px] border border-[#e0e4eb] bg-white shadow-[0_8px_22px_rgba(24,37,67,0.04)] sm:grid-cols-2 xl:grid-cols-5">
+        <ActivityRail locale={locale} items={activeOpportunities} closingCount={displayClosingCount} copy={copy} preview={isShowcase} />
+
+        <section className="mt-3 grid overflow-hidden rounded-[9px] border border-[#e0e4eb] bg-white shadow-[0_8px_22px_rgba(24,37,67,0.04)] sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[repeat(6,minmax(0,1fr))_210px]">
           {stats.map((item) => <Metric key={item.label} {...item} />)}
+          <MembershipCard subscription={workspace.subscription || {}} preview={isShowcase} />
         </section>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -366,17 +432,19 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
             <div className="flex flex-col gap-3 border-b border-[#dfe3ea] lg:flex-row lg:items-end lg:justify-between">
               <div className="flex min-w-0 gap-1 overflow-x-auto" role="tablist" aria-label="Opportunity views">
                 {(["recommended", "all", "bids", "closing", "results", "watchlist"] as Tab[]).map((value, index) => (
-                  <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`whitespace-nowrap border-b-2 px-3 py-3 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c38b2c]/30 ${tab === value ? "border-[#c88d27] text-[#17233a]" : "border-transparent text-[#66748a] hover:text-[#25344d]"}`}>{copy.tabs[index]}{value === "closing" && closingCount ? <span className="ml-2 rounded-full bg-[#e43a31] px-1.5 py-0.5 text-[8px] text-white">{closingCount}</span> : null}</button>
+                   <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`whitespace-nowrap border-b-2 px-3 py-3.5 text-[12px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c38b2c]/30 ${tab === value ? "border-[#c88d27] text-[#17233a]" : "border-transparent text-[#66748a] hover:text-[#25344d]"}`}>{copy.tabs[index]}{value === "closing" && displayClosingCount ? <span className="ml-2 rounded-full bg-[#e43a31] px-1.5 py-0.5 text-[8px] text-white">{displayClosingCount}</span> : null}</button>
                 ))}
               </div>
               <div className="mb-2 flex flex-wrap gap-2">
                 <div className="flex rounded-[6px] border border-[#dfe3ea] bg-white p-1">
-                  {(["all", "air", "sea"] as const).map((value) => <button key={value} onClick={() => setMode(value)} className={`rounded-[4px] px-2.5 py-1.5 text-[9px] font-bold capitalize transition ${mode === value ? "bg-[#172846] text-white" : "text-[#66748a] hover:bg-[#f1f4f8]"}`}>{value}</button>)}
+                  {(["all", "air", "sea"] as const).map((value) => <button key={value} type="button" onClick={() => setMode(value)} className={`rounded-[4px] px-2.5 py-1.5 text-[9px] font-bold capitalize transition ${mode === value ? "bg-[#172846] text-white" : "text-[#66748a] hover:bg-[#f1f4f8]"}`}>{value}</button>)}
                 </div>
                 <select value={sort} onChange={(event) => setSort(event.target.value as "match" | "deadline")} className="h-9 rounded-[6px] border border-[#dfe3ea] bg-white px-3 text-[9px] font-semibold text-[#425168] outline-none focus:border-[#a8b3c3]">
                   <option value="match">{copy.sortMatch}</option>
                   <option value="deadline">{copy.sortDeadline}</option>
                 </select>
+                <button type="button" aria-label="Filter opportunities" className="grid h-9 w-9 place-items-center rounded-[6px] border border-[#dfe3ea] bg-white text-[#5d6a7f] transition hover:bg-[#f5f7fa]"><SlidersHorizontal className="h-4 w-4" /></button>
+                <button type="button" aria-label="Grid view" className="grid h-9 w-9 place-items-center rounded-[6px] border border-[#dfe3ea] bg-white text-[#172846] transition hover:bg-[#f5f7fa]"><LayoutGrid className="h-4 w-4" /></button>
               </div>
             </div>
 
@@ -388,7 +456,7 @@ export function BiddingCommandCenter({ locale }: { locale: Locale }) {
             ) : <EmptyState copy={copy} canForward={Boolean(workspace.profile?.can_be_forwarder && workspace.profile?.onboarding_completed)} />}
           </section>
 
-          {selected ? <SelectedOpportunityPanel ref={selectedPanelRef} item={selected} now={now} locale={locale} profile={workspace.profile || {}} subscription={workspace.subscription || {}} tokenBalance={tokenBalance} watched={watchlist.includes(String(selected.id))} onWatch={() => toggleWatch(String(selected.id))} copy={copy} /> : null}
+          {selected ? <SelectedOpportunityPanel ref={selectedPanelRef} item={selected} now={now} locale={locale} profile={workspace.profile || {}} subscription={workspace.subscription || {}} tokenBalance={displayTokenBalance} watched={watchlist.includes(String(selected.id))} onWatch={() => toggleWatch(String(selected.id))} copy={copy} /> : null}
         </div>
       </div>
     </main>
@@ -407,46 +475,56 @@ function ErrorState({ error }: { error: string }) {
   return <div className="rounded-[9px] border border-[#efc3bd] bg-[#fff4f2] p-6"><div className="flex gap-3"><AlertTriangle className="h-5 w-5 text-[#c74839]" /><div><p className="text-[13px] font-bold text-[#8e3027]">Command Center could not load</p><p className="mt-1 text-[11px] text-[#a85449]">{error}</p></div></div></div>
 }
 
-function ActivityRail({ locale, items, closingCount, copy }: { locale: Locale; items: Opportunity[]; closingCount: number; copy: typeof en }) {
+function HeaderIcon({ href, label, badge = 0, children }: { href: string; label: string; badge?: number; children: ReactNode }) {
+  return <Link href={href} aria-label={label} title={label} className="relative grid h-11 w-11 flex-shrink-0 place-items-center rounded-[8px] border border-transparent text-[#526078] transition hover:border-[#e1e5ec] hover:bg-white hover:text-[#16243e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a31]/30">{children}{badge > 0 ? <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#d92e2e] px-1 text-[7px] font-bold text-white">{badge}</span> : null}</Link>
+}
+
+function ActivityRail({ locale, items, closingCount, copy, preview }: { locale: Locale; items: Opportunity[]; closingCount: number; copy: typeof en; preview: boolean }) {
   const top = [...items].filter((item) => item.matchScore !== null).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))[0]
   const recent = [...items].sort((a, b) => new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime())[0]
   const alerts = [
     { icon: Flame, tone: "orange", title: closingCount ? `${closingCount} ${copy.closing}` : copy.noCritical, meta: closingCount ? copy.reviewBefore : copy.allWindowsSafe },
     { icon: Plane, tone: "blue", title: top ? `${routeParts(top).originCode} -> ${routeParts(top).destinationCode}` : copy.waitingScored, meta: top ? `${top.matchScore}% Match` : copy.recommendationsProfile },
-    { icon: PackageCheck, tone: "green", title: recent ? `SR ${shortId(recent.id)}` : copy.noNewScope, meta: recent ? copy.newLiveRequest : copy.noNewScope },
+    { icon: PackageCheck, tone: "violet", title: recent ? `SR ${shortId(recent.id)}` : copy.noNewScope, meta: recent ? (preview ? "Previous token protected" : copy.newLiveRequest) : copy.noNewScope },
+    { icon: Award, tone: "green", title: preview ? "Bangkok -> Hong Kong" : copy.shortlisted, meta: preview ? "You were shortlisted" : copy.newLiveRequest },
   ] as const
-  return <section data-bcc-alert className="mt-5 grid overflow-hidden rounded-[9px] border border-[#e0e4eb] bg-white shadow-[0_8px_22px_rgba(24,37,67,0.04)] lg:grid-cols-[170px_1fr_1fr_1fr_auto]">
-    <div className="flex items-center gap-2 border-b border-[#e6e9ef] px-4 py-3 lg:border-b-0 lg:border-r"><BellRing className="h-4 w-4 text-[#b87b20]" /><span className="text-[10px] font-bold text-[#28354b]">{copy.alerts}</span></div>
-    {alerts.map(({ icon: Icon, tone, title, meta }) => <div key={title} className="flex min-w-0 items-center gap-3 border-b border-[#e6e9ef] px-4 py-3 lg:border-b-0 lg:border-r"><span className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-[6px] ${tone === "orange" ? "bg-[#fff0df] text-[#d27919]" : tone === "blue" ? "bg-[#eaf2ff] text-[#3570c6]" : "bg-[#e7f6f1] text-[#198567]"}`}><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="truncate text-[10px] font-bold text-[#26344b]">{title}</p><p className="mt-0.5 truncate text-[8.5px] text-[#778297]">{meta}</p></div></div>)}
-    <Link href={`/${locale}/notifications`} className="flex items-center justify-center gap-2 px-4 py-3 text-[9px] font-bold text-[#3a4860] transition hover:bg-[#f7f8fa]">{copy.viewAlerts}<ArrowRight className="h-3.5 w-3.5" /></Link>
+  return <section data-bcc-alert className="mt-5 grid overflow-hidden rounded-[9px] border border-[#e0e4eb] bg-white shadow-[0_8px_22px_rgba(24,37,67,0.04)] lg:grid-cols-[repeat(4,minmax(0,1fr))_170px]">
+    {alerts.map(({ icon: Icon, tone, title, meta }) => <div key={`${title}-${meta}`} className="flex min-w-0 items-center gap-3 border-b border-[#e6e9ef] px-4 py-3.5 lg:border-b-0 lg:border-r"><span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-[7px] ${tone === "orange" ? "bg-[#fff0df] text-[#d27919]" : tone === "blue" ? "bg-[#eaf2ff] text-[#3570c6]" : tone === "violet" ? "bg-[#f0edff] text-[#6854b2]" : "bg-[#e7f6f1] text-[#198567]"}`}><Icon className="h-[18px] w-[18px]" /></span><div className="min-w-0"><p className="truncate text-[11px] font-bold text-[#26344b]">{title}</p><p className="mt-1 truncate text-[9px] text-[#778297]">{meta}</p></div></div>)}
+    <Link href={`/${locale}/notifications`} className="flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-bold text-[#3a4860] transition hover:bg-[#f7f8fa]">{copy.viewAlerts}<ArrowRight className="h-3.5 w-3.5" /></Link>
   </section>
 }
 
-function Metric({ label, value, icon: Icon, tone }: { label: string; value: number; icon: typeof Radar; tone: "blue" | "red" | "gold" | "violet" | "green" | "slate" }) {
+function Metric({ label, value, icon: Icon, tone, meta }: { label: string; value: number; icon: typeof Radar; tone: "blue" | "red" | "gold" | "violet" | "green" | "slate"; meta?: string }) {
   const tones = { blue: "bg-[#e8f0ff] text-[#376cc0]", red: "bg-[#fff0ed] text-[#dc3e32]", gold: "bg-[#fff2dc] text-[#c77a18]", violet: "bg-[#f1edff] text-[#7458bd]", green: "bg-[#e7f6ef] text-[#16845e]", slate: "bg-[#eef1f5] text-[#647289]" }
-  return <div data-bcc-metric className="flex min-h-[82px] items-center gap-3 border-b border-[#e7eaf0] px-4 py-3 transition hover:bg-[#fafbfd] sm:border-r xl:border-b-0 last:border-r-0"><span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-[7px] ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-[8.5px] font-semibold text-[#627087]">{label}</p><p className="mt-1 text-[22px] font-bold leading-none tabular-nums text-[#142039]">{value}</p></div></div>
+  return <div data-bcc-metric className="flex min-h-[88px] items-center gap-3 border-b border-[#e7eaf0] px-4 py-3 transition hover:bg-[#fafbfd] sm:border-r 2xl:border-b-0"><span className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-[8px] ${tones[tone]}`}><Icon className="h-[18px] w-[18px]" /></span><div className="min-w-0"><p className="truncate text-[9px] font-semibold text-[#627087]">{label}</p><p className="mt-1 text-[24px] font-bold leading-none tabular-nums text-[#142039]">{value}</p>{meta ? <p className={`mt-1.5 text-[8px] font-semibold ${tone === "red" ? "text-[#d92e2e]" : "text-[#7b8798]"}`}>{meta}</p> : null}</div></div>
 }
 
-function MembershipCard({ subscription }: { subscription: JsonRecord }) {
+function MembershipCard({ subscription, preview }: { subscription: JsonRecord; preview: boolean }) {
   const active = subscription.status === "active" || subscription.status === "trial"
-  const label = subscription.status === "trial" ? "Trial" : subscription.plan === "annual" ? "Annual" : subscription.plan === "monthly" ? "Monthly" : "Free"
-  return <div className="hidden min-w-[125px] items-center gap-2 rounded-[8px] border border-[#e7dfd1] bg-white px-3 py-3 shadow-[0_5px_18px_rgba(24,37,67,0.04)] 2xl:flex"><Crown className="h-5 w-5 text-[#bf8425]" /><div><p className="text-[8px] uppercase text-[#7b8798]">Membership</p><p className="text-[10px] font-bold text-[#28354b]">{label}</p></div>{active ? <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-[#16845e]" /> : null}</div>
+  const label = preview ? "Enterprise" : subscription.status === "trial" ? "Trial" : subscription.plan === "annual" ? "Annual" : subscription.plan === "monthly" ? "Monthly" : "Free"
+  return <Link href="./subscription" data-bcc-metric className="flex min-h-[88px] items-center gap-3 border-b border-[#e7eaf0] bg-[#fffdf9] px-4 py-3 transition hover:bg-[#fff9ed] sm:border-r 2xl:border-b-0 2xl:border-r-0"><span className="grid h-11 w-11 place-items-center rounded-full border border-[#ecd9b1] bg-[#fff8e8] text-[#bf8425]"><Crown className="h-5 w-5" /></span><div><p className="text-[9px] text-[#7b8798]">Membership</p><p className="mt-1 text-[13px] font-bold text-[#28354b]">{label}</p><p className="mt-1.5 inline-flex items-center gap-1 text-[8px] text-[#6f7c8e]">{active || preview ? <CheckCircle2 className="h-3 w-3 text-[#16845e]" /> : null}{active || preview ? "Valid membership" : "Upgrade available"}</p></div></Link>
 }
 
 function FeaturedOpportunity({ item, now, selected, watched, onSelect, onWatch, copy }: OpportunityProps) {
   const route = routeParts(item)
   const cargo = item.cargo_details || {}
   const remaining = secondsLeft(item.bid_deadline, now)
-  return <article data-bcc-feature data-bcc-row className={`relative overflow-hidden rounded-[11px] border bg-[#12191d] text-white shadow-[0_16px_42px_rgba(15,22,27,0.16)] transition ${selected ? "border-[#d9b25f]" : "border-[#2b3438]"}`}>
-    <div data-bcc-glow className="pointer-events-none absolute -left-10 bottom-[-80px] h-52 w-80 rounded-full bg-[#b47718]/20 blur-3xl" />
-    <button type="button" onClick={onSelect} className="relative grid w-full gap-5 p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e0b557] lg:grid-cols-[145px_minmax(0,1fr)_220px] lg:items-center">
-      <div className="flex flex-col items-center gap-2"><span className="rounded-[4px] border border-[#947331] bg-[#28261f] px-2 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-[#efca78]">{copy.topMatch}</span><ScoreRing score={item.matchScore} featured /></div>
+  return <article data-bcc-feature data-bcc-row className={`group relative isolate overflow-hidden rounded-[12px] border text-white shadow-[0_22px_58px_rgba(8,25,39,0.24),0_0_0_1px_rgba(226,183,91,0.08)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_72px_rgba(8,25,39,0.3),0_0_28px_rgba(205,151,55,0.13)] ${selected ? "border-[#e2b95f]" : "border-[#344e5d]"}`}>
+    <div className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(122deg,#071b2a_0%,#0b2634_37%,#142b33_67%,#2b2116_100%)]" />
+    <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.18] [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:32px_32px]" />
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,transparent,#a97b2c_18%,#f4d483_50%,#a97b2c_82%,transparent)]" />
+    <div data-bcc-scan className="pointer-events-none absolute -inset-y-10 left-0 w-1/4 -skew-x-12 bg-[linear-gradient(90deg,transparent,rgba(255,225,155,.18),transparent)] opacity-0 mix-blend-screen" />
+    <div data-bcc-glow className="pointer-events-none absolute -left-10 bottom-[-80px] h-52 w-80 rounded-full bg-[#b47718]/25 blur-3xl" />
+    <div className="pointer-events-none absolute -right-20 top-[-80px] h-64 w-64 rounded-full bg-[#1a8092]/15 blur-3xl" />
+    <button type="button" onClick={onSelect} className="relative grid w-full gap-5 p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e0b557] lg:grid-cols-[155px_minmax(0,1fr)_235px] lg:items-center">
+      <div className="flex flex-col items-center gap-3"><span className="inline-flex items-center gap-1.5 rounded-[5px] border border-[#a98745]/70 bg-[#181f21]/75 px-2.5 py-1.5 text-[8px] font-bold uppercase text-[#f3d48d] shadow-[0_0_18px_rgba(212,162,66,0.14)]"><Sparkles className="h-3 w-3" />{copy.topMatch}</span><div className="relative"><span data-bcc-score-halo className="pointer-events-none absolute inset-1 rounded-full bg-[#d29d3c]/45 blur-xl" /><ScoreRing score={item.matchScore} featured /></div><span className="text-[9px] font-semibold uppercase text-[#c7d4d5]">{copy.profileLocked}</span></div>
       <div className="min-w-0">
-        <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]"><div><p className="text-[9px] text-[#9fa9ac]">{copy.origin}</p><p className="mt-1 text-[25px] font-bold text-[#f2d58e]">{route.originCode}</p><p className="text-[10px] text-[#d7dbd9]">{route.origin}</p></div><div className="relative flex items-center gap-3"><span className="h-px w-10 bg-[#ae8a46]" /><Plane data-bcc-plane className="h-7 w-7 text-[#f3c866]" /><span className="h-px w-10 bg-[#ae8a46]" /></div><div className="sm:text-right"><p className="text-[9px] text-[#9fa9ac]">{copy.destination}</p><p className="mt-1 text-[25px] font-bold text-[#f2d58e]">{route.destinationCode}</p><p className="text-[10px] text-[#d7dbd9]">{route.destination}</p></div></div>
+        <div className="grid items-center gap-3 sm:grid-cols-[1fr_minmax(116px,auto)_1fr]"><div><p className="text-[9px] uppercase text-[#9eb0b5]">{copy.origin}</p><p className="mt-1 text-[28px] font-bold text-[#f6dd9d]">{route.originCode}</p><p className="text-[10px] text-[#dce5e4]">{route.origin}</p></div><div className="relative flex h-12 items-center justify-center"><span className="absolute left-0 right-0 h-px bg-[#50656d]" /><span data-bcc-route-pulse className="absolute left-0 right-0 h-[2px] bg-[linear-gradient(90deg,transparent,#f1c66d_24%,#fff0ba_62%,transparent)] shadow-[0_0_12px_rgba(240,190,87,.65)]" /><span className="relative grid h-10 w-10 place-items-center rounded-full border border-[#b78a3f]/65 bg-[#0b1d27]/90 shadow-[0_0_26px_rgba(225,174,76,.28)]"><Plane data-bcc-plane className="h-5 w-5 text-[#ffd77c]" /></span></div><div className="sm:text-right"><p className="text-[9px] uppercase text-[#9eb0b5]">{copy.destination}</p><p className="mt-1 text-[28px] font-bold text-[#f6dd9d]">{route.destinationCode}</p><p className="text-[10px] text-[#dce5e4]">{route.destination}</p></div></div>
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[9px] text-[#e0e3df]"><span>{modeLabel(cargo.mode, copy)}</span><span>{cargo.incoterm || copy.termsPending}</span><span>{cargo.cargo || cargo.cargo_type || copy.generalCargo}</span><span>{cargo.weight_kg || "--"} kg</span><span>{cargo.cbm || "--"} CBM</span></div>
-        <div className="mt-4 flex flex-wrap gap-1.5"><TrustBadge label={item.client_verified ? copy.verifiedClient : copy.onboardedClient} tone="green" /><TrustBadge label={copy.scopeLocked} tone="violet" /><TrustBadge label={copy.sealed} tone="gold" /><TrustBadge label={riskLabel(cargo, copy)} tone={riskLabel(cargo, copy) === copy.lowRisk ? "green" : "amber"} /></div>
+        <div className="mt-4 flex flex-wrap gap-1.5">{item.preview ? <TrustBadge label={copy.showcase} tone="amber" /> : null}<TrustBadge label={item.client_verified ? copy.verifiedClient : copy.onboardedClient} tone="green" /><TrustBadge label={copy.scopeLocked} tone="violet" /><TrustBadge label={copy.sealed} tone="gold" /><TrustBadge label={riskLabel(cargo, copy)} tone={riskLabel(cargo, copy) === copy.lowRisk ? "green" : "amber"} /></div>
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-3 text-[8.5px] text-[#c8cfcc]"><span>Pickup: {cargo.pickup_date || "--"}</span><span>Transit: 1-3 days</span><span>Services: {(item.services_needed || []).slice(0, 3).join(", ") || "--"}</span></div>
       </div>
-      <div className="border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"><p className="text-[9px] font-bold uppercase text-[#c9b57d]">{copy.closingIn}</p><p className={`mt-2 font-mono text-[30px] font-bold tabular-nums ${remaining <= 900 ? "text-[#ff6d5f]" : "text-[#f1c875]"}`}>{formatCountdown(remaining)}</p><p className="mt-2 text-[9px] text-[#b7bebc]">{urgencyLabel(remaining, copy)}</p><UrgencyDots remaining={remaining} dark /><div className="mt-4 flex items-center justify-between"><span className="text-[13px] font-bold text-[#e5bf68]">{TOKEN_COST} Token</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#66cca6]">{item.submitted ? copy.submittedStatus : copy.eligibleStatus}<CheckCircle2 className="h-3.5 w-3.5" /></span></div></div>
+      <div className="rounded-[9px] border border-[#8c6d37]/40 bg-[linear-gradient(145deg,rgba(3,14,21,.72),rgba(91,61,24,.28))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.05)]"><div className="flex items-center justify-between gap-2"><p className="text-[9px] font-bold uppercase text-[#d5bc7c]">{copy.closingIn}</p><span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[8px] font-semibold uppercase text-[#ffca69]"><span className="h-1.5 w-1.5 rounded-full bg-[#ffb63d] shadow-[0_0_10px_#ffb63d]" />{copy.liveWindow}</span></div><p data-bcc-countdown className={`mt-2 whitespace-nowrap font-mono text-[27px] font-bold tabular-nums ${remaining <= 900 ? "text-[#ff7868]" : "text-[#f5cf7a]"}`}>{formatCountdown(remaining)}</p><p className="mt-2 text-[9px] text-[#bdc8c7]">{urgencyLabel(remaining, copy)}</p><ActivitySignal remaining={remaining} copy={copy} /><div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3"><span className="text-[13px] font-bold text-[#eac56f]">{TOKEN_COST} Token</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#6ed0ab]">{item.submitted ? copy.submittedStatus : copy.eligibleStatus}<CheckCircle2 className="h-3.5 w-3.5" /></span></div></div>
     </button>
     <button type="button" onClick={onWatch} aria-label={watched ? "Remove from watchlist" : "Add to watchlist"} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-[#e2c77e] transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e2c77e]"><Bookmark className={`h-4 w-4 ${watched ? "fill-current" : ""}`} /></button>
   </article>
@@ -460,7 +538,7 @@ function OpportunityRow({ item, now, selected, watched, onSelect, onWatch, copy 
   return <article data-bcc-row className={`relative rounded-[9px] border bg-white shadow-[0_6px_18px_rgba(24,37,67,0.04)] transition hover:-translate-y-px hover:shadow-[0_11px_25px_rgba(24,37,67,0.08)] ${selected ? "border-[#c99a46]" : "border-[#e0e4eb]"}`}>
     <button type="button" onClick={onSelect} className="grid w-full gap-4 p-4 pr-14 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#c99a46]/40 sm:grid-cols-[74px_minmax(0,1fr)_150px_86px] sm:items-center">
       <ScoreRing score={item.matchScore} />
-      <div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.matchScore !== null ? <span className="rounded-[4px] bg-[#eef4ff] px-1.5 py-0.5 text-[7.5px] font-bold uppercase text-[#3562a8]">{copy.recommendedTag}</span> : null}{urgent ? <span className="rounded-[4px] bg-[#fff0ed] px-1.5 py-0.5 text-[7.5px] font-bold uppercase text-[#d93830]">{copy.closingSoon}</span> : null}</div><p className="mt-1 truncate text-[13px] font-bold text-[#142039]">{route.origin} ({route.originCode}) <span className="px-1 text-[#8792a3]">-&gt;</span> {route.destination} ({route.destinationCode})</p><p className="mt-1 truncate text-[9px] text-[#6b788d]">{modeLabel(cargo.mode, copy)} | {cargo.incoterm || copy.termsPending} | {cargo.cargo || cargo.cargo_type || copy.generalCargo} | {cargo.weight_kg || "--"} kg | {cargo.cbm || "--"} CBM</p><div className="mt-2 flex flex-wrap gap-1"><TrustBadge label={item.client_verified ? copy.verifiedClient : copy.onboardedClient} tone="green" /><TrustBadge label={copy.scopeLocked} tone="violet" /><TrustBadge label={copy.sealed} tone="blue" /><TrustBadge label={riskLabel(cargo, copy)} tone={riskLabel(cargo, copy) === copy.lowRisk ? "green" : "amber"} /></div></div>
+      <div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.matchScore !== null ? <span className="rounded-[4px] bg-[#eef4ff] px-1.5 py-0.5 text-[8px] font-bold uppercase text-[#3562a8]">{copy.recommendedTag}</span> : null}{item.preview ? <span className="rounded-[4px] bg-[#fff7e5] px-1.5 py-0.5 text-[8px] font-bold uppercase text-[#96651a]">{copy.showcase}</span> : null}{urgent ? <span className="rounded-[4px] bg-[#fff0ed] px-1.5 py-0.5 text-[8px] font-bold uppercase text-[#d93830]">{copy.closingSoon}</span> : null}</div><p className="mt-1 truncate text-[14px] font-bold text-[#142039]">{route.origin} ({route.originCode}) <span className="px-1 text-[#8792a3]">-&gt;</span> {route.destination} ({route.destinationCode})</p><p className="mt-1 truncate text-[10px] text-[#6b788d]">{modeLabel(cargo.mode, copy)} | {cargo.incoterm || copy.termsPending} | {cargo.cargo || cargo.cargo_type || copy.generalCargo} | {cargo.weight_kg || "--"} kg | {cargo.cbm || "--"} CBM</p><div className="mt-2 flex flex-wrap gap-1"><TrustBadge label={item.client_verified ? copy.verifiedClient : copy.onboardedClient} tone="green" /><TrustBadge label={copy.scopeLocked} tone="violet" /><TrustBadge label={copy.sealed} tone="blue" /><TrustBadge label={riskLabel(cargo, copy)} tone={riskLabel(cargo, copy) === copy.lowRisk ? "green" : "amber"} /></div></div>
       <div><p className={`text-[8px] font-bold uppercase ${urgent ? "text-[#d92e2e]" : "text-[#617087]"}`}>{copy.closingIn}</p><p data-bcc-urgent={urgent ? "" : undefined} className={`mt-1 w-fit rounded-[4px] font-mono text-[18px] font-bold tabular-nums ${urgent ? "bg-[#fff0ed] px-1.5 text-[#d92e2e]" : "text-[#142039]"}`}>{formatCountdown(remaining)}</p><p className="mt-1 text-[8px] text-[#7c8798]">{urgencyLabel(remaining, copy)}</p><UrgencyDots remaining={remaining} /></div>
       <div className="text-right"><p className="text-[11px] font-bold text-[#8a5921]">{TOKEN_COST} Token</p><p className={`mt-4 inline-flex items-center gap-1 text-[9px] font-bold ${item.submitted ? "text-[#3562a8]" : "text-[#13845e]"}`}>{item.submitted ? copy.submittedStatus : copy.eligibleStatus}<CheckCircle2 className="h-3.5 w-3.5" /></p></div>
     </button>
@@ -481,15 +559,17 @@ const SelectedOpportunityPanel = forwardRef<HTMLElement, { item: Opportunity; no
     { label: isZh ? "\u7af6\u50f9\u8996\u7a97\u4ecd\u7136\u958b\u653e" : "Bidding window remains open", ok: remaining > 0 },
     { label: isZh ? "\u672a\u66fe\u5c0d\u6b64 SR \u63d0\u4ea4\u5831\u50f9" : "No previous bid for this SR", ok: !item.submitted },
   ]
-  const eligible = checks.every((check) => check.ok)
-  return <aside ref={ref} className="h-fit rounded-[10px] border border-[#e0e4eb] bg-white p-5 shadow-[0_12px_32px_rgba(24,37,67,0.07)] xl:sticky xl:top-5">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#778297]">{copy.selected}</p>{item.matchScore !== null ? <p className="mt-3 text-[30px] font-bold leading-none text-[#17233a]">{item.matchScore}% <span className="text-[15px]">Match</span></p> : <p className="mt-3 text-[18px] font-bold text-[#17233a]">{copy.general}</p>}<p className="mt-2 text-[10px] text-[#637087]">{item.matchScore !== null ? copy.calculated : copy.noScore}</p></div><span className="rounded-[4px] border border-[#d7d0ee] bg-[#f7f4ff] px-2 py-1 text-[8px] font-bold text-[#64519b]">{copy.scopeLocked}</span></div>
-    <div className="mt-5 border-y border-[#e8eaf0] py-4"><p className="text-[15px] font-bold text-[#12213a]">{route.originCode} <span className="px-2 text-[#909aab]">-&gt;</span> {route.destinationCode}</p><p className="mt-1 text-[9px] text-[#69758a]">{route.origin} | {route.destination}</p><p className="mt-3 text-[9px] text-[#48566e]">{modeLabel(cargo.mode, copy)} | {cargo.incoterm || copy.termsPending} | {cargo.weight_kg || "--"} kg | {cargo.cbm || "--"} CBM</p></div>
-    <div className="mt-4 rounded-[8px] border border-[#eee5d5] bg-[#fffcf7] p-4"><p className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#7d6745]">{copy.closingIn}</p><p className={`mt-2 font-mono text-[23px] font-bold tabular-nums ${remaining <= 900 ? "text-[#d92e2e]" : "text-[#563d24]"}`}>{formatCountdown(remaining)}</p><p className="mt-2 text-[8.5px] text-[#756b5e]">{copy.submitBefore}</p></div>
-    <div className="mt-5"><p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#2b3850]">{copy.whyMatched}</p><div className="mt-3 space-y-2">{item.matchReasons.length ? item.matchReasons.map((reason) => <div key={reason} className="flex gap-2 text-[9.5px] text-[#526078]"><BadgeCheck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#17835f]" /><span>{localizeReason(reason, isZh)}</span></div>) : <p className="text-[9.5px] leading-5 text-[#7a8495]">{copy.notScored}</p>}</div></div>
-    <div className="mt-5 border-t border-[#e8eaf0] pt-4"><p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#2b3850]">{copy.eligibility}</p><div className="mt-3 space-y-2">{checks.map((check) => <div key={check.label} className="flex items-center justify-between gap-3 text-[9.5px]"><span className="text-[#526078]">{check.label}</span>{check.ok ? <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-[#13845e]" /> : <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-[#d15b39]" />}</div>)}</div></div>
+  const eligible = !item.preview && checks.every((check) => check.ok)
+  const breakdown = matchBreakdown(item)
+  return <aside ref={ref} className="relative h-fit overflow-hidden rounded-[10px] border border-[#ded7ca] bg-white p-5 shadow-[0_14px_36px_rgba(24,37,67,0.09)] xl:sticky xl:top-5">
+    <span className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,#0b2634,#dfb35a_55%,#f5dc9f)]" />
+    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase text-[#778297]">{copy.selected}</p>{item.matchScore !== null ? <p className="mt-3 text-[34px] font-bold leading-none text-[#17233a]">{item.matchScore}% <span className="text-[16px]">Match</span></p> : <p className="mt-3 text-[18px] font-bold text-[#17233a]">{copy.general}</p>}<p className="mt-2 text-[10px] text-[#637087]">{item.matchScore !== null ? copy.calculated : copy.noScore}</p></div><span className="rounded-[4px] border border-[#d7d0ee] bg-[#f7f4ff] px-2 py-1 text-[8px] font-bold text-[#64519b]">{item.preview ? copy.showcase : copy.scopeLocked}</span></div>
+    <div className="mt-5 border-y border-[#e8eaf0] py-4"><p className="flex items-center gap-2 text-[16px] font-bold text-[#12213a]"><Plane className="h-4 w-4" />{route.originCode} <span className="text-[#909aab]">-&gt;</span> {route.destinationCode}</p><p className="mt-1 text-[10px] text-[#69758a]">{route.origin} | {route.destination}</p><p className="mt-3 text-[10px] text-[#48566e]">{modeLabel(cargo.mode, copy)} | {cargo.incoterm || copy.termsPending} | {cargo.weight_kg || "--"} kg | {cargo.cbm || "--"} CBM</p></div>
+    <div className="mt-4 grid grid-cols-[1fr_66px] items-center gap-3 rounded-[8px] border border-[#eee5d5] bg-[#fffcf7] p-4"><div><p className="text-[9px] font-bold uppercase text-[#7d6745]">{copy.closingIn}</p><p className={`mt-2 font-mono text-[23px] font-bold tabular-nums ${remaining <= 900 ? "text-[#d92e2e]" : "text-[#563d24]"}`}>{formatCountdown(remaining)}</p><p className="mt-2 text-[9px] text-[#756b5e]">{copy.submitBefore}</p></div><MiniDeadlineRing remaining={remaining} /></div>
+    <div className="mt-5"><p className="text-[9px] font-bold uppercase text-[#2b3850]">Match breakdown</p><div className="mt-3 space-y-2.5">{breakdown.map((part) => <div key={part.label} className="grid grid-cols-[1fr_86px_30px] items-center gap-2"><span className="truncate text-[9px] text-[#526078]">{part.label}</span><span className="h-1.5 overflow-hidden rounded-full bg-[#edf0f4]"><span className="block h-full rounded-full bg-[linear-gradient(90deg,#18364e,#5b917d)]" style={{ width: `${part.value}%` }} /></span><strong className="text-right text-[8px] tabular-nums text-[#29364d]">{part.value}%</strong></div>)}</div></div>
+    <div className="mt-5 border-t border-[#e8eaf0] pt-4"><p className="text-[9px] font-bold uppercase text-[#2b3850]">{copy.eligibility}</p><div className="mt-3 space-y-2.5">{checks.map((check) => <div key={check.label} className="flex items-center justify-between gap-3 text-[9.5px]"><span className="text-[#526078]">{check.label}</span>{check.ok ? <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-[#13845e]" /> : <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-[#d15b39]" />}</div>)}</div></div>
     <div className="mt-5 border-t border-[#e8eaf0] pt-4"><div className="flex items-center justify-between"><span className="text-[11px] font-bold text-[#6f4921]">{copy.tokenRequired}</span><span className="rounded-[4px] bg-[#fff3dd] px-2 py-1 text-[7.5px] font-bold uppercase text-[#9a6817]">{copy.atomicDebit}</span></div><p className="mt-2 text-[8.5px] leading-4 text-[#7a8495]">{copy.charged}</p></div>
-    <Link href={`/${locale}/marketplace/${item.id}`} className={`mt-5 flex h-11 items-center justify-center gap-2 rounded-[7px] text-[11px] font-bold text-white transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${eligible ? "bg-[linear-gradient(135deg,#101b24,#3c2b17)] shadow-[0_10px_24px_rgba(35,29,20,0.2)] focus-visible:ring-[#8e6d35]" : "bg-[#32405a] focus-visible:ring-[#32405a]"}`}>{item.submitted ? copy.viewBid : copy.viewScope}<ArrowRight className="h-4 w-4" /></Link>
+    {item.preview ? <button type="button" disabled className="mt-5 flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-[7px] bg-[#29313a] text-[10px] font-bold text-white/65">{copy.previewCta}<ShieldCheck className="h-4 w-4" /></button> : <Link href={`/${locale}/marketplace/${item.id}`} className={`mt-5 flex h-12 items-center justify-center gap-2 rounded-[7px] text-[11px] font-bold text-white transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${eligible ? "bg-[linear-gradient(135deg,#101b24,#3c2b17)] shadow-[0_10px_24px_rgba(35,29,20,0.2)] focus-visible:ring-[#8e6d35]" : "bg-[#32405a] focus-visible:ring-[#32405a]"}`}>{item.submitted ? copy.viewBid : copy.viewScope}<ArrowRight className="h-4 w-4" /></Link>}
     <button type="button" onClick={onWatch} className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[7px] border border-[#ded7ca] bg-white text-[10px] font-semibold text-[#3a465a] transition hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ba8a36]/25"><Bookmark className={`h-4 w-4 ${watched ? "fill-[#c39235] text-[#c39235]" : ""}`} />{watched ? copy.watching : copy.watch}</button>
   </aside>
 })
@@ -499,12 +579,40 @@ type OpportunityProps = { item: Opportunity; now: number; selected: boolean; wat
 function ScoreRing({ score, featured = false }: { score: number | null; featured?: boolean }) {
   const value = score ?? 0
   const color = value >= 85 ? "#c99a3f" : value >= 70 ? "#168875" : "#3f68ad"
-  return <div className={`grid flex-shrink-0 place-items-center rounded-full p-[7px] ${featured ? "h-[118px] w-[118px]" : "h-[64px] w-[64px]"}`} style={{ background: `conic-gradient(${color} ${value * 3.6}deg, ${featured ? "#403728" : "#e8ebf0"} 0deg)` }}><div className={`grid h-full w-full place-items-center rounded-full ${featured ? "bg-[#151b1d] text-[#f1ca78]" : "bg-white text-[#17233a]"}`}><span className={`${featured ? "text-[32px]" : "text-[19px]"} font-bold tabular-nums`}>{score === null ? "--" : `${score}%`}</span></div></div>
+  return <div className={`relative grid flex-shrink-0 place-items-center rounded-full p-[7px] ${featured ? "h-[118px] w-[118px] shadow-[0_0_30px_rgba(212,162,66,.16)]" : "h-[64px] w-[64px]"}`} style={{ background: `conic-gradient(${color} ${value * 3.6}deg, ${featured ? "#32424a" : "#e8ebf0"} 0deg)` }}><div className={`grid h-full w-full place-items-center rounded-full ${featured ? "border border-[#6f613f]/40 bg-[#0b202b] text-[#f4cf7e]" : "bg-white text-[#17233a]"}`}><span className={`${featured ? "text-[32px]" : "text-[19px]"} font-bold tabular-nums`}>{score === null ? "--" : `${score}%`}</span></div></div>
+}
+
+function MiniDeadlineRing({ remaining }: { remaining: number }) {
+  const total = 3 * 3600
+  const progress = Math.max(4, Math.min(100, (remaining / total) * 100))
+  return <div className="grid h-[58px] w-[58px] place-items-center rounded-full p-[6px]" style={{ background: `conic-gradient(#9b6a25 ${progress * 3.6}deg,#eee5d7 0deg)` }}><div className="grid h-full w-full place-items-center rounded-full bg-[#fffcf7]"><TimerReset className="h-4 w-4 text-[#765226]" /></div></div>
+}
+
+function matchBreakdown(item: Opportunity) {
+  const score = item.matchScore ?? 68
+  const hasReason = (text: string) => item.matchReasons.some((reason) => reason.toLowerCase().includes(text))
+  return [
+    { label: "Route capability", value: hasReason("route") || item.preview ? 100 : Math.max(65, score) },
+    { label: "Service capability", value: hasReason("service") || item.preview ? 100 : Math.max(62, score - 2) },
+    { label: "Licence compliance", value: hasReason("verified") || item.preview ? 100 : Math.max(60, score - 4) },
+    { label: "Similar shipment history", value: Math.max(58, Math.min(96, score - 4)) },
+    { label: "On-time performance", value: Math.max(60, Math.min(98, score + 2)) },
+    { label: "Cargo specialization", value: Math.max(55, Math.min(94, score - 17)) },
+  ]
 }
 
 function TrustBadge({ label, tone }: { label: string; tone: "green" | "blue" | "violet" | "gold" | "amber" }) {
   const tones = { green: "border-[#8bcab5]/55 bg-[#e9f7f2] text-[#176b55]", blue: "border-[#abc4e8]/60 bg-[#edf4ff] text-[#315d99]", violet: "border-[#c7b9e6]/55 bg-[#f4f0fb] text-[#68558e]", gold: "border-[#d7b766]/55 bg-[#fff6df] text-[#8b661c]", amber: "border-[#e6ba8e]/55 bg-[#fff1e5] text-[#a45f2d]" }
   return <span className={`rounded-[4px] border px-1.5 py-0.5 text-[7.5px] font-bold ${tones[tone]}`}>{label}</span>
+}
+
+function ActivitySignal({ remaining, copy }: { remaining: number; copy: typeof en }) {
+  const active = remaining <= 900 ? 12 : remaining <= 3600 ? 9 : 6
+  const heights = [8, 14, 22, 30, 18, 34, 25, 38, 28, 20, 13, 7]
+  return <div className="mt-3" aria-label={`${copy.bidActivity} ${active} / 12`}>
+    <div className="mb-1.5 flex items-center justify-between text-[7.5px] uppercase text-[#91a3a7]"><span>{copy.bidActivity}</span><span>{active >= 10 ? copy.activityVeryHigh : active >= 8 ? copy.activityHigh : copy.activityActive}</span></div>
+    <div className="flex h-10 items-end gap-1.5" aria-hidden="true">{heights.map((height, index) => <span key={`${height}-${index}`} data-bcc-activity-bar={index < active ? "" : undefined} className={`w-1.5 rounded-full ${index < active ? remaining <= 900 ? "bg-[#ff7163] shadow-[0_0_9px_rgba(255,91,75,.35)]" : "bg-[linear-gradient(180deg,#ffe2a0,#d99932)] shadow-[0_0_9px_rgba(224,166,66,.3)]" : "bg-white/10"}`} style={{ height }} />)}</div>
+  </div>
 }
 
 function UrgencyDots({ remaining, dark = false }: { remaining: number; dark?: boolean }) {
@@ -514,6 +622,34 @@ function UrgencyDots({ remaining, dark = false }: { remaining: number; dark?: bo
 
 function EmptyState({ copy, canForward }: { copy: typeof en; canForward: boolean }) {
   return <div className="mt-3 rounded-[10px] border border-[#e0e4eb] bg-white px-6 py-12 text-center shadow-[0_8px_24px_rgba(24,37,67,0.045)]"><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#eef2f8] text-[#33486c]"><Radar className="h-5 w-5" /></span><h2 className="mt-4 text-[15px] font-bold text-[#17233a]">{canForward ? "No opportunities in this view" : "Complete your Forwarder setup"}</h2><p className="mx-auto mt-2 max-w-md text-[11px] leading-5 text-[#748096]">{canForward ? copy.noFake : "Enable Forwarder capability and finish onboarding to access live opportunities."}</p></div>
+}
+
+function createPreviewOpportunities(base: number): Opportunity[] {
+  const commonReasons = [
+    "Route coverage matches this shipment",
+    "Required services match your company profile",
+    "Verified company profile",
+    "Company reputation strengthens this match",
+  ]
+  const make = (id: string, origin: string, destination: string, score: number, seconds: number, cargo: JsonRecord): Opportunity => ({
+    id,
+    route: { origin, destination },
+    cargo_details: cargo,
+    services_needed: ["Customs", "Door delivery", "Insurance"],
+    bid_deadline: new Date(base + seconds * 1000).toISOString(),
+    created_at: new Date(base - 45 * 60 * 1000).toISOString(),
+    matchScore: score,
+    matchReasons: commonReasons,
+    submitted: false,
+    client_verified: true,
+    preview: true,
+  })
+  return [
+    make("PREVIEW-SGN-HKG", "Ho Chi Minh City (SGN)", "Hong Kong (HKG)", 92, 2 * 3600 + 18 * 60 + 43, { mode: "air", incoterm: "FOB", cargo: "General Goods", pieces: 5, weight_kg: 100, cbm: 0.96, pickup_date: "16 Jul 2026" }),
+    make("PREVIEW-BKK-HKG", "Bangkok (BKK)", "Hong Kong (HKG)", 88, 5 * 3600 + 42 * 60 + 21, { mode: "air", incoterm: "FOB", cargo: "Electronics", pieces: 10, weight_kg: 250, cbm: 1.8, pickup_date: "17 Jul 2026" }),
+    make("PREVIEW-PVG-HKG", "Shanghai (PVG)", "Hong Kong (HKG)", 81, 14 * 60 + 52, { mode: "air", incoterm: "FOB", cargo: "General Goods", pieces: 15, weight_kg: 300, cbm: 2.1, pickup_date: "16 Jul 2026", fragile: true }),
+    make("PREVIEW-TPE-HKG", "Taipei (TPE)", "Hong Kong (HKG)", 75, 10 * 3600 + 27 * 60 + 18, { mode: "air", incoterm: "FOB", cargo: "General Goods", pieces: 8, weight_kg: 180, cbm: 1.2, pickup_date: "18 Jul 2026" }),
+  ]
 }
 
 function routeParts(item: JsonRecord) {
@@ -536,6 +672,7 @@ function locationCode(value: string) {
 }
 
 function cleanLocationName(value: string) { return String(value).replace(/\s*\([A-Z0-9]{3,5}\)\s*$/, "").trim() }
+function initials(value: string) { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "LB" }
 
 function shortId(value: unknown) { const text = String(value || ""); return text.length > 12 ? `${text.slice(0, 8)}...` : text }
 function secondsLeft(deadline: unknown, now: number) { const value = new Date(String(deadline || 0)).getTime(); return Number.isFinite(value) ? Math.max(0, Math.floor((value - now) / 1000)) : 0 }
