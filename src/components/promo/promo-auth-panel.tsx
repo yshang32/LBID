@@ -7,12 +7,13 @@ import { apiJson } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-type AuthMode = "login" | "register" | "reset" | "confirm"
+export type PromoAuthMode = "login" | "register" | "reset" | "update"
+type AuthMode = PromoAuthMode | "confirm"
 
 type PromoAuthPanelProps = {
   locale: Locale
   open: boolean
-  initialMode: "login" | "register"
+  initialMode: PromoAuthMode
   onClose: () => void
   onAuthenticated?: () => void
 }
@@ -37,11 +38,14 @@ const zh = {
   loginEyebrow: "\u9032\u5165 LBID \u5de5\u4f5c\u5340",
   registerEyebrow: "\u5efa\u7acb\u516c\u53f8\u5e33\u6236",
   resetEyebrow: "\u5e33\u6236\u5b89\u5168",
+  updateEyebrow: "\u5e33\u6236\u5b89\u5168",
   loginTitle: "\u6b61\u8fce\u56de\u4f86\u3002",
   registerTitle: "\u958b\u59cb\u516c\u5e73\u914d\u5c0d\u3002",
   resetTitle: "\u91cd\u8a2d\u5bc6\u78bc",
+  updateTitle: "\u8a2d\u5b9a\u65b0\u5bc6\u78bc",
   supporting: "\u4e00\u500b\u516c\u53f8\u5e33\u6236\u53ef\u540c\u6642\u767c\u51fa\u9700\u6c42\u3001\u63d0\u4ea4\u5bc6\u5c01\u5831\u50f9\uff0c\u6216\u555f\u7528\u5169\u7a2e\u80fd\u529b\u3002",
   resetSupporting: "\u8f38\u5165\u5de5\u4f5c\u96fb\u90f5\uff0c\u6211\u5011\u6703\u767c\u9001\u5b89\u5168\u7684\u91cd\u8a2d\u9023\u7d50\u3002",
+  updateSupporting: "\u8f38\u5165\u65b0\u5bc6\u78bc\u5b8c\u6210\u5e33\u6236\u5b89\u5168\u66f4\u65b0\u3002",
   loginTab: "\u767b\u5165",
   registerTab: "\u5efa\u7acb\u5e33\u6236",
   company: "\u516c\u53f8\u540d\u7a31",
@@ -55,16 +59,19 @@ const zh = {
   loginAction: "\u9032\u5165\u5de5\u4f5c\u5340",
   registerAction: "\u5efa\u7acb\u516c\u53f8\u5e33\u6236",
   resetAction: "\u767c\u9001\u91cd\u8a2d\u9023\u7d50",
+  updateAction: "\u66f4\u65b0\u5bc6\u78bc",
   working: "\u8655\u7406\u4e2d...",
   back: "\u8fd4\u56de\u767b\u5165",
   confirmTitle: "\u78ba\u8a8d\u4f60\u7684\u5de5\u4f5c\u96fb\u90f5",
   confirmBody: "\u9a57\u8b49\u9023\u7d50\u5df2\u767c\u9001\u81f3",
   required: "\u8acb\u8f38\u5165\u5de5\u4f5c\u96fb\u90f5\u53ca\u5bc6\u78bc\u3002",
   registerRequired: "\u8acb\u5b8c\u6210\u516c\u53f8\u8cc7\u6599\uff1b\u5bc6\u78bc\u81f3\u5c11\u9700\u8981 8 \u500b\u5b57\u5143\u3002",
+  passwordRequired: "\u5bc6\u78bc\u81f3\u5c11\u9700\u8981 8 \u500b\u5b57\u5143\u3002",
   mismatch: "\u5169\u6b21\u8f38\u5165\u7684\u5bc6\u78bc\u4e0d\u4e00\u81f4\u3002",
   acceptRequired: "\u8acb\u5148\u540c\u610f\u670d\u52d9\u689d\u6b3e\u53ca\u79c1\u96b1\u653f\u7b56\u3002",
   incorrect: "\u96fb\u90f5\u6216\u5bc6\u78bc\u4e0d\u6b63\u78ba\u3002",
   resetSent: "\u5982\u679c\u5e33\u6236\u5b58\u5728\uff0c\u91cd\u8a2d\u9023\u7d50\u5df2\u767c\u9001\u3002",
+  updated: "\u5bc6\u78bc\u5df2\u66f4\u65b0\uff0c\u8acb\u4f7f\u7528\u65b0\u5bc6\u78bc\u767b\u5165\u3002",
   connected: "\u5df2\u9023\u63a5 LBID\uff0c\u6b63\u5728\u9032\u5165\u4f60\u7684\u5de5\u4f5c\u5340\u3002",
   show: "\u986f\u793a\u5bc6\u78bc",
   hide: "\u96b1\u85cf\u5bc6\u78bc",
@@ -76,11 +83,14 @@ const en = {
   loginEyebrow: "Enter the LBID workspace",
   registerEyebrow: "Create company account",
   resetEyebrow: "Account security",
+  updateEyebrow: "Account security",
   loginTitle: "Welcome back.",
   registerTitle: "Start matching fairly.",
   resetTitle: "Reset your password",
+  updateTitle: "Set a new password",
   supporting: "One company account can create demand, submit sealed bids, or enable both capabilities.",
   resetSupporting: "Enter your work email and we will send a secure reset link.",
+  updateSupporting: "Choose a new password to finish securing your account.",
   loginTab: "Login",
   registerTab: "Create account",
   company: "Company name",
@@ -94,16 +104,19 @@ const en = {
   loginAction: "Enter workspace",
   registerAction: "Create company account",
   resetAction: "Send reset link",
+  updateAction: "Update password",
   working: "Working...",
   back: "Back to login",
   confirmTitle: "Confirm your work email",
   confirmBody: "A verification link was sent to",
   required: "Enter your work email and password.",
   registerRequired: "Complete the company details. Password must contain at least 8 characters.",
+  passwordRequired: "Password must contain at least 8 characters.",
   mismatch: "Passwords do not match.",
   acceptRequired: "Accept the Terms of Service and Privacy Policy to continue.",
   incorrect: "Email or password is incorrect.",
   resetSent: "If the account exists, a reset link has been sent.",
+  updated: "Password updated. Sign in with your new password.",
   connected: "You are connected. Opening your LBID workspace.",
   show: "Show password",
   hide: "Hide password",
@@ -178,6 +191,23 @@ export function PromoAuthPanel({ locale, open, initialMode, onClose, onAuthentic
       return resetError ? setError(resetError.message) : setNotice(copy.resetSent)
     }
 
+    if (mode === "update") {
+      if (password.length < 8) return setError(copy.passwordRequired)
+      if (password !== confirmation) return setError(copy.mismatch)
+      setLoading(true)
+      const { error: updateError } = await supabase.auth.updateUser({ password })
+      if (updateError) {
+        setLoading(false)
+        return setError(updateError.message)
+      }
+      await supabase.auth.signOut()
+      setLoading(false)
+      setPassword("")
+      setConfirmation("")
+      setMode("login")
+      return setNotice(copy.updated)
+    }
+
     if (mode === "register") {
       if (!company.trim() || !email || password.length < 8) return setError(copy.registerRequired)
       if (password !== confirmation) return setError(copy.mismatch)
@@ -235,6 +265,7 @@ export function PromoAuthPanel({ locale, open, initialMode, onClose, onAuthentic
   if (!open) return null
   const register = mode === "register"
   const reset = mode === "reset"
+  const update = mode === "update"
 
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-labelledby="promo-auth-title">
@@ -256,30 +287,30 @@ export function PromoAuthPanel({ locale, open, initialMode, onClose, onAuthentic
             </div>
           ) : (
             <>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a87918]">{reset ? copy.resetEyebrow : register ? copy.registerEyebrow : copy.loginEyebrow}</p>
-              <h2 id="promo-auth-title" className="mt-3 font-serif text-[36px] font-normal leading-[1.05] text-[#0c1d3f]">{reset ? copy.resetTitle : register ? copy.registerTitle : copy.loginTitle}</h2>
-              <p className="mt-4 text-[13px] leading-6 text-[#667085]">{reset ? copy.resetSupporting : copy.supporting}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a87918]">{update ? copy.updateEyebrow : reset ? copy.resetEyebrow : register ? copy.registerEyebrow : copy.loginEyebrow}</p>
+              <h2 id="promo-auth-title" className="mt-3 font-serif text-[36px] font-normal leading-[1.05] text-[#0c1d3f]">{update ? copy.updateTitle : reset ? copy.resetTitle : register ? copy.registerTitle : copy.loginTitle}</h2>
+              <p className="mt-4 text-[13px] leading-6 text-[#667085]">{update ? copy.updateSupporting : reset ? copy.resetSupporting : copy.supporting}</p>
 
-              {!reset && <div className="mt-7 grid grid-cols-2 border-b border-[#dfe3e8]">
+              {!reset && !update && <div className="mt-7 grid grid-cols-2 border-b border-[#dfe3e8]">
                 <button type="button" onClick={() => setMode("login")} className={`border-b-2 py-3 text-[12px] font-semibold ${!register ? "border-[#10254d] text-[#10254d]" : "border-transparent text-[#8b95a5]"}`}>{copy.loginTab}</button>
                 <button type="button" onClick={() => setMode("register")} className={`border-b-2 py-3 text-[12px] font-semibold ${register ? "border-[#10254d] text-[#10254d]" : "border-transparent text-[#8b95a5]"}`}>{copy.registerTab}</button>
               </div>}
 
               <form onSubmit={submit} className="mt-6 space-y-4">
                 {register && <Field label={copy.company} id="promo-company"><input id="promo-company" value={company} onChange={(event) => setCompany(event.target.value)} autoComplete="organization" className={inputClass} /></Field>}
-                <Field label={copy.email} id="promo-email"><input id="promo-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className={inputClass} /></Field>
+                {!update && <Field label={copy.email} id="promo-email"><input id="promo-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className={inputClass} /></Field>}
                 {register && <Field label={copy.region} id="promo-country"><select id="promo-country" value={country} onChange={(event) => setCountry(event.target.value)} className={inputClass}>{countries.map((item) => <option key={item}>{item}</option>)}</select></Field>}
-                {!reset && <Field label={copy.password} id="promo-password"><div className="relative"><input id="promo-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? "new-password" : "current-password"} className={`${inputClass} pr-11`} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? copy.hide : copy.show} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#8a95a6]"><span aria-hidden="true">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</span></button></div></Field>}
-                {register && <Field label={copy.confirmPassword} id="promo-confirm"><input id="promo-confirm" type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" className={inputClass} /></Field>}
+                {!reset && <Field label={copy.password} id="promo-password"><div className="relative"><input id="promo-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register || update ? "new-password" : "current-password"} className={`${inputClass} pr-11`} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? copy.hide : copy.show} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#8a95a6]"><span aria-hidden="true">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</span></button></div></Field>}
+                {(register || update) && <Field label={copy.confirmPassword} id="promo-confirm"><input id="promo-confirm" type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" className={inputClass} /></Field>}
 
-                {!register && !reset && <div className="flex items-center justify-between gap-4 text-[11px]"><label className="flex items-center gap-2 text-[#657084]"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} className="accent-[#10254d]" />{copy.remember}</label><button type="button" onClick={() => setMode("reset")} className="font-semibold text-[#28528d] hover:underline">{copy.forgot}</button></div>}
+                {!register && !reset && !update && <div className="flex items-center justify-between gap-4 text-[11px]"><label className="flex items-center gap-2 text-[#657084]"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} className="accent-[#10254d]" />{copy.remember}</label><button type="button" onClick={() => setMode("reset")} className="font-semibold text-[#28528d] hover:underline">{copy.forgot}</button></div>}
                 {register && <label className="flex items-start gap-2 text-[11px] leading-5 text-[#657084]"><input type="checkbox" checked={acceptTerms} onChange={(event) => setAcceptTerms(event.target.checked)} className="mt-1 accent-[#10254d]" />{copy.terms}</label>}
 
                 {error && <div role="alert" className="flex gap-2 rounded-[5px] border border-[#f0c9c4] bg-[#fff5f3] p-3 text-[11px] leading-5 text-[#a53f31]"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />{error}</div>}
                 {notice && <div role="status" className="flex gap-2 rounded-[5px] border border-[#bfe3d4] bg-[#f0faf6] p-3 text-[11px] leading-5 text-[#157455]"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />{notice}</div>}
 
-                <button type="submit" disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-[4px] bg-[#10254d] text-[13px] font-semibold text-white transition hover:-translate-y-px hover:bg-[#173664] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#45b7d1] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{loading ? copy.working : reset ? copy.resetAction : register ? copy.registerAction : copy.loginAction}<ArrowRight className="h-4 w-4" /></button>
-                {reset && <button type="button" onClick={() => setMode("login")} className="w-full py-2 text-[11px] font-semibold text-[#526075] hover:underline">{copy.back}</button>}
+                <button type="submit" disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-[4px] bg-[#10254d] text-[13px] font-semibold text-white transition hover:-translate-y-px hover:bg-[#173664] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#45b7d1] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">{loading ? copy.working : update ? copy.updateAction : reset ? copy.resetAction : register ? copy.registerAction : copy.loginAction}<ArrowRight className="h-4 w-4" /></button>
+                {(reset || update) && <button type="button" onClick={() => setMode("login")} className="w-full py-2 text-[11px] font-semibold text-[#526075] hover:underline">{copy.back}</button>}
               </form>
             </>
           )}

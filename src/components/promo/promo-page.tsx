@@ -6,7 +6,7 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 
 import type { Locale } from "@/lib/i18n"
-import { PromoAuthPanel } from "./promo-auth-panel"
+import { PromoAuthPanel, type PromoAuthMode } from "./promo-auth-panel"
 import { PromoCanvas, type PromoCanvasHandle } from "./promo-canvas"
 import { PROMO_FRAME_COUNT, promoStageFrames } from "./promo-manifest"
 import { PromoStory, type PromoAudience } from "./promo-story"
@@ -81,10 +81,10 @@ function formatEta(fp: number) {
   return `T-${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
 }
 
-export function PromoPage({ locale = "en" }: { locale?: Locale }) {
+export function PromoPage({ locale = "en", initialAuthMode }: { locale?: Locale; initialAuthMode?: PromoAuthMode }) {
   const copy = promoCopy[locale]
   const [authOpen, setAuthOpen] = useState(false)
-  const [authMode, setAuthMode] = useState<"login" | "register">("login")
+  const [authMode, setAuthMode] = useState<PromoAuthMode>(initialAuthMode || "login")
   const [audience, setAudience] = useState<PromoAudience>("client")
   const canvasRef = useRef<PromoCanvasHandle>(null)
   const trackRef = useRef<HTMLDivElement>(null)
@@ -99,7 +99,7 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
   const bufferRef = useRef<HTMLSpanElement>(null)
   const hudRef = useRef<HTMLDivElement>(null)
   const otherLocale: Locale = locale === "zh" ? "en" : "zh"
-  const openAuth = useCallback((mode: "login" | "register") => {
+  const openAuth = useCallback((mode: PromoAuthMode) => {
     setAuthMode(mode)
     setAuthOpen(true)
   }, [])
@@ -107,8 +107,11 @@ export function PromoPage({ locale = "en" }: { locale?: Locale }) {
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search)
-    if (query.get("auth") === "login") openAuth("login")
-  }, [openAuth])
+    const requestedMode = query.get("auth") || initialAuthMode
+    if (requestedMode === "login" || requestedMode === "register" || requestedMode === "reset" || requestedMode === "update") {
+      openAuth(requestedMode)
+    }
+  }, [initialAuthMode, openAuth])
 
   useEffect(() => {
     const track = trackRef.current
